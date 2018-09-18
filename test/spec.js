@@ -19,5 +19,5 @@ test('can open valid file', async t => {
 
 test('can read objects from file', async t => {
   const map = await ocad2geojson(path.join(__dirname, 'data', 'Tuve_Databas_075.ocd'))
-  t.is(map.objects.length, 15552)
+  t.is(map.objects.length, 15546)
 })

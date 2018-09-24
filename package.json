@@ -1,14 +1,14 @@
 {
   "name": "ocad2geojson",
   "version": "1.0.0",
-  "description": "",
+  "description": "Convert OCAD files to GeoJSON",
   "main": "src/index.js",
   "scripts": {
     "test": "ava"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "keywords": ["ocad", "geojson", "gis", "orienteering"],
+  "author": "Per Liedman <per@liedman.net>",
+  "license": "AGPL-3.0-or-later",
   "devDependencies": {
     "ava": "^0.25.0",
     "eslint": "^5.6.0",

@@ -33,6 +33,12 @@ const parseOcadBuffer = async (buffer, options) => new Promise((resolve, reject)
     objectIndexOffset = objectIndex.nextObjectIndexBlock
   }
 
+  if (options.assignIds || options.assignIds === undefined) {
+    objects.forEach((o, i) => {
+      o.id = i + 1
+    })
+  }
+
   let featureCollection = {
     type: 'FeatureCollection',
     features: objects
@@ -219,9 +225,27 @@ class ObjectIndex extends Block {
         }
         break
       case 3:
+        const rings = []
+        let currentRing = []
+        rings.push(currentRing)
+        for (let i = 0; i < object.coordinates.length; i++) {
+          const c = object.coordinates[i]
+          if (c.isFirstHolePoint()) {
+            // Copy first coordinate
+            currentRing.push(currentRing[0].slice())
+            currentRing = []
+            rings.push(currentRing)
+          }
+
+          currentRing.push(c)
+        }
+
+        // Copy first coordinate
+        currentRing.push(currentRing[0].slice())
+
         geometry = {
           type: 'Polygon',
-          coordinates: [object.coordinates]
+          coordinates: rings
         }
         break
       default:
@@ -279,10 +303,7 @@ class TObject extends Block {
     this.coordinates = new Array(this.nItem)
 
     for (let i = 0; i < this.nItem; i++) {
-      this.coordinates[i] = [
-        (this.readInteger() >> 8),
-        (this.readInteger() >> 8)
-      ]
+      this.coordinates[i] = new TdPoly(this.readInteger(), this.readInteger())
     }
   }
 
@@ -340,6 +361,46 @@ class StringIndex extends Block {
 
       return pss
     }, {})
+  }
+}
+
+class TdPoly extends Array {
+  constructor (ocadX, ocadY) {
+    super(ocadX >> 8, ocadY >> 8)
+    this.xFlags = ocadX & 0xff
+    this.yFlags = ocadY & 0xff
+  }
+
+  isFirstBezier () {
+    return this.xFlags & 0x01
+  }
+
+  isSecondBezier () {
+    return this.xFlags & 0x02
+  }
+
+  hasNoLeftLine () {
+    return this.xFlags & 0x04
+  }
+
+  isBorderOrVirtualLine () {
+    return this.xFlags & 0x08
+  }
+
+  isCornerPoint () {
+    return this.yFlags & 0x01
+  }
+
+  isFirstHolePoint () {
+    return this.yFlags & 0x02
+  }
+
+  hasNoRightLine () {
+    return this.yFlags & 0x04
+  }
+
+  isDashPoint () {
+    return this.yFlags & 0x08
   }
 }
 

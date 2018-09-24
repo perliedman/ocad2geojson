@@ -1,6 +1,7 @@
 const fs = require('fs')
 const { Buffer } = require('buffer')
 const { coordEach } = require('@turf/meta')
+const Color = require('color')
 
 module.exports = async (path, options) => {
   options = options || {}
@@ -22,6 +23,15 @@ const parseOcadBuffer = async (buffer, options) => new Promise((resolve, reject)
   const header = new FileHeader(buffer)
   if (!header.isValid()) {
     reject(new Error(`Not an OCAD file (invalid header ${header.ocadMark} !== ${0x0cad})`))
+  }
+
+  let symbols = []
+  let symbolIndexOffset = header.symbolIndexBlock
+  while (symbolIndexOffset) {
+    let symbolIndex = new SymbolIndex(buffer, symbolIndexOffset)
+    Array.prototype.push.apply(symbols, symbolIndex.parseSymbols())
+
+    symbolIndexOffset = symbolIndex.nextObjectIndexBlock
   }
 
   let objects = []
@@ -64,11 +74,12 @@ const parseOcadBuffer = async (buffer, options) => new Promise((resolve, reject)
     applyCrs(featureCollection, parameterStrings['1039'][0])
   }
 
-  resolve({
+  resolve(new OcadFile(
     header,
     parameterStrings,
-    featureCollection
-  })
+    featureCollection,
+    symbols
+  ))
 })
 
 const applyCrs = (featureCollection, scalePar) => {
@@ -88,6 +99,46 @@ const applyCrs = (featureCollection, scalePar) => {
     coord[0] = (coord[0] * hundredsMmToMeter) * m + x
     coord[1] = (coord[1] * hundredsMmToMeter) * m + y
   })
+}
+
+class OcadFile {
+  constructor (header, parameterStrings, featureCollection, symbols) {
+    this.header = header
+    this.parameterStrings = parameterStrings
+    this.featureCollection = featureCollection
+    this.symbols = symbols
+
+    this.colors = parameterStrings[9].map(colorDef => {
+      const cmyk = [colorDef.c, colorDef.m, colorDef.y, colorDef.k].map(Number)
+      return {
+        number: colorDef.n,
+        cmyk: cmyk,
+        name: colorDef.first,
+        rgb: Color.cmyk(cmyk).rgb().string()
+      }
+    })
+      .reduce((a, c) => {
+        a[c.number] = c
+        return a
+      }, [])
+  }
+
+  getMapboxStyleLayers (options) {
+    const usedSymbols = this.featureCollection.features.reduce((a, f) => {
+      const symbolId = f.properties.sym
+      if (!a.idSet.has(symbolId)) {
+        a.symbolIds.push(symbolId)
+        a.idSet.add(symbolId)
+      }
+
+      return a
+    }, { symbolIds: [], idSet: new Set() }).symbolIds
+
+    return usedSymbols
+      .map(symNum => this.symbols.find(s => symNum === s.symNum))
+      .filter(s => s)
+      .map(symbol => symbol.toMapboxLayer(this.colors, options))
+  }
 }
 
 class Block {
@@ -168,6 +219,133 @@ class FileHeader extends Block {
 
   isValid () {
     return this.ocadMark === 0x0cad
+  }
+}
+
+class SymbolIndex extends Block {
+  constructor (buffer, offset) {
+    super(buffer, offset)
+
+    this.nextSymbolIndexBlock = this.readInteger()
+    this.symbolPosition = new Array(256)
+    for (let i = 0; i < this.symbolPosition.length; i++) {
+      this.symbolPosition[i] = this.readInteger()
+    }
+  }
+
+  parseSymbols () {
+    return this.symbolPosition
+      .filter(sp => sp > 0)
+      .map(sp => this.parseSymbol(sp))
+      .filter(s => s)
+  }
+
+  parseSymbol (offset) {
+    if (!offset) return
+
+    const type = this.buffer.readInt8(offset + 8)
+    switch (type) {
+      case 2:
+        return new LineSymbol(this.buffer, offset)
+      case 3:
+        return new AreaSymbol(this.buffer, offset)
+    }
+
+    // Ignore other symbols for now
+  }
+}
+
+class Symbol extends Block {
+  constructor (buffer, offset) {
+    super(buffer, offset)
+
+    this.size = this.readInteger()
+    this.symNum = this.readInteger()
+    this.otp = this.readByte()
+    this.flags = this.readByte()
+    this.selected = !!this.readByte()
+    this.status = this.readByte()
+    this.preferredDrawingTool = this.readByte()
+    this.csMode = this.readByte()
+    this.csObjType = this.readByte()
+    this.csCdFlags = this.readByte()
+    this.extent = this.readInteger()
+    this.filePos = this.readCardinal()
+    this.readByte() // notUsed1
+    this.readByte() // notUsed2
+    this.nColors = this.readSmallInt()
+    this.colors = new Array(14)
+    for (let i = 0; i < this.colors.length; i++) {
+      this.colors[i] = this.readSmallInt()
+    }
+    this.description = ''
+    for (let i = 0; i < 64; i++) {
+      const c = this.readByte()
+      if (c) {
+        this.description += String.fromCharCode(c)
+      }
+    }
+
+    this.iconBits = new Array(484)
+    for (let i = 0; i < this.iconBits.length; i++) {
+      this.iconBits[i] = this.readByte()
+    }
+
+    this.symbolTreeGroup = new Array(64)
+    for (let i = 0; i < this.symbolTreeGroup.length; i++) {
+      this.symbolTreeGroup[i] = this.readWord()
+    }
+  }
+}
+
+class LineSymbol extends Symbol {
+  constructor (buffer, offset) {
+    super(buffer, offset)
+
+    this.lineColor = this.readSmallInt()
+    this.lineWidth = this.readSmallInt()
+    this.lineStyle = this.readSmallInt()
+  }
+
+  toMapboxLayer (colors, options) {
+    return {
+      id: `symbol-${this.symNum}`,
+      source: options.source,
+      type: 'line',
+      filter: ['==', ['get', 'sym'], this.symNum],
+      paint: {
+        'line-color': colors[this.colors[this.lineColor]].rgb,
+        'line-width': {
+          'type': 'exponential',
+          'base': 2,
+          'stops': [
+            [0, (this.lineWidth || 1) * Math.pow(2, (0 - 15))],
+            [24, (this.lineWidth || 1) * Math.pow(2, (24 - 15))]
+          ]
+        }
+      }
+    }
+  }
+}
+
+class AreaSymbol extends Symbol {
+  constructor (buffer, offset) {
+    super(buffer, offset)
+
+    this.borderSym = this.readInteger()
+    this.fillColor = this.readSmallInt()
+  }
+
+  toMapboxLayer (colors, options) {
+    return {
+      id: `symbol-${this.symNum}`,
+      source: options.source,
+      type: 'fill',
+      filter: ['==', ['get', 'sym'], this.symNum],
+      paint: {
+        'fill-color': colors[this.colors[this.fillColor]].rgb
+      }
+    }
   }
 }
 

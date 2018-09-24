@@ -27,18 +27,16 @@ fetch('example.ocd')
             data: geoJson
           }
         },
-        layers: [
-          {
-            id: 'lines',
-            source: 'map',
-            type: 'line',
-            filter: ['==', ['geometry-type'], 'LineString']
-          }
-        ]
+        layers: mapData.getMapboxStyleLayers({
+          source: 'map'
+        })
       },
-      center: [11.9, 57.73],
+      center: [11.93, 57.75],
       zoom: 14
     })
 
-    // map.fitBounds(bounds)
+    const nav = new mapboxgl.NavigationControl();
+    map.addControl(nav, 'top-left');
+
+    map.fitBounds(bounds)
   })

@@ -6,7 +6,12 @@
   "scripts": {
     "test": "ava"
   },
-  "keywords": ["ocad", "geojson", "gis", "orienteering"],
+  "keywords": [
+    "ocad",
+    "geojson",
+    "gis",
+    "orienteering"
+  ],
   "author": "Per Liedman <per@liedman.net>",
   "license": "AGPL-3.0-or-later",
   "devDependencies": {
@@ -20,6 +25,7 @@
   },
   "dependencies": {
     "@turf/meta": "^6.0.2",
+    "color": "^3.0.0",
     "minimist": "^1.2.0"
   }
 }

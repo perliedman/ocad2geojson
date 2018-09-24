@@ -113,7 +113,7 @@ class OcadFile {
       return {
         number: colorDef.n,
         cmyk: cmyk,
-        name: colorDef.first,
+        name: colorDef._first,
         rgb: Color.cmyk(cmyk).rgb().string()
       }
     })
@@ -595,8 +595,7 @@ class ParameterString extends Block {
     }
 
     const vals = val.split('\t')
-    this.first = vals[0]
-    this.values = {}
+    this.values = { _first: vals[0] }
     for (let i = 1; i < vals.length; i++) {
       this.values[vals[i][0]] = vals[i].substring(1)
     }

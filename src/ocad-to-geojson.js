@@ -1,21 +1,26 @@
 const { coordEach } = require('@turf/meta')
 
+const defaultOptions = {
+  assignIds: true,
+  applyCrs: true
+}
+
 module.exports = function (ocadFile, options) {
-  options = options || {}
+  options = { ...defaultOptions, ...options }
   const features = ocadFile.objects.map(tObjectToGeoJson).filter(f => f)
   const featureCollection = {
     type: 'FeatureCollection',
     features
   }
 
-  if (options.assignIds || options.assignIds === undefined) {
+  if (options.assignIds) {
     features.forEach((o, i) => {
       o.id = i + 1
     })
   }
 
-  if (ocadFile.parameterStrings['1039'] && (options.applyCrs || options.applyCrs === undefined)) {
-    applyCrs(featureCollection, ocadFile.parameterStrings['1039'][0])
+  if (options.applyCrs) {
+    applyCrs(featureCollection, ocadFile.getCrs())
   }
 
   return featureCollection
@@ -71,21 +76,13 @@ const tObjectToGeoJson = object => {
   }
 }
 
-const applyCrs = (featureCollection, scalePar) => {
+const applyCrs = (featureCollection, crs) => {
   // OCAD uses 1/100 mm of "paper coordinates" as units, we
   // want to convert to meters in real world
   const hundredsMmToMeter = 1 / (100 * 1000)
-  let { x, y, m } = scalePar
-
-  // Easting (meters)
-  x = Number(x)
-  // Northing (meters)
-  y = Number(y)
-  // Map scale
-  m = Number(m)
 
   coordEach(featureCollection, coord => {
-    coord[0] = (coord[0] * hundredsMmToMeter) * m + x
-    coord[1] = (coord[1] * hundredsMmToMeter) * m + y
+    coord[0] = (coord[0] * hundredsMmToMeter) * crs.scale + crs.easting
+    coord[1] = (coord[1] * hundredsMmToMeter) * crs.scale + crs.northing
   })
 }

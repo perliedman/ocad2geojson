@@ -93,6 +93,23 @@ class OcadFile {
       }, [])
   }
 
+  getCrs () {
+    const scalePar = this.parameterStrings['1039']
+      ? this.parameterStrings['1039'][0]
+      : { x: 0, y: 0, m: 1 }
+    let { x, y, m } = scalePar
+
+    x = Number(x)
+    y = Number(y)
+    m = Number(m)
+
+    return {
+      easting: x,
+      northing: y,
+      scale: m
+    }
+  }
+
   getMapboxStyleLayers (featureCollection, options) {
     const usedSymbols = featureCollection.features.reduce((a, f) => {
       const symbolId = f.properties.sym

@@ -1,9 +1,10 @@
 const Block = require('./block')
 
 module.exports = class Symbol extends Block {
-  constructor (buffer, offset) {
+  constructor (buffer, offset, symbolType) {
     super(buffer, offset)
 
+    this.type = symbolType
     this.size = this.readInteger()
     this.symNum = this.readInteger()
     this.otp = this.readByte()

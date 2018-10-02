@@ -1,4 +1,4 @@
-const { readOcad, ocadToGeoJson} = require('../')
+const { readOcad, ocadToGeoJson, ocadToMapboxGlStyle } = require('../')
 const { Buffer } = require('buffer')
 const { toWgs84 } = require('reproject')
 const Color = require('color')
@@ -32,7 +32,7 @@ fetch('example.ocd')
             data: geoJson
           }
         },
-        layers: ocadFile.getMapboxStyleLayers(geoJson, {
+        layers: ocadToMapboxGlStyle(ocadFile, {
           source: 'map'
         })
       },

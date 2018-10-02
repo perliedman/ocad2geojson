@@ -109,21 +109,4 @@ class OcadFile {
       scale: m
     }
   }
-
-  getMapboxStyleLayers (featureCollection, options) {
-    const usedSymbols = featureCollection.features.reduce((a, f) => {
-      const symbolId = f.properties.sym
-      if (!a.idSet.has(symbolId)) {
-        a.symbolIds.push(symbolId)
-        a.idSet.add(symbolId)
-      }
-
-      return a
-    }, { symbolIds: [], idSet: new Set() }).symbolIds
-
-    return usedSymbols
-      .map(symNum => this.symbols.find(s => symNum === s.symNum))
-      .filter(s => s)
-      .map(symbol => symbol.toMapboxLayer(this.colors, options))
-  }
 }

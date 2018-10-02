@@ -1,6 +1,5 @@
 const fs = require('fs')
 const { Buffer } = require('buffer')
-const { coordEach } = require('@turf/meta')
 const Color = require('color')
 
 const FileHeader = require('./file-header')
@@ -48,17 +47,6 @@ const parseOcadBuffer = async (buffer, options) => new Promise((resolve, reject)
     objectIndexOffset = objectIndex.nextObjectIndexBlock
   }
 
-  if (options.assignIds || options.assignIds === undefined) {
-    objects.forEach((o, i) => {
-      o.id = i + 1
-    })
-  }
-
-  let featureCollection = {
-    type: 'FeatureCollection',
-    features: objects
-  }
-
   let parameterStrings = {}
   let stringIndexOffset = header.stringIndexBlock
   while (stringIndexOffset) {
@@ -75,42 +63,19 @@ const parseOcadBuffer = async (buffer, options) => new Promise((resolve, reject)
     stringIndexOffset = stringIndex.nextStringIndexBlock
   }
 
-  if (parameterStrings['1039'] && (options.applyCrs || options.applyCrs === undefined)) {
-    applyCrs(featureCollection, parameterStrings['1039'][0])
-  }
-
   resolve(new OcadFile(
     header,
     parameterStrings,
-    featureCollection,
+    objects,
     symbols
   ))
 })
 
-const applyCrs = (featureCollection, scalePar) => {
-  // OCAD uses 1/100 mm of "paper coordinates" as units, we
-  // want to convert to meters in real world
-  const hundredsMmToMeter = 1 / (100 * 1000)
-  let { x, y, m } = scalePar
-
-  // Easting (meters)
-  x = Number(x)
-  // Northing (meters)
-  y = Number(y)
-  // Map scale
-  m = Number(m)
-
-  coordEach(featureCollection, coord => {
-    coord[0] = (coord[0] * hundredsMmToMeter) * m + x
-    coord[1] = (coord[1] * hundredsMmToMeter) * m + y
-  })
-}
-
 class OcadFile {
-  constructor (header, parameterStrings, featureCollection, symbols) {
+  constructor (header, parameterStrings, objects, symbols) {
     this.header = header
     this.parameterStrings = parameterStrings
-    this.featureCollection = featureCollection
+    this.objects = objects
     this.symbols = symbols
 
     this.colors = parameterStrings[9].map(colorDef => {
@@ -128,8 +93,8 @@ class OcadFile {
       }, [])
   }
 
-  getMapboxStyleLayers (options) {
-    const usedSymbols = this.featureCollection.features.reduce((a, f) => {
+  getMapboxStyleLayers (featureCollection, options) {
+    const usedSymbols = featureCollection.features.reduce((a, f) => {
       const symbolId = f.properties.sym
       if (!a.idSet.has(symbolId)) {
         a.symbolIds.push(symbolId)

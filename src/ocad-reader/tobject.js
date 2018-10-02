@@ -2,9 +2,10 @@ const Block = require('./block')
 const TdPoly = require('./td-poly')
 
 module.exports = class TObject extends Block {
-  constructor (buffer, offset) {
+  constructor (buffer, offset, objType) {
     super(buffer, offset)
 
+    this.objType = objType
     this.sym = this.readInteger()
     this.otp = this.readByte()
     this._customer = this.readByte()

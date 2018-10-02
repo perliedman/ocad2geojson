@@ -17,6 +17,7 @@
     "@turf/bbox": "^6.0.1",
     "blob-to-buffer": "^1.2.8",
     "brfs": "^2.0.1",
+    "color": "^3.0.0",
     "reproject": "^1.2.2"
   }
 }

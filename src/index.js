@@ -1,3 +1,7 @@
-const ocadReader = require('./ocad-reader')
+const readOcad = require('./ocad-reader')
+const ocadToGeoJson = require('./ocad-to-geojson')
 
-module.exports = ocadReader
+module.exports = {
+  readOcad,
+  ocadToGeoJson
+}

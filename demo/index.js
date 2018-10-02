@@ -1,6 +1,7 @@
-const ocad2geojson = require('../')
+const { readOcad, ocadToGeoJson} = require('../')
 const { Buffer } = require('buffer')
 const { toWgs84 } = require('reproject')
+const Color = require('color')
 const toBuffer = require('blob-to-buffer')
 const bbox = require('@turf/bbox').default
 const mapboxgl = window.mapboxgl
@@ -11,10 +12,14 @@ fetch('example.ocd')
     if (err) reject(err)
     resolve(buffer)
   })))
-  .then(buffer => ocad2geojson(buffer))
-  .then(mapData => {
-    const geoJson = toWgs84(mapData.featureCollection, '+proj=utm +zone=33 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs')
+  .then(buffer => readOcad(buffer))
+  .then(ocadFile => {
+    const geoJson = toWgs84(ocadToGeoJson(ocadFile), '+proj=utm +zone=33 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs')
     const bounds = bbox(geoJson)
+
+    ocadFile.colors.forEach((c, i) => {
+      ocadFile.colors[i].rgb = Color(ocadFile.colors[i].rgb).desaturate(0.4).rgb().string()
+    })
     
     const map = window._map = new mapboxgl.Map({
       container: 'map',
@@ -27,7 +32,7 @@ fetch('example.ocd')
             data: geoJson
           }
         },
-        layers: mapData.getMapboxStyleLayers({
+        layers: ocadFile.getMapboxStyleLayers(geoJson, {
           source: 'map'
         })
       },

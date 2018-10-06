@@ -1,19 +1,19 @@
 const fs = require('fs')
 const argv = require('minimist')(process.argv.slice(2));
-const ocad2geojson = require('./')
+const { readOcad, ocadToGeoJson } = require('./')
 const filePath = argv._[0]
 const outStream = argv.o ? fs.createWriteStream(argv.o) : process.stdout
 
-ocad2geojson(filePath)
-  .then(map => {
+readOcad(filePath)
+  .then(ocadFile => {
     if (argv.v) {
-      writeInfo(filePath, map, process.stderr)
+      writeInfo(filePath, ocadFile, process.stderr)
     }
 
     if (!argv.p) {
-      outStream.write(JSON.stringify(map.featureCollection, null, 2))
+      outStream.write(JSON.stringify(ocadToGeoJson(ocadFile), null, 2))
     } else {
-      outStream.write(JSON.stringify(map.parameterStrings, null, 2))
+      outStream.write(JSON.stringify(ocadFile.parameterStrings, null, 2))
     }
   })
 

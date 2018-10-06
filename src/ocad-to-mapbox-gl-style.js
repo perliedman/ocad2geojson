@@ -9,10 +9,16 @@ module.exports = function ocadToMapboxGlStyle(ocadFile, options) {
     return a
   }, { symbolIds: [], idSet: new Set() }).symbolIds
 
-  return usedSymbols
+  const layers = usedSymbols
     .map(symNum => ocadFile.symbols.find(s => symNum === s.symNum))
     .filter(s => s)
     .map(symbol => symbolToMapboxLayer(symbol, ocadFile.colors, options))
+
+  layers.sort((a, b) => {
+    return b.metadata.sort - a.metadata.sort
+  })
+
+  return layers
 }
 
 const symbolToMapboxLayer = (symbol, colors, options) => {
@@ -33,6 +39,9 @@ const symbolToMapboxLayer = (symbol, colors, options) => {
               [24, (symbol.lineWidth || 1) * Math.pow(2, (24 - 15))]
             ]
           }
+        },
+        metadata: {
+          sort: colors[symbol.colors[symbol.lineColor]].renderOrder
         }
       }
     case 3:
@@ -43,6 +52,9 @@ const symbolToMapboxLayer = (symbol, colors, options) => {
         filter: ['==', ['get', 'sym'], symbol.symNum],
         paint: {
           'fill-color': colors[symbol.colors[symbol.fillColor]].rgb
+        },
+        metadata: {
+          sort: colors[symbol.colors[symbol.fillColor]].renderOrder
         }
       }
   }

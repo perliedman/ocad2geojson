@@ -78,13 +78,14 @@ class OcadFile {
     this.objects = objects
     this.symbols = symbols
 
-    this.colors = parameterStrings[9].map(colorDef => {
+    this.colors = parameterStrings[9].map((colorDef, i) => {
       const cmyk = [colorDef.c, colorDef.m, colorDef.y, colorDef.k].map(Number)
       return {
         number: colorDef.n,
         cmyk: cmyk,
         name: colorDef._first,
-        rgb: Color.cmyk(cmyk).rgb().string()
+        rgb: Color.cmyk(cmyk).rgb().string(),
+        renderOrder: i
       }
     })
       .reduce((a, c) => {

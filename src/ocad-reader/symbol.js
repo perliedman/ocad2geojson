@@ -25,8 +25,9 @@ module.exports = class Symbol extends Block {
       this.colors[i] = this.readSmallInt()
     }
     this.description = ''
-    for (let i = 0; i < 64; i++) {
-      const c = this.readByte()
+    // UTF-16 string, 64 bytes
+    for (let i = 0; i < 64 / 2; i++) {
+      const c = this.readWord()
       if (c) {
         this.description += String.fromCharCode(c)
       }

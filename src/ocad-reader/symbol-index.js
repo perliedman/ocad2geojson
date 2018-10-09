@@ -1,4 +1,5 @@
 const Block = require('./block')
+const PointSymbol = require('./point-symbol')
 const LineSymbol = require('./line-symbol')
 const AreaSymbol = require('./area-symbol')
 
@@ -25,6 +26,8 @@ module.exports = class SymbolIndex extends Block {
 
     const type = this.buffer.readInt8(offset + 8)
     switch (type) {
+      case 1:
+        return new PointSymbol(this.buffer, offset)
       case 2:
         return new LineSymbol(this.buffer, offset)
       case 3:

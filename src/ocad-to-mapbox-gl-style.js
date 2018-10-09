@@ -33,7 +33,7 @@ const symbolToMapboxLayer = (symbol, colors, options) => {
             type: 'circle',
             filter: ['==', ['get', 'sym'], symbol.symNum],
             paint: {
-              'circle-color': colors[symbol.colors[element.color]].rgb,
+              'circle-color': colors[element.color].rgb,
               'circle-radius': {
                 'type': 'exponential',
                 'base': 2,
@@ -44,36 +44,43 @@ const symbolToMapboxLayer = (symbol, colors, options) => {
               }
             },
             metadata: {
-              sort: colors[symbol.colors[element.color]].renderOrder
+              sort: colors[element.color].renderOrder
             }
           }
       }
 
       break
     case 2:
-      // TODO: figure out why width ended up in secDSize; should not be so
-      const baseWidth = (symbol.secDSize / 10) || 1
+      const baseWidth = (symbol.lineWidth / 10) || 1
+      const baseMainLength = symbol.mainLength / (10 * baseWidth)
+      const baseMainGap = symbol.mainGap / (10 * baseWidth)
 
-      return {
+      const layer = {
         id: `symbol-${symbol.symNum}`,
         source: options.source,
         type: 'line',
         filter: ['==', ['get', 'sym'], symbol.symNum],
         paint: {
-          'line-color': colors[symbol.colors[symbol.lineColor]].rgb,
+          'line-color': colors[symbol.lineColor].rgb,
           'line-width': {
             'type': 'exponential',
             'base': 2,
             'stops': [
-              [0, baseWidth * Math.pow(2, (0 - 16))],
-              [24, baseWidth * Math.pow(2, (24 - 16))]
+              [0, baseWidth * Math.pow(2, (0 - 15))],
+              [24, baseWidth * Math.pow(2, (24 - 15))]
             ]
           }
         },
         metadata: {
-          sort: colors[symbol.colors[symbol.lineColor]].renderOrder
+          sort: colors[symbol.lineColor].renderOrder
         }
       }
+
+      if (baseMainLength && baseMainGap) {
+        layer.paint['line-dasharray'] = [baseMainLength, baseMainGap]
+      }
+
+      return layer
     case 3:
       return {
         id: `symbol-${symbol.symNum}`,

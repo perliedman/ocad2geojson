@@ -4,6 +4,9 @@ module.exports = class LineSymbol extends Symbol {
   constructor (buffer, offset) {
     super(buffer, offset, 2)
 
+    // TODO: why?
+    this.offset += 64
+
     this.lineColor = this.readSmallInt()
     this.lineWidth = this.readSmallInt()
     this.lineStyle = this.readSmallInt()

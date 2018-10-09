@@ -10,10 +10,39 @@ readOcad(filePath)
       writeInfo(filePath, ocadFile, process.stderr)
     }
 
-    if (!argv.p) {
-      outStream.write(JSON.stringify(ocadToGeoJson(ocadFile), null, 2))
-    } else {
-      outStream.write(JSON.stringify(ocadFile.parameterStrings, null, 2))
+    let mode = 'geojson'
+
+    if (argv.p) {
+      mode = 'params'
+    } else if (argv.s) {
+      mode = 'symbols'
+      const n = Number(argv.s)
+      const t = Math.trunc(n)
+      symNum = (t + (n - t) / 100) * 1000
+    }
+
+    switch (mode) {
+      case 'geojson':
+        outStream.write(JSON.stringify(ocadToGeoJson(ocadFile), null, 2))
+        break
+      case 'params':
+        outStream.write(JSON.stringify(ocadFile.parameterStrings, null, 2))
+        break
+      case 'symbols':
+        const symbol = ocadFile.symbols.find(s => s.symNum === symNum)
+
+        if (!symbol) {
+          console.error(`No such symbol ${argv.s} (${symNum})`)
+          process.exit(1)
+        }
+
+        delete symbol.buffer
+        if (!argv.iconBits) {
+          delete symbol.iconBits
+        }
+
+        outStream.write(JSON.stringify(symbol, null, 2))
+        break
     }
   })
 

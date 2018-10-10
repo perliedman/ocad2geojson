@@ -15,10 +15,9 @@ fetch('example.ocd')
   .then(buffer => readOcad(buffer))
   .then(ocadFile => {
     const geoJson = toWgs84(ocadToGeoJson(ocadFile), '+proj=utm +zone=33 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs')
-    const bounds = bbox(geoJson)
 
     ocadFile.colors.forEach((c, i) => {
-      ocadFile.colors[i].rgb = Color(ocadFile.colors[i].rgb).desaturate(0.4).rgb().string()
+      ocadFile.colors[i].rgb = Color(ocadFile.colors[i].rgb).desaturate(0.15).rgb().string()
     })
     
     const map = window._map = new mapboxgl.Map({
@@ -36,12 +35,18 @@ fetch('example.ocd')
           source: 'map'
         })
       },
-      center: [11.93, 57.75],
-      zoom: 14
+      // center: [11.93, 57.75],
+      // zoom: 14
     })
 
     const nav = new mapboxgl.NavigationControl();
     map.addControl(nav, 'top-left');
 
-    map.fitBounds(bounds)
+    map.on('load', function() {
+      const bounds = bbox(geoJson)
+      map.fitBounds(bounds, {
+        padding: 20,
+        animate: false
+      })
+    })
   })

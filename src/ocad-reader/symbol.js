@@ -1,4 +1,5 @@
 const Block = require('./block')
+const SymbolElement = require('./symbol-element')
 
 module.exports = class Symbol extends Block {
   constructor (buffer, offset, symbolType) {
@@ -42,5 +43,18 @@ module.exports = class Symbol extends Block {
     for (let i = 0; i < this.symbolTreeGroup.length; i++) {
       this.symbolTreeGroup[i] = this.readWord()
     }
+  }
+
+  readElements (dataSize) {
+    const elements = []
+
+    for (let i = 0; i < dataSize; i += 2) {
+      const element = new SymbolElement(this.buffer, this.offset)
+      elements.push(element)
+
+      i += element.numberCoords
+    }
+
+    return elements
   }
 }

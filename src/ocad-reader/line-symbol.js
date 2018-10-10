@@ -49,5 +49,11 @@ module.exports = class LineSymbol extends Symbol {
     this.endDSize = this.readWord()
     this.useSymbolFlags = this.readByte()
     this.reserved = this.readByte()
+
+    this.primSymElements = this.readElements(this.primDSize)
+    this.secSymElements = this.readElements(this.secDSize)
+    this.cornerSymElements = this.readElements(this.cornerDSize)
+    this.startSymElements = this.readElements(this.startDSize)
+    this.endSymElements = this.readElements(this.endDSize)
   }
 }

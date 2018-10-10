@@ -27,13 +27,12 @@ const symbolToMapboxLayer = (symbol, colors, options) => {
         case 3:
         case 4:
           const baseRadius = (element.diameter / 10) || 1
-          return {
+          const layer = {
             id: `symbol-${symbol.symNum}`,
             source: options.source,
             type: 'circle',
             filter: ['==', ['get', 'sym'], symbol.symNum],
             paint: {
-              'circle-color': colors[element.color].rgb,
               'circle-radius': {
                 'type': 'exponential',
                 'base': 2,
@@ -47,6 +46,25 @@ const symbolToMapboxLayer = (symbol, colors, options) => {
               sort: colors[element.color].renderOrder
             }
           }
+
+          const color = colors[element.color].rgb
+          if (element.type === 3) {
+            const baseWidth = element.lineWidth / 10
+            layer.paint['circle-opacity'] = 0
+            layer.paint['circle-stroke-color'] = color
+            layer.paint['circle-stroke-width'] = {
+              'type': 'exponential',
+              'base': 2,
+              'stops': [
+                [0, baseWidth * Math.pow(2, (0 - 16))],
+                [24, baseWidth * Math.pow(2, (24 - 16))]
+              ]
+            }
+          } else {
+            layer.paint['circle-color'] = color
+          }
+
+          return layer
       }
 
       break

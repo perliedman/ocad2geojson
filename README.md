@@ -3,20 +3,29 @@ OCAD to GeoJSON
 
 Work in progress to export OCAD files to GeoJSON, put put some more GIS in the orienteering world.
 
-This is barely useful at the moment, but you can at least get the geometry out of an OCAD file.
+![Example Map Output](example-map.png)
+
+You can use this to get geo/GIS data out of an OCAD file. This is currently more or less three modules
+working together:
+
+* _OCAD file reader_, to get meaningful data out of the binary OCAD files
+* _OCAD to GeoJSON_, to export the geographic objects from OCAD files
+* _OCAD to Mapbox GL style_, to get the styling (colors, line widths, etc.) into something you can
+  use with other tools
 
 ## Usage
 
 ```js
-const ocad2geojson = require('ocad2geojson')
+const { readOcad, ocadToGeoJson, ocadToMapboxGlStyle } = require('../')
 
-ocad2geojson(filePath)
+readOcad(filePath)
   .then(map => {
-    console.log(JSON.stringify(map.featureCollection))
+    const geojson = ocadToGeoJson(ocadFile)
+    console.log(JSON.stringify(geojson))
   })
 ```
 
-The argument to `ocad2geojson` can either be a file path (string) or a `Buffer` object.
+The argument to `readOcad` can either be a file path (string) or a `Buffer` object.
 
 ## Command line
 

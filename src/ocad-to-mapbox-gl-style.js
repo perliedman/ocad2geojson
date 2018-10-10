@@ -1,14 +1,21 @@
 module.exports = function ocadToMapboxGlStyle (ocadFile, options) {
-  return usedSymbols(ocadFile)
-    .symbolNums
+  const usedSymbols = usedSymbolNumbers(ocadFile)
     .map(symNum => ocadFile.symbols.find(s => symNum === s.symNum))
     .filter(s => s)
+
+  const symbolLayers = usedSymbols
     .map(symbol => symbolToMapboxLayer(symbol, ocadFile.colors, options))
     .filter(l => l)
+
+  const elementLayers = usedSymbols
+    .filter(symbol => symbol.type === 2 && symbol.primSymElements.length > 0 && symbol.primSymElements[0].type >= 3)
+    .map(symbol => circleLayer(`symbol-${symbol.symNum}-prim`, options.source, ['==', ['get', 'element'], `${symbol.symNum}-prim`], symbol.primSymElements[0], ocadFile.colors))
+
+  return symbolLayers.concat(elementLayers)
     .sort((a, b) => b.metadata.sort - a.metadata.sort)
 }
 
-const usedSymbols = ocadFile => ocadFile.objects.reduce((a, f) => {
+const usedSymbolNumbers = ocadFile => ocadFile.objects.reduce((a, f) => {
   const symbolNum = f.sym
   if (!a.idSet.has(symbolNum)) {
     a.symbolNums.push(symbolNum)
@@ -16,9 +23,11 @@ const usedSymbols = ocadFile => ocadFile.objects.reduce((a, f) => {
   }
 
   return a
-}, { symbolNums: [], idSet: new Set() })
+}, { symbolNums: [], idSet: new Set() }).symbolNums
 
 const symbolToMapboxLayer = (symbol, colors, options) => {
+  const filter = ['==', ['get', 'sym'], symbol.symNum]
+
   switch (symbol.type) {
     case 1:
       const element = symbol.elements[0]
@@ -26,50 +35,13 @@ const symbolToMapboxLayer = (symbol, colors, options) => {
       switch (element.type) {
         case 3:
         case 4:
-          const baseRadius = (element.diameter / 10) || 1
-          const layer = {
-            id: `symbol-${symbol.symNum}`,
-            source: options.source,
-            type: 'circle',
-            filter: ['==', ['get', 'sym'], symbol.symNum],
-            paint: {
-              'circle-radius': {
-                'type': 'exponential',
-                'base': 2,
-                'stops': [
-                  [0, baseRadius * Math.pow(2, (0 - 16))],
-                  [24, baseRadius * Math.pow(2, (24 - 16))]
-                ]
-              }
-            },
-            metadata: {
-              sort: colors[element.color].renderOrder
-            }
-          }
-
-          const color = colors[element.color].rgb
-          if (element.type === 3) {
-            const baseWidth = element.lineWidth / 10
-            layer.paint['circle-opacity'] = 0
-            layer.paint['circle-stroke-color'] = color
-            layer.paint['circle-stroke-width'] = {
-              'type': 'exponential',
-              'base': 2,
-              'stops': [
-                [0, baseWidth * Math.pow(2, (0 - 16))],
-                [24, baseWidth * Math.pow(2, (24 - 16))]
-              ]
-            }
-          } else {
-            layer.paint['circle-color'] = color
-          }
-
-          return layer
+          return circleLayer(`symbol-${symbol.symNum}`, options.source, filter, element, colors)
       }
 
       break
     case 2:
-      const baseWidth = (symbol.lineWidth / 10) || 1
+      if (!symbol.lineWidth) return
+      const baseWidth = (symbol.lineWidth / 10)
       const baseMainLength = symbol.mainLength / (10 * baseWidth)
       const baseMainGap = symbol.mainGap / (10 * baseWidth)
 
@@ -80,14 +52,7 @@ const symbolToMapboxLayer = (symbol, colors, options) => {
         filter: ['==', ['get', 'sym'], symbol.symNum],
         paint: {
           'line-color': colors[symbol.lineColor].rgb,
-          'line-width': {
-            'type': 'exponential',
-            'base': 2,
-            'stops': [
-              [0, baseWidth * Math.pow(2, (0 - 15))],
-              [24, baseWidth * Math.pow(2, (24 - 15))]
-            ]
-          }
+          'line-width': expFunc(baseWidth)
         },
         metadata: {
           sort: colors[symbol.lineColor].renderOrder
@@ -114,3 +79,40 @@ const symbolToMapboxLayer = (symbol, colors, options) => {
       }
   }
 }
+
+const circleLayer = (id, source, filter, element, colors) => {
+  const baseRadius = (element.diameter / 10) || 1
+  const layer = {
+    id,
+    source,
+    type: 'circle',
+    filter,
+    paint: {
+      'circle-radius': expFunc(baseRadius)
+    },
+    metadata: {
+      sort: colors[element.color].renderOrder
+    }
+  }
+
+  const color = colors[element.color].rgb
+  if (element.type === 3) {
+    const baseWidth = element.lineWidth / 10
+    layer.paint['circle-opacity'] = 0
+    layer.paint['circle-stroke-color'] = color
+    layer.paint['circle-stroke-width'] = expFunc(baseWidth)
+  } else {
+    layer.paint['circle-color'] = color
+  }
+
+  return layer
+}
+
+const expFunc = base => ({
+  'type': 'exponential',
+  'base': 2,
+  'stops': [
+    [0, base * Math.pow(2, (0 - 16))],
+    [24, base * Math.pow(2, (24 - 16))]
+  ]
+})

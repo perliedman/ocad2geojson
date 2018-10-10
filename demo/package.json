@@ -4,7 +4,7 @@
   "description": "A demo application to try out ocad2geojson",
   "main": "index.js",
   "scripts": {
-    "start": "watchify index.js -o bundle.js",
+    "start": "watchify index.js -o bundle.js -d",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "Per Liedman <per@liedman.net>",

@@ -8,8 +8,8 @@ module.exports = function ocadToMapboxGlStyle (ocadFile, options) {
     .filter(l => l)
 
   const elementLayers = usedSymbols
-    .filter(symbol => symbol.type === 2 && symbol.primSymElements.length > 0 && symbol.primSymElements[0].type >= 3)
-    .map(symbol => circleLayer(`symbol-${symbol.symNum}-prim`, options.source, ['==', ['get', 'element'], `${symbol.symNum}-prim`], symbol.primSymElements[0], ocadFile.colors))
+    .map(symbol => symbolElementsToMapboxLayer(symbol, ocadFile.colors, options))
+    .filter(l => l)
 
   return symbolLayers.concat(elementLayers)
     .sort((a, b) => b.metadata.sort - a.metadata.sort)
@@ -76,6 +76,19 @@ const symbolToMapboxLayer = (symbol, colors, options) => {
         metadata: {
           sort: colors[symbol.colors[symbol.fillColor]].renderOrder
         }
+      }
+  }
+}
+
+const symbolElementsToMapboxLayer = (symbol, colors, options) => {
+  switch (symbol.type) {
+    case 2:
+      if (symbol.primSymElements.length > 0 && symbol.primSymElements[0].type >= 3) {
+        return circleLayer(
+          `symbol-${symbol.symNum}-prim`,
+          options.source,
+          ['==', ['get', 'element'], `${symbol.symNum}-prim`],
+          symbol.primSymElements[0], colors)
       }
   }
 }

@@ -92,8 +92,8 @@ fetch('../example.ocd')
                   'type': 'exponential',
                   'base': 2,
                   'stops': [
-                    [0, 4 * Math.pow(2, (0 - 16))],
-                    [24, 4 * Math.pow(2, (24 - 16))]
+                    [0, 7 * Math.pow(2, (0 - 16))],
+                    [24, 7 * Math.pow(2, (24 - 16))]
                   ]
                 },
                 "line-opacity": 0.85
@@ -102,17 +102,55 @@ fetch('../example.ocd')
 
           let firstIndex = 0
           let lastIndex = 0
+          let currentCoords = []
+          let currentTimes = []
 
           const update = () => {
             const relT = (+new Date() - startT) * replaySpeedFactor
             const trackT = trackStartT + relT
             const minT = trackT - 60 * 1000
 
-            while (coordTimes[firstIndex].t < minT) firstIndex++
-            while (coordTimes[lastIndex].t < trackT) lastIndex++
+            for (firstIndex = 0; firstIndex < currentTimes.length && currentTimes[firstIndex] < minT; firstIndex++) {}
+            if (firstIndex > 0) {
+              currentCoords = currentCoords.slice(firstIndex)
+              currentTimes = currentTimes.slice(firstIndex)
+            }
 
-            currentPath.geometry.coordinates = trackPath.geometry.coordinates.slice(firstIndex, lastIndex + 1)
+            while (lastIndex < coordTimes.length - 2 && coordTimes[lastIndex + 1].t <= trackT) {
+              lastIndex++
+              currentCoords.push(trackPath.geometry.coordinates[lastIndex])
+              currentTimes.push(coordTimes[lastIndex].t)
+            }
+
+            const lastT = coordTimes[lastIndex].t
+            const lastC = trackPath.geometry.coordinates[lastIndex]
+            const nextT = coordTimes[lastIndex + 1].t
+            const nextC = trackPath.geometry.coordinates[lastIndex + 1]
+            const dLng = nextC[0] - lastC[0]
+            const dLat = nextC[1] - lastC[1]
+            const dT = nextT - lastT
+            const d = Math.min((trackT - lastT) / dT, 1)
+            const interpolatedCoord = [
+              lastC[0] + dLng * d,
+              lastC[1] + dLat * d,
+            ]
+
+            currentCoords.push(interpolatedCoord)
+            currentTimes.push(trackT)
+
+            currentPath.geometry.coordinates = currentCoords
             map.getSource('track').setData(currentGeoJson);
+
+            const bounds = bbox(currentPath)
+            const bW = bounds[2] - bounds[0]
+            const bH = bounds[3] - bounds[1]
+            map.fitBounds([
+                [bounds[0] - 2.5 * bW, bounds[1] - 2.5 * bH],
+                [bounds[0] + 3 * bW, bounds[1] + 3 * bH],
+              ],
+              {
+                padding: 20,
+              })
 
             window.requestAnimationFrame(update)
           }

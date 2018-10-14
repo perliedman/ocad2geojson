@@ -4,7 +4,8 @@
   "description": "A demo application to try out ocad2geojson",
   "main": "index.js",
   "scripts": {
-    "start": "watchify index.js -o bundle.js -d",
+    "viewer": "watchify viewer/index.js -o viewer/bundle.js -d",
+    "tracker": "watchify tracker/index.js -o tracker/bundle.js -d",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "Per Liedman <per@liedman.net>",
@@ -14,6 +15,7 @@
     "watchify": "^3.11.0"
   },
   "dependencies": {
+    "@mapbox/togeojson": "^0.16.0",
     "@turf/bbox": "^6.0.1",
     "blob-to-buffer": "^1.2.8",
     "brfs": "^2.0.1",

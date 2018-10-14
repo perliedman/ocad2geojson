@@ -1,4 +1,4 @@
-const { readOcad, ocadToGeoJson, ocadToMapboxGlStyle } = require('../')
+const { readOcad, ocadToGeoJson, ocadToMapboxGlStyle } = require('../../')
 const { Buffer } = require('buffer')
 const { toWgs84 } = require('reproject')
 const Color = require('color')
@@ -6,7 +6,7 @@ const toBuffer = require('blob-to-buffer')
 const bbox = require('@turf/bbox').default
 const mapboxgl = window.mapboxgl
 
-fetch('example.ocd')
+fetch('../example.ocd')
   .then(res => res.blob())
   .then(blob => new Promise((resolve, reject) => toBuffer(blob, (err, buffer) => {
     if (err) reject(err)

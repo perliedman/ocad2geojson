@@ -4,6 +4,8 @@ const { toWgs84 } = require('reproject')
 const Color = require('color')
 const toBuffer = require('blob-to-buffer')
 const bbox = require('@turf/bbox').default
+const bearing = require('@turf/bearing').default
+const distance = require('@turf/distance').default
 const { gpx } = require('@mapbox/togeojson')
 const mapboxgl = window.mapboxgl
 
@@ -57,7 +59,7 @@ fetch('../example.ocd')
         .then(text => (new window.DOMParser()).parseFromString(text, "text/xml"))
         .then(doc => gpx(doc))
         .then(trackGeoJson => {
-          const replaySpeedFactor = 10
+          const replaySpeedFactor = 30
           const trackPath = trackGeoJson.features[0]
           const coordTimes = trackPath.properties.coordTimes.map((t, i) => ({t: +new Date(t), i}))
           const startT = +new Date()
@@ -100,13 +102,19 @@ fetch('../example.ocd')
             }
           })
 
+          let currentBearing = 0
+          let currentPitch = 0
           let firstIndex = 0
           let lastIndex = 0
           let currentCoords = []
           let currentTimes = []
+          let lastUpdate = 0
 
           const update = () => {
-            const relT = (+new Date() - startT) * replaySpeedFactor
+            const now = +new Date()
+            const frameT = (now - lastUpdate) / 1000
+            lastUpdate = now
+            const relT = (now - startT) * replaySpeedFactor
             const trackT = trackStartT + relT
             const minT = trackT - 60 * 1000
 
@@ -141,14 +149,35 @@ fetch('../example.ocd')
             currentPath.geometry.coordinates = currentCoords
             map.getSource('track').setData(currentGeoJson);
 
+            // let bs = 0
+            // for (let i = lastIndex + 1; i < lastIndex + 10; i++) {
+            //   bs += i < trackPath.geometry.coordinates.length
+            //     ? bearing(trackPath.geometry.coordinates[lastIndex], trackPath.geometry.coordinates[i])
+            //     : 0
+            // }
+
+            const targetBearing = bearing(currentCoords[0], currentCoords[currentCoords.length - 1])
+            let dBearing = (targetBearing - currentBearing)
+            if (dBearing > 180) dBearing -= 360
+            const bearingChange = Math.min(20, Math.abs(dBearing)) * Math.sign(dBearing)
+            currentBearing += bearingChange * Math.min(frameT, 1)
+            if (currentBearing < -180) currentBearing += 360
+
+            const targetPitch = Math.min(distance(currentCoords[0], currentCoords[currentCoords.length - 1]) * 160, 45)
+            const dPitch = (targetPitch - currentPitch)
+            const pitchChange = Math.min(5, Math.abs(dPitch)) * Math.sign(dPitch)
+            currentPitch += pitchChange * Math.min(frameT, 1)
+
             const bounds = bbox(currentPath)
-            const bW = bounds[2] - bounds[0]
-            const bH = bounds[3] - bounds[1]
+            const bW = Math.max(0.001, bounds[2] - bounds[0])
+            const bH = Math.max(0.001, bounds[3] - bounds[1])
             map.fitBounds([
                 [bounds[0] - 2.5 * bW, bounds[1] - 2.5 * bH],
                 [bounds[0] + 3 * bW, bounds[1] + 3 * bH],
               ],
               {
+                bearing: currentBearing,
+                pitch: currentPitch,
                 padding: 20,
               })
 

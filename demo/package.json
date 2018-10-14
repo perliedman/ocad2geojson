@@ -17,6 +17,8 @@
   "dependencies": {
     "@mapbox/togeojson": "^0.16.0",
     "@turf/bbox": "^6.0.1",
+    "@turf/bearing": "^6.0.1",
+    "@turf/distance": "^6.0.1",
     "blob-to-buffer": "^1.2.8",
     "brfs": "^2.0.1",
     "color": "^3.0.0",

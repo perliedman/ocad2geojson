@@ -1,8 +1,12 @@
 const fs = require('fs')
+const mkdirp = require('mkdirp')
+const { toWgs84 } = require('reproject')
+const geojsonvt = require('geojson-vt')
+const vtpbf = require('vt-pbf')
 const argv = require('minimist')(process.argv.slice(2));
-const { readOcad, ocadToGeoJson } = require('./')
+const { readOcad, ocadToGeoJson, ocadToMapboxGlStyle } = require('./')
 const filePath = argv._[0]
-const outStream = argv.o ? fs.createWriteStream(argv.o) : process.stdout
+var outStream
 
 readOcad(filePath)
   .then(ocadFile => {
@@ -19,6 +23,14 @@ readOcad(filePath)
       const n = Number(argv.s)
       const t = Math.trunc(n)
       symNum = (t + (n - t) / 100) * 1000
+    } else if (argv['vector-tiles']) {
+      mode = 'vectortiles'
+    }
+
+    if (mode !== 'vectortiles') {
+      outStream = argv.o ? fs.createWriteStream(argv.o) : process.stdout
+    } else {
+      mkdirp.sync(argv.o)
     }
 
     switch (mode) {
@@ -43,6 +55,29 @@ readOcad(filePath)
 
         outStream.write(JSON.stringify(symbol, null, 2))
         break
+      case 'vectortiles':
+        const geoJson = toWgs84(ocadToGeoJson(ocadFile), '+proj=utm +zone=33 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs')
+        const tileIndex = geojsonvt(geoJson, {
+          maxZoom: 14,
+          indexMaxZoom: 14,
+          indexMaxPoints: 0
+        })
+        tileIndex.tileCoords.forEach(tc => {
+          mkdirp.sync(`${argv.o}/${tc.z}/${tc.x}`)
+          const tile = tileIndex.getTile(tc.z, tc.x, tc.y)
+          const pbf = vtpbf.fromGeojsonVt({ ocad: tile })
+          const tilePath = `${argv.o}/${tc.z}/${tc.x}/${tc.y}.pbf`
+          fs.writeFileSync(tilePath, pbf)
+          console.log(tilePath)
+        })
+        fs.writeFileSync(`${argv.o}/layers.json`, JSON.stringify(ocadToMapboxGlStyle(ocadFile, {
+          source: 'map',
+          sourceLayer: 'ocad'
+        })))
+        break
+      default:
+        console.error(`Unknown mode ${mode}.`)
+        process.exit(1)
     }
   })
 
@@ -53,7 +88,7 @@ const writeInfo = (path, map, stream) => {
     `File: ${path}`,
     `OCAD version: ${header.version}.${header.subVersion}.${header.subSubVersion}`,
     `File version: ${header.currentFileVersion}`,
-    `Total number objects: ${map.featureCollection.features.length}`,
+    `Total number objects: ${map.objects.length}`,
   ]
 
   if (map.parameterStrings[1039]) {

@@ -35,7 +35,7 @@ const symbolToMapboxLayer = (symbol, colors, options) => {
       switch (element.type) {
         case 3:
         case 4:
-          return circleLayer(`symbol-${symbol.symNum}`, options.source, filter, element, colors)
+          return circleLayer(`symbol-${symbol.symNum}`, options.source, options.sourceLayer, filter, element, colors)
       }
 
       break
@@ -48,6 +48,7 @@ const symbolToMapboxLayer = (symbol, colors, options) => {
       const layer = {
         id: `symbol-${symbol.symNum}`,
         source: options.source,
+        'source-layer': options.sourceLayer,
         type: 'line',
         filter: ['==', ['get', 'sym'], symbol.symNum],
         paint: {
@@ -68,6 +69,7 @@ const symbolToMapboxLayer = (symbol, colors, options) => {
       return {
         id: `symbol-${symbol.symNum}`,
         source: options.source,
+        'source-layer': options.sourceLayer,
         type: 'fill',
         filter: ['==', ['get', 'sym'], symbol.symNum],
         paint: {
@@ -87,17 +89,19 @@ const symbolElementsToMapboxLayer = (symbol, colors, options) => {
         return circleLayer(
           `symbol-${symbol.symNum}-prim`,
           options.source,
+          options.sourceLayer,
           ['==', ['get', 'element'], `${symbol.symNum}-prim`],
           symbol.primSymElements[0], colors)
       }
   }
 }
 
-const circleLayer = (id, source, filter, element, colors) => {
+const circleLayer = (id, source, sourceLayer, filter, element, colors) => {
   const baseRadius = (element.diameter / 10) || 1
   const layer = {
     id,
     source,
+    'source-layer': sourceLayer,
     type: 'circle',
     filter,
     paint: {

@@ -66,6 +66,7 @@ const symbolToMapboxLayer = (symbol, colors, options) => {
 
       return layer
     case 3:
+      const fillColorIndex = symbol.fillOn ? symbol.fillColor : symbol.colors[0]
       return {
         id: `symbol-${symbol.symNum}`,
         source: options.source,
@@ -73,10 +74,11 @@ const symbolToMapboxLayer = (symbol, colors, options) => {
         type: 'fill',
         filter: ['==', ['get', 'sym'], symbol.symNum],
         paint: {
-          'fill-color': colors[symbol.colors[symbol.fillColor]].rgb
+          'fill-color': colors[fillColorIndex].rgb,
+          'fill-opacity': symbol.fillOn ? 1 : (symbol.hatchLineWidth / symbol.hatchDist) || 0.5 // TODO: not even close, but emulates hatch/patterns
         },
         metadata: {
-          sort: colors[symbol.colors[symbol.fillColor]].renderOrder
+          sort: colors[fillColorIndex].renderOrder
         }
       }
   }

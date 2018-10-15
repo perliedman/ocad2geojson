@@ -3,9 +3,10 @@ const LRect = require('./lrect')
 const TObject = require('./tobject')
 
 module.exports = class ObjectIndex extends Block {
-  constructor (buffer, offset) {
+  constructor (buffer, offset, version) {
     super(buffer, offset)
 
+    this.version = version
     this.nextObjectIndexBlock = this.readInteger()
     this.table = new Array(256)
     for (let i = 0; i < 256; i++) {
@@ -39,6 +40,6 @@ module.exports = class ObjectIndex extends Block {
   parseObject (objIndex, objType) {
     if (!objIndex.pos) return
 
-    return new TObject(this.buffer, objIndex.pos, objType)
+    return new TObject[this.version](this.buffer, objIndex.pos, objType)
   }
 }

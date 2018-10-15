@@ -4,9 +4,10 @@ const LineSymbol = require('./line-symbol')
 const AreaSymbol = require('./area-symbol')
 
 module.exports = class SymbolIndex extends Block {
-  constructor (buffer, offset) {
+  constructor (buffer, offset, version) {
     super(buffer, offset)
 
+    this.version = version
     this.nextSymbolIndexBlock = this.readInteger()
     this.symbolPosition = new Array(256)
     for (let i = 0; i < this.symbolPosition.length; i++) {
@@ -27,11 +28,11 @@ module.exports = class SymbolIndex extends Block {
     const type = this.buffer.readInt8(offset + 8)
     switch (type) {
       case 1:
-        return new PointSymbol(this.buffer, offset)
+        return new PointSymbol[this.version](this.buffer, offset)
       case 2:
-        return new LineSymbol(this.buffer, offset)
+        return new LineSymbol[this.version](this.buffer, offset)
       case 3:
-        return new AreaSymbol(this.buffer, offset)
+        return new AreaSymbol[this.version](this.buffer, offset)
     }
 
     // Ignore other symbols for now

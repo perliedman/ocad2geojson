@@ -32,7 +32,7 @@ const parseOcadBuffer = async (buffer, options) => new Promise((resolve, reject)
   let symbols = []
   let symbolIndexOffset = header.symbolIndexBlock
   while (symbolIndexOffset) {
-    let symbolIndex = new SymbolIndex(buffer, symbolIndexOffset)
+    let symbolIndex = new SymbolIndex(buffer, symbolIndexOffset, header.version)
     Array.prototype.push.apply(symbols, symbolIndex.parseSymbols())
 
     symbolIndexOffset = symbolIndex.nextObjectIndexBlock
@@ -41,7 +41,7 @@ const parseOcadBuffer = async (buffer, options) => new Promise((resolve, reject)
   let objects = []
   let objectIndexOffset = header.objectIndexBlock
   while (objectIndexOffset) {
-    let objectIndex = new ObjectIndex(buffer, objectIndexOffset)
+    let objectIndex = new ObjectIndex(buffer, objectIndexOffset, header.version)
     Array.prototype.push.apply(objects, objectIndex.parseObjects())
 
     objectIndexOffset = objectIndex.nextObjectIndexBlock

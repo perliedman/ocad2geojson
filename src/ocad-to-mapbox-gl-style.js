@@ -73,10 +73,10 @@ const symbolToMapboxLayer = (symbol, colors, options) => {
         type: 'fill',
         filter: ['==', ['get', 'sym'], symbol.symNum],
         paint: {
-          'fill-color': colors[symbol.colors[symbol.fillColor]].rgb
+          'fill-color': (colors[symbol.colors[symbol.fillColor]] && colors[symbol.colors[symbol.fillColor]].rgb) || '#ff0000'
         },
         metadata: {
-          sort: colors[symbol.colors[symbol.fillColor]].renderOrder
+          sort: (colors[symbol.colors[symbol.fillColor]] && colors[symbol.colors[symbol.fillColor]].renderOrder) || 0
         }
       }
   }

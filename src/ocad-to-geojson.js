@@ -95,6 +95,8 @@ const generateSymbolElements = (symbols, feature) => {
   const symbol = symbols[feature.properties.sym]
   const elements = []
 
+  if (!symbol) return elements
+
   switch (symbol.type) {
     case 2:
       if (symbol.primSymElements.length > 0) {
@@ -112,17 +114,7 @@ const generateSymbolElements = (symbols, feature) => {
           let c = vAdd(c0, vMul(u, endLength))
           const mainV = vMul(u, mainLength)
           while (d < segmentLength) {
-            elements.push({
-              type: 'Feature',
-              properties: {
-                element: `${symbol.symNum}-prim`,
-                parentId: feature.id
-              },
-              geometry: {
-                type: 'Point',
-                coordinates: c
-              }
-            })
+            elements.push(createElement(symbol, feature, symbol.primSymElements, c))
 
             c = vAdd(c, mainV)
             d += mainLength
@@ -133,6 +125,18 @@ const generateSymbolElements = (symbols, feature) => {
 
   return elements
 }
+
+const createElement = (symbol, parentFeature, element, c) => ({
+  type: 'Feature',
+  properties: {
+    element: `${symbol.symNum}-prim`,
+    parentId: parentFeature.id
+  },
+  geometry: {
+    type: 'Point',
+    coordinates: c
+  }
+})
 
 const applyCrs = (featureCollection, crs) => {
   // OCAD uses 1/100 mm of "paper coordinates" as units, we

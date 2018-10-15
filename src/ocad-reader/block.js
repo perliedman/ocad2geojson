@@ -1,7 +1,7 @@
 module.exports = class Block {
   constructor (buffer, offset) {
     this.buffer = buffer
-    this.offset = offset || 0
+    this._startOffset = this.offset = offset || 0
   }
 
   readInteger () {
@@ -42,5 +42,9 @@ module.exports = class Block {
     const val = this.buffer.readDoubleLE(this.offset)
     this.offset += 8
     return val
+  }
+
+  getSize () {
+    return this.offset - this._startOffset
   }
 }

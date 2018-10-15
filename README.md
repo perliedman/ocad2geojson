@@ -13,6 +13,8 @@ working together:
 * _OCAD to Mapbox GL style_, to get the styling (colors, line widths, etc.) into something you can
   use with other tools
 
+OCAD version 10, 11 and 12 files are mostly supported.
+
 ## Usage
 
 ```js

@@ -7,9 +7,9 @@ module.exports = function ocadToMapboxGlStyle (ocadFile, options) {
     .map(symbol => symbolToMapboxLayer(symbol, ocadFile.colors, options))
     .filter(l => l)
 
-  const elementLayers = usedSymbols
+  const elementLayers = Array.prototype.concat.apply([], usedSymbols
     .map(symbol => symbolElementsToMapboxLayer(symbol, ocadFile.colors, options))
-    .filter(l => l)
+    .filter(l => l))
 
   return symbolLayers.concat(elementLayers)
     .sort((a, b) => b.metadata.sort - a.metadata.sort)
@@ -26,75 +26,124 @@ const usedSymbolNumbers = ocadFile => ocadFile.objects.reduce((a, f) => {
 }, { symbolNums: [], idSet: new Set() }).symbolNums
 
 const symbolToMapboxLayer = (symbol, colors, options) => {
+  const id = `symbol-${symbol.symNum}`
   const filter = ['==', ['get', 'sym'], symbol.symNum]
 
   switch (symbol.type) {
-    case 1:
-      const element = symbol.elements[0]
+    // case 1:
+    //   const element = symbol.elements[0]
 
-      switch (element.type) {
-        case 3:
-        case 4:
-          return circleLayer(`symbol-${symbol.symNum}`, options.source, options.sourceLayer, filter, element, colors)
-      }
+    //   switch (element.type) {
+    //     case 3:
+    //     case 4:
+    //       return circleLayer(`symbol-${symbol.symNum}`, options.source, options.sourceLayer, filter, element, colors)
+    //   }
 
-      break
+    //   break
     case 2:
       if (!symbol.lineWidth) return
-      const baseWidth = (symbol.lineWidth / 10)
-      const baseMainLength = symbol.mainLength / (10 * baseWidth)
-      const baseMainGap = symbol.mainGap / (10 * baseWidth)
-
-      const layer = {
-        id: `symbol-${symbol.symNum}`,
-        source: options.source,
-        'source-layer': options.sourceLayer,
-        type: 'line',
-        filter: ['==', ['get', 'sym'], symbol.symNum],
-        paint: {
-          'line-color': colors[symbol.lineColor].rgb,
-          'line-width': expFunc(baseWidth)
-        },
-        metadata: {
-          sort: colors[symbol.lineColor].renderOrder
-        }
-      }
-
-      if (baseMainLength && baseMainGap) {
-        layer.paint['line-dasharray'] = [baseMainLength, baseMainGap]
-      }
-
-      return layer
+      return lineLayer(id, options.source, options.sourceLayer, filter, symbol, colors)
     case 3:
-      const fillColorIndex = symbol.fillOn ? symbol.fillColor : symbol.colors[0]
-      return {
-        id: `symbol-${symbol.symNum}`,
-        source: options.source,
-        'source-layer': options.sourceLayer,
-        type: 'fill',
-        filter: ['==', ['get', 'sym'], symbol.symNum],
-        paint: {
-          'fill-color': colors[fillColorIndex].rgb,
-          'fill-opacity': symbol.fillOn ? 1 : (symbol.hatchLineWidth / symbol.hatchDist) || 0.5 // TODO: not even close, but emulates hatch/patterns
-        },
-        metadata: {
-          sort: colors[fillColorIndex].renderOrder
-        }
-      }
+      return areaLayer(id, options.source, options.sourceLayer, filter, symbol, colors)
   }
 }
 
 const symbolElementsToMapboxLayer = (symbol, colors, options) => {
+  var elements = []
+  var name
   switch (symbol.type) {
+    case 1:
+      elements = symbol.elements
+      name = 'element'
+      break
     case 2:
-      if (symbol.primSymElements.length > 0 && symbol.primSymElements[0].type >= 3) {
-        return circleLayer(
-          `symbol-${symbol.symNum}-prim`,
-          options.source,
-          options.sourceLayer,
-          ['==', ['get', 'element'], `${symbol.symNum}-prim`],
-          symbol.primSymElements[0], colors)
-      }
+      elements = symbol.primSymElements
+      name = 'prim'
+      break
+  }
+
+  return elements
+    .map((e, i) => createElementLayer(e, name, i, symbol, colors, options))
+    .filter(l => l)
+}
+
+const createElementLayer = (element, name, index, symbol, colors, options) => {
+  const id = `symbol-${symbol.symNum}-${name}-${index}`
+  const filter = ['==', ['get', 'element'], `${symbol.symNum}-${name}-${index}`]
+
+  switch (element.type) {
+    case 1:
+      return lineLayer(
+        id,
+        options.source,
+        options.sourceLayer,
+        filter,
+        element, colors)
+    case 2:
+      return areaLayer(
+        id,
+        options.source,
+        options.sourceLayer,
+        filter,
+        element, colors)
+    case 3:
+    case 4:
+      return circleLayer(
+        id,
+        options.source,
+        options.sourceLayer,
+        filter,
+        element, colors)
+  }
+}
+
+const lineLayer = (id, source, sourceLayer, filter, lineDef, colors) => {
+  const baseWidth = (lineDef.lineWidth / 10)
+  const baseMainLength = lineDef.mainLength / (10 * baseWidth)
+  const baseMainGap = lineDef.mainGap / (10 * baseWidth)
+  const colorIndex = lineDef.lineColor || lineDef.color
+
+  const layer = {
+    id,
+    source,
+    'source-layer': sourceLayer,
+    type: 'line',
+    filter,
+    paint: {
+      'line-color': colors[colorIndex].rgb,
+      'line-width': expFunc(baseWidth)
+    },
+    metadata: {
+      sort: colors[colorIndex].renderOrder
+    }
+  }
+
+  if (baseMainLength && baseMainGap) {
+    layer.paint['line-dasharray'] = [baseMainLength, baseMainGap]
+  }
+
+  return layer
+}
+
+const areaLayer = (id, source, sourceLayer, filter, areaDef, colors) => {
+  const fillColorIndex = areaDef.fillOn !== undefined
+    ? areaDef.fillOn ? areaDef.fillColor : areaDef.colors[0]
+    : areaDef.color
+  return {
+    id,
+    source,
+    'source-layer': sourceLayer,
+    type: 'fill',
+    filter,
+    paint: {
+      'fill-color': colors[fillColorIndex].rgb,
+      'fill-opacity': areaDef.fillOn === undefined || areaDef.fillOn
+        ? 1
+        : (areaDef.hatchLineWidth / areaDef.hatchDist) || 0.5 // TODO: not even close, but emulates hatch/patterns
+    },
+    metadata: {
+      sort: colors[fillColorIndex].renderOrder
+    }
   }
 }
 

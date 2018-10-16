@@ -1,8 +1,8 @@
 module.exports = class TdPoly extends Array {
-  constructor (ocadX, ocadY) {
-    super(ocadX >> 8, ocadY >> 8)
-    this.xFlags = ocadX & 0xff
-    this.yFlags = ocadY & 0xff
+  constructor (ocadX, ocadY, xFlags, yFlags) {
+    super(xFlags === undefined ? ocadX >> 8 : ocadX, yFlags === undefined ? ocadY >> 8 : ocadY)
+    this.xFlags = xFlags === undefined ? ocadX & 0xff : xFlags
+    this.yFlags = yFlags === undefined ? ocadY & 0xff : yFlags
   }
 
   isFirstBezier () {
@@ -35,5 +35,26 @@ module.exports = class TdPoly extends Array {
 
   isDashPoint () {
     return this.yFlags & 0x08
+  }
+
+  vLength () {
+    return Math.sqrt(this[0] * this[0] + this[1] * this[1])
+  }
+
+  add (c1) {
+    return new TdPoly(this[0] + c1[0], this[1] + c1[1], this.xFlags, this.yFlags)
+  }
+
+  sub (c1) {
+    return new TdPoly(this[0] - c1[0], this[1] - c1[1], this.xFlags, this.yFlags)
+  }
+
+  mul (f) {
+    return new TdPoly(this[0] * f, this[1] * f, this.xFlags, this.yFlags)
+  }
+
+  unit () {
+    const l = this.vLength()
+    return this.mul(1 / l)
   }
 }

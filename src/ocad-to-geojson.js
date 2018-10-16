@@ -57,27 +57,9 @@ const tObjectToGeoJson = object => {
       }
       break
     case 3:
-      const rings = []
-      let currentRing = []
-      rings.push(currentRing)
-      for (let i = 0; i < object.coordinates.length; i++) {
-        const c = object.coordinates[i]
-        if (c.isFirstHolePoint()) {
-          // Copy first coordinate
-          currentRing.push(currentRing[0].slice())
-          currentRing = []
-          rings.push(currentRing)
-        }
-
-        currentRing.push(c)
-      }
-
-      // Copy first coordinate
-      currentRing.push(currentRing[0].slice())
-
       geometry = {
         type: 'Polygon',
-        coordinates: rings
+        coordinates: coordinatesToRings(object.coordinates)
       }
       break
     default:
@@ -93,30 +75,35 @@ const tObjectToGeoJson = object => {
 
 const generateSymbolElements = (symbols, feature) => {
   const symbol = symbols[feature.properties.sym]
-  const elements = []
+  let elements = []
 
   if (!symbol) return elements
 
   switch (symbol.type) {
+    case 1:
+      elements = symbol.elements
+        .map((e, i) => createElement(symbol, 'element', i, feature, e, feature.geometry.coordinates))
+      break
     case 2:
       if (symbol.primSymElements.length > 0) {
         const coords = feature.geometry.coordinates
         for (let i = 1; i < coords.length; i++) {
           const c0 = coords[i - 1]
           const c1 = coords[i]
-          const v = vSub(c1, c0)
-          const u = vUnit(v)
-          const segmentLength = vLength(v)
+          const v = c1.sub(c0)
+          const u = v.unit()
+          const segmentLength = v.vLength()
           const mainLength = symbol.mainLength
           const endLength = symbol.endLength
 
           let d = endLength
-          let c = vAdd(c0, vMul(u, endLength))
-          const mainV = vMul(u, mainLength)
+          let c = c0.add(u.mul(endLength))
+          const mainV = u.mul(mainLength)
           while (d < segmentLength) {
-            elements.push(createElement(symbol, feature, symbol.primSymElements, c))
+            elements = elements.concat(symbol.primSymElements
+              .map((e, i) => createElement(symbol, 'prim', i, feature, e, c)))
 
-            c = vAdd(c, mainV)
+            c = c.add(mainV)
             d += mainLength
           }
         }
@@ -126,17 +113,41 @@ const generateSymbolElements = (symbols, feature) => {
   return elements
 }
 
-const createElement = (symbol, parentFeature, element, c) => ({
-  type: 'Feature',
-  properties: {
-    element: `${symbol.symNum}-prim`,
-    parentId: parentFeature.id
-  },
-  geometry: {
-    type: 'Point',
-    coordinates: c
+const createElement = (symbol, name, index, parentFeature, element, c) => {
+  var geometry
+  const translatedCoords = element.coords.map(lc => lc.add(c))
+
+  switch (element.type) {
+    case 1:
+      geometry = {
+        type: 'LineString',
+        coordinates: translatedCoords
+      }
+      break
+    case 2:
+      geometry = {
+        type: 'Polygon',
+        coordinates: coordinatesToRings(translatedCoords)
+      }
+      break
+    case 3:
+    case 4:
+      geometry = {
+        type: 'Point',
+        coordinates: translatedCoords[0]
+      }
+      break
   }
-})
+
+  return {
+    type: 'Feature',
+    properties: {
+      element: `${symbol.symNum}-${name}-${index}`,
+      parentId: parentFeature.id
+    },
+    geometry
+  }
+}
 
 const applyCrs = (featureCollection, crs) => {
   // OCAD uses 1/100 mm of "paper coordinates" as units, we
@@ -149,21 +160,24 @@ const applyCrs = (featureCollection, crs) => {
   })
 }
 
-const vLength = (v) => {
-  return Math.sqrt(v[0] * v[0] + v[1] * v[1])
-}
+const coordinatesToRings = coordinates => {
+  const rings = []
+  let currentRing = []
+  rings.push(currentRing)
+  for (let i = 0; i < coordinates.length; i++) {
+    const c = coordinates[i]
+    if (c.isFirstHolePoint()) {
+      // Copy first coordinate
+      currentRing.push(currentRing[0].slice())
+      currentRing = []
+      rings.push(currentRing)
+    }
 
-const vAdd = (c0, c1) => {
-  return [c0[0] + c1[0], c0[1] + c1[1]]
-}
+    currentRing.push(c)
+  }
 
-const vSub = (c0, c1) => {
-  return [c0[0] - c1[0], c0[1] - c1[1]]
-}
+  // Copy first coordinate
+  currentRing.push(currentRing[0].slice())
 
-const vMul = (v, f) => [v[0] * f, v[1] * f]
-
-const vUnit = (v) => {
-  const l = vLength(v)
-  return [v[0] / l, v[1] / l]
+  return rings
 }

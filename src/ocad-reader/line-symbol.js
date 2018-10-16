@@ -64,6 +64,7 @@ class Decrease10 extends Block {
   constructor (buffer, offset) {
     super(buffer, offset)
 
+    this.decMode = this.readWord()
     this.decLast = this.readWord()
     this.res = this.readWord()
   }

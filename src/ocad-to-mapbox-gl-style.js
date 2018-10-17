@@ -101,7 +101,7 @@ const lineLayer = (id, source, sourceLayer, filter, lineDef, colors) => {
   const baseWidth = (lineDef.lineWidth / 10)
   const baseMainLength = lineDef.mainLength / (10 * baseWidth)
   const baseMainGap = lineDef.mainGap / (10 * baseWidth)
-  const colorIndex = lineDef.lineColor || lineDef.color
+  const colorIndex = lineDef.lineColor !== undefined ? lineDef.lineColor : lineDef.color
 
   const layer = {
     id,

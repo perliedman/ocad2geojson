@@ -73,7 +73,7 @@ readOcad(filePath)
         fs.writeFileSync(`${argv.o}/layers.json`, JSON.stringify(ocadToMapboxGlStyle(ocadFile, {
           source: 'map',
           sourceLayer: 'ocad'
-        })))
+        }), null, 2))
         break
       default:
         console.error(`Unknown mode ${mode}.`)

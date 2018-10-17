@@ -87,6 +87,8 @@ const generateSymbolElements = (symbols, feature) => {
     case 2:
       if (symbol.primSymElements.length > 0) {
         const coords = feature.geometry.coordinates
+        const endLength = symbol.endLength
+        let d = endLength
         for (let i = 1; i < coords.length; i++) {
           const c0 = coords[i - 1]
           const c1 = coords[i]
@@ -94,10 +96,8 @@ const generateSymbolElements = (symbols, feature) => {
           const u = v.unit()
           const segmentLength = v.vLength()
           const mainLength = symbol.mainLength
-          const endLength = symbol.endLength
 
-          let d = endLength
-          let c = c0.add(u.mul(endLength))
+          let c = c0.add(u.mul(d))
           const mainV = u.mul(mainLength)
           while (d < segmentLength) {
             elements = elements.concat(symbol.primSymElements
@@ -106,6 +106,8 @@ const generateSymbolElements = (symbols, feature) => {
             c = c.add(mainV)
             d += mainLength
           }
+
+          d -= segmentLength
         }
       }
   }
@@ -115,7 +117,8 @@ const generateSymbolElements = (symbols, feature) => {
 
 const createElement = (symbol, name, index, parentFeature, element, c) => {
   var geometry
-  const translatedCoords = element.coords.map(lc => lc.add(c))
+  const rotatedCoords = parentFeature.properties.ang ? element.coords.map(lc => lc.rotate(parentFeature.properties.ang / 10)) : element.coords
+  const translatedCoords = rotatedCoords.map(lc => lc.add(c))
 
   switch (element.type) {
     case 1:

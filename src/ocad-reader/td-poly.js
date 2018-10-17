@@ -57,4 +57,13 @@ module.exports = class TdPoly extends Array {
     const l = this.vLength()
     return this.mul(1 / l)
   }
+
+  rotate (theta) {
+    theta *= Math.PI / 180
+    return new TdPoly(
+      this[0] * Math.cos(theta) - this[1] * Math.sin(theta),
+      this[0] * Math.sin(theta) + this[1] * Math.cos(theta),
+      this.xFlags,
+      this.yFlags)
+  }
 }

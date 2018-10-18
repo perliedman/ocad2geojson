@@ -1,7 +1,6 @@
 const { readOcad, ocadToGeoJson, ocadToMapboxGlStyle } = require('../../')
 const { Buffer } = require('buffer')
 const { toWgs84 } = require('reproject')
-const Color = require('color')
 const toBuffer = require('blob-to-buffer')
 const bbox = require('@turf/bbox').default
 const bearing = require('@turf/bearing').default
@@ -20,10 +19,6 @@ fetch('../example.ocd')
   .then(buffer => readOcad(buffer))
   .then(ocadFile => {
     const geoJson = toWgs84(ocadToGeoJson(ocadFile), '+proj=utm +zone=33 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs')
-
-    ocadFile.colors.forEach((c, i) => {
-      ocadFile.colors[i].rgb = Color(ocadFile.colors[i].rgb).desaturate(0.15).rgb().string()
-    })
     
     const map = window._map = new mapboxgl.Map({
       container: 'map',

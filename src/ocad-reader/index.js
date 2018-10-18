@@ -1,6 +1,6 @@
 const fs = require('fs')
 const { Buffer } = require('buffer')
-const Color = require('color')
+const getRgb = require('../cmyk-to-rgb')
 
 const FileHeader = require('./file-header')
 const SymbolIndex = require('./symbol-index')
@@ -84,7 +84,7 @@ class OcadFile {
         number: colorDef.n,
         cmyk: cmyk,
         name: colorDef._first,
-        rgb: Color.cmyk(cmyk).rgb().string(),
+        rgb: getRgb(cmyk),
         renderOrder: i
       }
     })

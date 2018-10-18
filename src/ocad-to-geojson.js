@@ -81,8 +81,9 @@ const generateSymbolElements = (symbols, feature) => {
 
   switch (symbol.type) {
     case 1:
+      const angle = feature.properties.ang ? feature.properties.ang / 10 / 180 * Math.PI : 0
       elements = symbol.elements
-        .map((e, i) => createElement(symbol, 'element', i, feature, e, feature.geometry.coordinates))
+        .map((e, i) => createElement(symbol, 'element', i, feature, e, feature.geometry.coordinates, angle))
       break
     case 2:
       if (symbol.primSymElements.length > 0) {
@@ -93,6 +94,7 @@ const generateSymbolElements = (symbols, feature) => {
           const c0 = coords[i - 1]
           const c1 = coords[i]
           const v = c1.sub(c0)
+          const angle = Math.atan2(v[1], v[0])
           const u = v.unit()
           const segmentLength = v.vLength()
           const mainLength = symbol.mainLength
@@ -101,7 +103,7 @@ const generateSymbolElements = (symbols, feature) => {
           const mainV = u.mul(mainLength)
           while (d < segmentLength) {
             elements = elements.concat(symbol.primSymElements
-              .map((e, i) => createElement(symbol, 'prim', i, feature, e, c)))
+              .map((e, i) => createElement(symbol, 'prim', i, feature, e, c, angle)))
 
             c = c.add(mainV)
             d += mainLength
@@ -115,9 +117,9 @@ const generateSymbolElements = (symbols, feature) => {
   return elements
 }
 
-const createElement = (symbol, name, index, parentFeature, element, c) => {
+const createElement = (symbol, name, index, parentFeature, element, c, angle) => {
   var geometry
-  const rotatedCoords = parentFeature.properties.ang ? element.coords.map(lc => lc.rotate(parentFeature.properties.ang / 10)) : element.coords
+  const rotatedCoords = angle ? element.coords.map(lc => lc.rotate(angle)) : element.coords
   const translatedCoords = rotatedCoords.map(lc => lc.add(c))
 
   switch (element.type) {

@@ -148,7 +148,7 @@ const areaLayer = (id, source, sourceLayer, filter, areaDef, colors) => {
 }
 
 const circleLayer = (id, source, sourceLayer, filter, element, colors) => {
-  const baseRadius = (element.diameter / 10) || 1
+  const baseRadius = (element.diameter / 2 / 10) || 1
   const layer = {
     id,
     source,
@@ -180,7 +180,7 @@ const expFunc = base => ({
   'type': 'exponential',
   'base': 2,
   'stops': [
-    [0, base * Math.pow(2, (0 - 16))],
-    [24, base * Math.pow(2, (24 - 16))]
+    [0, base * Math.pow(2, (0 - 15))],
+    [24, base * Math.pow(2, (24 - 15))]
   ]
 })

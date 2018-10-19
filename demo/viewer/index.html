@@ -3,23 +3,81 @@
 <head>
   <title>OCAD to GeoJSON demo</title>
 
-  <link href='https://api.tiles.mapbox.com/mapbox-gl-js/v0.49.0/mapbox-gl.css' rel='stylesheet' />
+  <link href='https://api.tiles.mapbox.com/mapbox-gl-js/v0.50.0/mapbox-gl.css' rel='stylesheet' />
+  <link rel="stylesheet" href="https://unpkg.com/purecss@1.0.0/build/pure-min.css" integrity="sha384-nn4HPE8lTHyVtfCBi5yW9d20FjT8BJwUXyWZT9InLYax14RDjBj46LmSztkmNP9w" crossorigin="anonymous">
   <style type="text/css">
-    body {
-      margin: 0;
-      padding: 0;
+    #app {
+      min-height: 100vh;
     }
-
-    #map {
-      position: absolute;
+    .map {
       width: 100%;
       height: 100%;
+    }
+
+    .l-box {
+      padding: 1em;
     }
   </style>
 </head>
 <body>
-  <div id="map"></div>
-  <script src='https://api.tiles.mapbox.com/mapbox-gl-js/v0.49.0/mapbox-gl.js'></script>
+  <div id="app" class="pure-g">
+    <div class="pure-u-1-4">
+      <upload-form v-on:fileselected="selectFile"></upload-form>
+      <file-info v-bind:name="name" v-bind:file="file" v-bind:error="error"></file-info>
+    </div>
+    <div class="pure-u-3-4">
+      <map-view v-bind:layers="layers" v-bind:geojson="geojson"></map-view>
+    </div>
+  </div>
+
+  <script type="text/x-template" id="upload-form-template">
+    <form class="pure-form pure-form-aligned">
+      <fieldset>
+        <div class="pure-control-group">
+          <label for="file">Select file</label>
+          <input id="file" type="file" v-on:change="fileSelected"/>
+        </div>
+        <div class="pure-control-group">
+          <label for="epsg">EPSG:</label>
+          <input id="epsg" type="text" v-model="epsg" placeholder="EPSG code" />
+        </div>
+        <div class="pure-controls">
+          <button class="pure-button pure-button-primary" type="button" v-on:click="loadFile">Load</button>
+        </div>
+      </fieldset>
+    </form>
+  </script>
+
+  <script type="text/x-template" id="file-info-template">
+    <div class="l-box">
+      <div v-if="!error">
+        <h3>{{name}}</h3>
+        <h4>General</h4>
+        <dl>
+          <dt>OCAD version</dt><dd>{{file && file.header.version}}.{{file && file.header.subVersion}}.{{file && file.header.subSubVersion}}</dd>
+          <dt>Total number objects</dt><dd>{{file && file.objects.length}}</dd>
+        </dl>
+        <h4>CRS</h4>
+        <dl v-if="crs">
+          <dt>Scale</dt><dd>1:{{crs.m}}</dd>
+          <dt>Northing</dt><dd>{{crs.y}}</dd>
+          <dt>Easting</dt><dd>{{crs.x}}</dd>
+        </dl>
+        <p v-else>Not defined</p>
+      </div>
+      <div v-else>
+        <h3>O noes, an error occured :(</h3>
+        <code><pre>{{error}}</pre></code>
+      </div>
+    </div>
+  </script>
+
+  <script type="text/x-template" id="map-view-template">
+    <div class="map" ref="mapContainer"></div>
+  </script>
+
+  <script src="https://unpkg.com/vue@2.5.17/dist/vue.js"></script>
+  <script src='https://api.tiles.mapbox.com/mapbox-gl-js/v0.50.0/mapbox-gl.js'></script>
   <script src="bundle.js"></script>
 </body>
 </html>

@@ -1,7 +1,3 @@
-const { readOcad, ocadToGeoJson, ocadToMapboxGlStyle } = require('../../')
-const { Buffer } = require('buffer')
-const { toWgs84 } = require('reproject')
-const toBuffer = require('blob-to-buffer')
 const bbox = require('@turf/bbox').default
 const bearing = require('@turf/bearing').default
 const distance = require('@turf/distance').default
@@ -10,16 +6,9 @@ const mapboxgl = window.mapboxgl
 
 const fetchTrack = fetch('example.gpx')
 
-fetch('../example.ocd')
-  .then(res => res.blob())
-  .then(blob => new Promise((resolve, reject) => toBuffer(blob, (err, buffer) => {
-    if (err) reject(err)
-    resolve(buffer)
-  })))
-  .then(buffer => readOcad(buffer))
-  .then(ocadFile => {
-    const geoJson = toWgs84(ocadToGeoJson(ocadFile), '+proj=utm +zone=33 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs')
-    
+fetch('../tiles/hp/layers.json')
+  .then(res => res.json())
+  .then(layers => {    
     const map = window._map = new mapboxgl.Map({
       container: 'map',
       style: {
@@ -27,13 +16,12 @@ fetch('../example.ocd')
         name: 'OCAD demo',
         sources: {
           map: {
-            type: 'geojson',
-            data: geoJson
+            type: 'vector',
+            tiles: ['http://localhost:8081/tiles/hp/{z}/{x}/{y}.pbf'],
+            maxzoom: 14
           }
         },
-        layers: ocadToMapboxGlStyle(ocadFile, {
-          source: 'map'
-        })
+        layers
       },
       // center: [11.93, 57.75],
       // zoom: 14
@@ -43,12 +31,6 @@ fetch('../example.ocd')
     map.addControl(nav, 'top-left');
 
     map.on('load', function() {
-      const bounds = bbox(geoJson)
-      map.fitBounds(bounds, {
-        padding: 20,
-        animate: false
-      })
-
       fetchTrack
         .then(res => res.text())
         .then(text => (new window.DOMParser()).parseFromString(text, "text/xml"))
@@ -95,6 +77,11 @@ fetch('../example.ocd')
                 },
                 "line-opacity": 0.85
             }
+          })
+
+          map.jumpTo({
+            center: trackPath.geometry.coordinates[0],
+            zoom: 14
           })
 
           let currentBearing = 0

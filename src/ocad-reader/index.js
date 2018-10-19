@@ -29,6 +29,10 @@ const parseOcadBuffer = async (buffer, options) => new Promise((resolve, reject)
     reject(new Error(`Not an OCAD file (invalid header ${header.ocadMark} !== ${0x0cad})`))
   }
 
+  if (header.version < 10 && !options.bypassVersionCheck) {
+    throw new Error(`Unsupport OCAD file version (${header.version}), only >= 10 supported for now.`)
+  }
+
   let symbols = []
   let symbolIndexOffset = header.symbolIndexBlock
   while (symbolIndexOffset) {

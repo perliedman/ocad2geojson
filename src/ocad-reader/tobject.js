@@ -39,6 +39,32 @@ class TObject11 extends BaseTObject {
     this.otp = this.readByte()
     this._customer = this.readByte()
     this.ang = this.readSmallInt()
+    this.nItem = this.readCardinal()
+    this.nText = this.readWord()
+    this.mark = this.readByte()
+    this.snappingMark = this.readByte()
+    this.col = this.readInteger()
+    this.lineWidth = this.readSmallInt()
+    this.diamFlags = this.readSmallInt()
+    this.serverObjectId = this.readInteger()
+    this.height = this.readInteger()
+    this._date = this.readDouble()
+    this.coordinates = new Array(this.nItem)
+
+    for (let i = 0; i < this.nItem; i++) {
+      this.coordinates[i] = new TdPoly(this.readInteger(), this.readInteger())
+    }
+  }
+}
+
+class TObject12 extends BaseTObject {
+  constructor (buffer, offset, objType) {
+    super(buffer, offset, objType)
+
+    this.sym = this.readInteger()
+    this.otp = this.readByte()
+    this._customer = this.readByte()
+    this.ang = this.readSmallInt()
     this.col = this.readInteger()
     this.lineWidth = this.readSmallInt()
     this.diamFlags = this.readSmallInt()
@@ -91,5 +117,5 @@ module.exports = {
     }
   },
   11: TObject11,
-  12: TObject11
+  12: TObject12
 }

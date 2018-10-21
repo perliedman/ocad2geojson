@@ -9,6 +9,7 @@ const defaultOptions = {
 module.exports = function (ocadFile, options) {
   options = { ...defaultOptions, ...options }
   let features = ocadFile.objects
+    .filter(o => options.includeDeleted || o.status === 1)
     .map(tObjectToGeoJson)
     .filter(f => f)
 

@@ -33,6 +33,7 @@ module.exports = class ObjectIndex extends Block {
 
   parseObjects () {
     return this.table
+      .filter(o => o.status === 1) // Remove deleted and hidden objects
       .map(o => this.parseObject(o, o.objType))
       .filter(o => o)
   }

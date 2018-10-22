@@ -89,7 +89,11 @@ const generateSymbolElements = (symbols, feature) => {
       if (symbol.primSymElements.length > 0) {
         const coords = feature.geometry.coordinates
         const endLength = symbol.endLength
+        const mainLength = symbol.mainLength
+        const spotDist = symbol.primSymDist
+
         let d = endLength
+
         for (let i = 1; i < coords.length; i++) {
           const c0 = coords[i - 1]
           const c1 = coords[i]
@@ -97,16 +101,18 @@ const generateSymbolElements = (symbols, feature) => {
           const angle = Math.atan2(v[1], v[0])
           const u = v.unit()
           const segmentLength = v.vLength()
-          const mainLength = symbol.mainLength
 
           let c = c0.add(u.mul(d))
-          const mainV = u.mul(mainLength)
+          let j = 0
           while (d < segmentLength) {
             elements = elements.concat(symbol.primSymElements
               .map((e, i) => createElement(symbol, 'prim', i, feature, e, c, angle)))
 
-            c = c.add(mainV)
-            d += mainLength
+            j++
+            const step = (spotDist && j % symbol.nPrimSym) ? spotDist : mainLength
+
+            c = c.add(u.mul(step))
+            d += step
           }
 
           d -= segmentLength

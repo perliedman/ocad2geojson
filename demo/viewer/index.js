@@ -1,40 +1,3 @@
-/*const mapboxgl = window.mapboxgl
-
-fetch('../tiles/hp/layers.json')
-  .then(res => res.json())
-  .then(layers => {
-    const map = window._map = new mapboxgl.Map({
-      container: 'map',
-      style: {
-        version: 8,
-        name: 'OCAD demo',
-        sources: {
-          map: {
-            type: 'vector',
-            tiles: ['http://localhost:8081/tiles/hp/{z}/{x}/{y}.pbf'],
-            maxzoom: 14
-          }
-        },
-        layers
-      },
-      center: [11.92, 57.745],
-      zoom: 13,
-      customAttribution: '&copy; 2018 Tolereds AIK, Fältarbete: Maths Carlsson'
-    })
-
-    const nav = new mapboxgl.NavigationControl();
-    map.addControl(nav, 'top-left');
-
-    // map.on('load', function() {
-    //   const bounds = bbox(geoJson)
-    //   map.fitBounds(bounds, {
-    //     padding: 20,
-    //     animate: false
-    //   })
-    // })
-  })
-*/
-
 const Vue = window.Vue
 const toBuffer = require('blob-to-buffer')
 const bbox = require('@turf/bbox').default
@@ -75,10 +38,32 @@ Vue.component('upload-form', {
 
 Vue.component('file-info', {
   template: '#file-info-template',
-  props: ['name', 'file', 'error'],
+  props: ['name', 'file', 'error', 'geojson'],
   computed: {
     crs () {
       return this.file && this.file.parameterStrings[1039] && this.file.parameterStrings[1039][0]
+    }
+  },
+  methods: {
+    downloadGeoJson () {
+      if (!this.geojson || this.error) { return }
+
+      const link = document.createElement('a')
+      const blob = new Blob([JSON.stringify(this.geojson)], { type: "application/json" })
+      const url = URL.createObjectURL(blob)
+      link.href = url
+      link.download = this.name + '.json'
+      document.body.appendChild(link)
+      link.click()
+
+      // Clean up, since createObjectURL can leak memory
+      const remove = () => {
+        setTimeout(() => URL.revokeObjectURL(url))
+        link.removeEventListener('pointerup', remove)
+        document.body.removeChild(link)
+      }
+
+      link.addEventListener('pointerup', remove)
     }
   }
 })

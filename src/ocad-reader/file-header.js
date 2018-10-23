@@ -5,7 +5,7 @@ module.exports = class FileHeader extends Block {
     super(buffer, offset)
 
     if (buffer.length - offset < 60) {
-      throw new Error('Buffer is not large enough to hold header')
+      throw new Error('Not an OCAD file (not large enough to hold header)')
     }
 
     this.ocadMark = this.readSmallInt()

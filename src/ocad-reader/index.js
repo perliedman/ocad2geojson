@@ -24,9 +24,9 @@ module.exports = async (path, options) => {
 }
 
 const parseOcadBuffer = async (buffer, options) => new Promise((resolve, reject) => {
-  const header = new FileHeader(buffer)
+  const header = new FileHeader(buffer, 0)
   if (!header.isValid()) {
-    reject(new Error(`Not an OCAD file (invalid header ${header.ocadMark} !== ${0x0cad})`))
+    throw new Error(`Not an OCAD file (invalid header ${header.ocadMark} !== ${0x0cad})`)
   }
 
   if (header.version < 10 && !options.bypassVersionCheck) {

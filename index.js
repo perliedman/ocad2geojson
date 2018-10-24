@@ -2,7 +2,7 @@ const Vue = window.Vue
 const toBuffer = require('blob-to-buffer')
 const bbox = require('@turf/bbox').default
 const { toWgs84 } = require('reproject')
-const { readOcad, ocadToGeoJson, ocadToMapboxGlStyle } = require('../../')
+const { readOcad, ocadToGeoJson, ocadToMapboxGlStyle } = require('ocad2geojson')
 
 Vue.component('upload-form', {
   template: '#upload-form-template',

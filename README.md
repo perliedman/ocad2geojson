@@ -5,6 +5,8 @@ Work in progress to export OCAD files to GeoJSON, put put some more GIS in the o
 
 ![Example Map Output](example-map.png)
 
+Demo: [OCAD map viewer and converter in your browser](https://www.liedman.net/ocad2geojson/)
+
 You can use this to get geo/GIS data out of an OCAD file. This is currently more or less three modules
 working together:
 

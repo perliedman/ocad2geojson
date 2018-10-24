@@ -6,7 +6,7 @@ const { readOcad, ocadToGeoJson, ocadToMapboxGlStyle } = require('../../')
 
 Vue.component('upload-form', {
   template: '#upload-form-template',
-  props: [],
+  props: ['loading'],
   data () {
     return {
       files: [],
@@ -32,6 +32,16 @@ Vue.component('upload-form', {
 
       const file = this.files[0]
       reader.readAsArrayBuffer(file)
+    }
+  }
+})
+
+Vue.component('info', {
+  template: '#info-template',
+  data: () => ({open: false}),
+  methods: {
+    toggle () {
+      this.open = !this.open
     }
   }
 })
@@ -124,6 +134,7 @@ const app = new Vue({
     error: null,
     layers: [],
     geojson: {type: 'FeatureCollection', features: []},
+    loading: false,
     epsgCache: {}
   },
   methods: {
@@ -131,28 +142,33 @@ const app = new Vue({
       this.name = name
       this.file = null
       this.error = null
+      this.loading = true
 
-      const crsDef = this.epsgCache[epsg]
-        ? Promise.resolve(this.epsgCache[epsg])
-        : fetch(`http://epsg.io/${epsg}.proj4`)
-          .then(res => res.text())
-          .then(projDef => {
-            this.epsgCache[epsg] = projDef
-            return projDef
+      Vue.nextTick(() => {
+        const crsDef = this.epsgCache[epsg]
+          ? Promise.resolve(this.epsgCache[epsg])
+          : fetch(`http://epsg.io/${epsg}.proj4`)
+            .then(res => res.text())
+            .then(projDef => {
+              this.epsgCache[epsg] = projDef
+              return projDef
+            })
+
+        readOcad(content)
+          .then(ocadFile => {
+            this.loading = false
+            this.file = Object.freeze(ocadFile)
+            this.layers = ocadToMapboxGlStyle(this.file, {source: 'map', sourceLayer: ''})
+
+            crsDef.then(projDef => {
+              this.geojson = toWgs84(ocadToGeoJson(this.file), projDef)
+            })
           })
-
-      readOcad(content)
-        .then(ocadFile => {
-          this.file = Object.freeze(ocadFile)
-          this.layers = ocadToMapboxGlStyle(this.file, {source: 'map', sourceLayer: ''})
-
-          crsDef.then(projDef => {
-            this.geojson = toWgs84(ocadToGeoJson(this.file), projDef)
+          .catch(err => {
+            this.error = err.message
+            this.loading = false
           })
-        })
-        .catch(err => {
-          this.error = err.message
-        })
+      })
     }
   }
 })

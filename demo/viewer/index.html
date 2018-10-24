@@ -27,7 +27,13 @@
       color: #f2f2f2;
     }
     .im {
-      font-size: 0.9rem;
+      font-size: 1.1rem;
+    }
+    .fade-enter-active, .fade-leave-active {
+      transition: opacity .5s;
+    }
+    .fade-enter, .fade-leave-to {
+      opacity: 0;
     }
   </style>
 </head>
@@ -35,9 +41,9 @@
   <div id="app" class="container">
     <div class="row">
       <div class="column column-25">
-        <h1>OCAD Converter</h1>
-        <hr/>
-        <upload-form v-on:fileselected="selectFile"></upload-form>
+        <h3>OCAD Viewer / Converter</h3>
+        <info></info>
+        <upload-form v-bind:loading="loading" v-on:fileselected="selectFile"></upload-form>
         <hr/>
         <file-info v-bind:name="name" v-bind:file="file" v-bind:error="error" v-bind:geojson="geojson"></file-info>
       </div>
@@ -46,6 +52,44 @@
       </div>
     </div>
   </div>
+
+  <script type="text/x-template" id="info-template">
+    <div>
+      <a href="#" v-on:click="toggle">
+        <i class="im im-info"></i> What is this?
+      </a>
+      <transition name="fade">
+        <div v-if="open">
+          <p>
+            This tool lets you view and convert OCAD files to other formats.
+            OCAD is mostly used for orienteering maps.
+          </p>
+          <p>
+            After conversion, you can use the map data in a lot of other
+            programs, like for example QGIS, which is a free and open source
+            map editing program.
+          </p>
+          <p>
+            This is a work in progress: not every map detail is perfect, and
+            only files from OCAD version 10 and up are currently supported.
+            More features will be added in the future, so stay tuned (or
+            come help out!). 
+          </p>
+          <p>
+            The tool runs strictly in your browser, so the files never leave
+            your computer, and is never stored anywhere else, which might be
+            good to know if you worry about the files copyright.
+          </p>
+          <p>
+            Source code, report bugs and other technical details:
+            <a href="https://github.com/perliedman/ocad2geojson/">
+              ocad2geojson on GitHub
+            </a> 
+          </p>
+        </div>
+      </transition>
+    </div>
+  </script>
 
   <script type="text/x-template" id="upload-form-template">
     <form>
@@ -60,14 +104,16 @@
           v-bind:disabled="!this.files.length"
           type="button"
           v-on:click="loadFile"
-          v-bind:title="!this.files.length ? 'Select a file first' : 'Load selected file'">Load</button>
+          v-bind:title="!this.files.length ? 'Select a file first' : 'Load selected file'">
+          {{!loading ? 'Load' : 'Loading...'}}
+        </button>
     </form>
   </script>
 
   <script type="text/x-template" id="file-info-template">
     <div>
-      <div v-if="!error">
-        <h3>{{name}}</h3>
+      <div v-if="!error && file">
+        <h4>{{name}}</h4>
         <button
           ref="geoJsonLink"
           class="button button-outline"
@@ -77,12 +123,12 @@
           title="Download as GeoJSON">
           <i class="im im-download"></i> GeoJSON
         </button>
-        <h4>General</h4>
+        <h5>General</h5>
         <dl>
           <dt>OCAD version</dt><dd>{{file && file.header.version}}.{{file && file.header.subVersion}}.{{file && file.header.subSubVersion}}</dd>
           <dt>Total number objects</dt><dd>{{file && file.objects.length}}</dd>
         </dl>
-        <h4>CRS</h4>
+        <h5>CRS</h5>
         <dl v-if="crs">
           <dt>Scale</dt><dd>1:{{crs.m}}</dd>
           <dt>Northing</dt><dd>{{crs.y}}</dd>
@@ -90,8 +136,8 @@
         </dl>
         <p v-else>Not defined</p>
       </div>
-      <div v-else>
-        <h3>O noes, an error occured :(</h3>
+      <div v-if="error">
+        <p>O noes, an error occured :(</p>
         <blockquote>{{error}}</blockquote>
       </div>
     </div>

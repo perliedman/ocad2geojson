@@ -173,6 +173,22 @@ const applyCrs = (featureCollection, crs) => {
 
 const coordinatesToRings = coordinates => {
   const rings = []
+
+  const fixLastRingWinding = () => {
+    const n = rings.length - 1
+    const ring = rings[n]
+    let sum = 0
+    for (let i = 1; i < ring.length; i++) {
+      const c0 = ring[i - 1]
+      const c1 = ring[i]
+      sum += (c1[0] - c0[0]) * (c1[1] + c0[1])
+    }
+
+    if ((n > 0 && sum < 0) || (n === 0 && sum > 0)) {
+      ring.reverse()
+    }
+  }
+
   let currentRing = []
   rings.push(currentRing)
   for (let i = 0; i < coordinates.length; i++) {
@@ -180,6 +196,9 @@ const coordinatesToRings = coordinates => {
     if (c.isFirstHolePoint()) {
       // Copy first coordinate
       currentRing.push(currentRing[0].slice())
+
+      fixLastRingWinding()
+
       currentRing = []
       rings.push(currentRing)
     }
@@ -189,6 +208,8 @@ const coordinatesToRings = coordinates => {
 
   // Copy first coordinate
   currentRing.push(currentRing[0].slice())
+
+  fixLastRingWinding()
 
   return rings
 }

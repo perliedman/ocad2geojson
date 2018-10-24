@@ -148,7 +148,7 @@ const app = new Vue({
       Vue.nextTick(() => {
         const crsDef = this.epsgCache[epsg]
           ? Promise.resolve(this.epsgCache[epsg])
-          : fetch(`http://epsg.io/${epsg}.proj4`)
+          : fetch(`https://epsg.io/${epsg}.proj4`)
             .then(res => res.text())
             .then(projDef => {
               this.epsgCache[epsg] = projDef

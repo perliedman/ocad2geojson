@@ -1,4 +1,7 @@
 const { coordEach } = require('@turf/meta')
+const { PointSymbolType, LineSymbolType } = require('./ocad-reader/symbol-types')
+const { PointObjectType, LineObjectType, AreaObjectType } = require('./ocad-reader/object-types')
+const { LineElementType, AreaElementType, CircleElementType, DotElementType } = require('./ocad-reader/symbol-element-types')
 
 const defaultOptions = {
   assignIds: true,
@@ -52,19 +55,19 @@ module.exports = function (ocadFile, options) {
 const tObjectToGeoJson = object => {
   var geometry
   switch (object.objType) {
-    case 1:
+    case PointObjectType:
       geometry = {
         type: 'Point',
         coordinates: object.coordinates[0]
       }
       break
-    case 2:
+    case LineObjectType:
       geometry = {
         type: 'LineString',
         coordinates: object.coordinates
       }
       break
-    case 3:
+    case AreaObjectType:
       geometry = {
         type: 'Polygon',
         coordinates: coordinatesToRings(object.coordinates)
@@ -88,12 +91,12 @@ const generateSymbolElements = (symbols, feature) => {
   if (!symbol) return elements
 
   switch (symbol.type) {
-    case 1:
+    case PointSymbolType:
       const angle = feature.properties.ang ? feature.properties.ang / 10 / 180 * Math.PI : 0
       elements = symbol.elements
         .map((e, i) => createElement(symbol, 'element', i, feature, e, feature.geometry.coordinates, angle))
       break
-    case 2:
+    case LineSymbolType:
       if (symbol.primSymElements.length > 0) {
         const coords = feature.geometry.coordinates
         const endLength = symbol.endLength
@@ -137,20 +140,20 @@ const createElement = (symbol, name, index, parentFeature, element, c, angle) =>
   const translatedCoords = rotatedCoords.map(lc => lc.add(c))
 
   switch (element.type) {
-    case 1:
+    case LineElementType:
       geometry = {
         type: 'LineString',
         coordinates: translatedCoords
       }
       break
-    case 2:
+    case AreaElementType:
       geometry = {
         type: 'Polygon',
         coordinates: coordinatesToRings(translatedCoords)
       }
       break
-    case 3:
-    case 4:
+    case CircleElementType:
+    case DotElementType:
       geometry = {
         type: 'Point',
         coordinates: translatedCoords[0]

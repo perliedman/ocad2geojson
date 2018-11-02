@@ -1,3 +1,6 @@
+const { PointSymbolType, LineSymbolType, AreaSymbolType } = require('./ocad-reader/symbol-types')
+const { LineElementType, AreaElementType, CircleElementType, DotElementType } = require('./ocad-reader/symbol-element-types')
+
 module.exports = function ocadToMapboxGlStyle (ocadFile, options) {
   const usedSymbols = usedSymbolNumbers(ocadFile)
     .map(symNum => ocadFile.symbols.find(s => symNum === s.symNum))
@@ -40,10 +43,10 @@ const symbolToMapboxLayer = (symbol, colors, options) => {
     //   }
 
     //   break
-    case 2:
+    case LineSymbolType:
       if (!symbol.lineWidth) return
       return lineLayer(id, options.source, options.sourceLayer, filter, symbol, colors)
-    case 3:
+    case AreaSymbolType:
       return areaLayer(id, options.source, options.sourceLayer, filter, symbol, colors)
   }
 }
@@ -52,11 +55,11 @@ const symbolElementsToMapboxLayer = (symbol, colors, options) => {
   var elements = []
   var name
   switch (symbol.type) {
-    case 1:
+    case PointSymbolType:
       elements = symbol.elements
       name = 'element'
       break
-    case 2:
+    case LineSymbolType:
       elements = symbol.primSymElements
       name = 'prim'
       break
@@ -72,22 +75,22 @@ const createElementLayer = (element, name, index, symbol, colors, options) => {
   const filter = ['==', ['get', 'element'], `${symbol.symNum}-${name}-${index}`]
 
   switch (element.type) {
-    case 1:
+    case LineElementType:
       return lineLayer(
         id,
         options.source,
         options.sourceLayer,
         filter,
         element, colors)
-    case 2:
+    case AreaElementType:
       return areaLayer(
         id,
         options.source,
         options.sourceLayer,
         filter,
         element, colors)
-    case 3:
-    case 4:
+    case CircleElementType:
+    case DotElementType:
       return circleLayer(
         id,
         options.source,
@@ -164,12 +167,13 @@ const circleLayer = (id, source, sourceLayer, filter, element, colors) => {
   }
 
   const color = colors[element.color].rgb
-  if (element.type === 3) {
+  if (element.type === CircleElementType) {
     const baseWidth = element.lineWidth / 10
     layer.paint['circle-opacity'] = 0
     layer.paint['circle-stroke-color'] = color
     layer.paint['circle-stroke-width'] = expFunc(baseWidth)
   } else {
+    // DotElementType
     layer.paint['circle-color'] = color
   }
 

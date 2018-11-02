@@ -2,6 +2,7 @@ const Block = require('./block')
 const PointSymbol = require('./point-symbol')
 const LineSymbol = require('./line-symbol')
 const AreaSymbol = require('./area-symbol')
+const { PointSymbolType, LineSymbolType, AreaSymbolType } = require('./symbol-types')
 
 module.exports = class SymbolIndex extends Block {
   constructor (buffer, offset, version) {
@@ -27,11 +28,11 @@ module.exports = class SymbolIndex extends Block {
 
     const type = this.buffer.readInt8(offset + 8)
     switch (type) {
-      case 1:
+      case PointSymbolType:
         return new PointSymbol[this.version](this.buffer, offset)
-      case 2:
+      case LineSymbolType:
         return new LineSymbol[this.version](this.buffer, offset)
-      case 3:
+      case AreaSymbolType:
         return new AreaSymbol[this.version](this.buffer, offset)
     }
 

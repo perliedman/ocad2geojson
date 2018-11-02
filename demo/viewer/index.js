@@ -4,18 +4,23 @@ const bbox = require('@turf/bbox').default
 const { toWgs84 } = require('reproject')
 const { readOcad, ocadToGeoJson, ocadToMapboxGlStyle } = require('../../')
 
+Vue.use(MuseUI);
+MuseUI.theme.use('dark')
+
 Vue.component('upload-form', {
   template: '#upload-form-template',
   props: ['loading'],
   data () {
     return {
-      files: [],
-      epsg: 3006
+      form: {
+        files: [],
+        epsg: 3006
+      }
     }
   },
   methods: {
     fileSelected (e) {
-      this.files = e.target.files
+      this.form.files = e.target.files
     },
     loadFile () {
       const reader = new FileReader()
@@ -25,12 +30,12 @@ Vue.component('upload-form', {
           this.$emit('fileselected', {
             name: file.name,
             content: buffer,
-            epsg: this.epsg
+            epsg: this.form.epsg
           })
         })
       }
 
-      const file = this.files[0]
+      const file = this.form.files[0]
       reader.readAsArrayBuffer(file)
     }
   }
@@ -52,6 +57,11 @@ Vue.component('file-info', {
   computed: {
     crs () {
       return this.file && this.file.parameterStrings[1039] && this.file.parameterStrings[1039][0]
+    },
+    version () {
+      if (!this.file || !this.file.header) return '-'
+      const header = this.file.header
+      return `${header.version}.${header.subVersion}.${header.subSubVersion}`
     }
   },
   methods: {

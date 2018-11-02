@@ -32,6 +32,10 @@ class BaseSymbol extends Block {
 
     return elements
   }
+
+  isHidden () {
+    return (this.status & 0xf) === 2
+  }
 }
 
 class Symbol10 extends BaseSymbol {

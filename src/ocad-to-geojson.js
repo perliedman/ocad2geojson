@@ -6,14 +6,21 @@ const { LineElementType, AreaElementType, CircleElementType, DotElementType } = 
 const defaultOptions = {
   assignIds: true,
   applyCrs: true,
-  generateSymbolElements: true
+  generateSymbolElements: true,
+  exportHidden: false
 }
 
 module.exports = function (ocadFile, options) {
-  let id = 1
   options = { ...defaultOptions, ...options }
+
+  let id = 1
+  const symbols = ocadFile.symbols.reduce((ss, s) => {
+    ss[s.symNum] = s
+    return ss
+  }, {})
+
   let features = ocadFile.objects
-    .map(tObjectToGeoJson)
+    .map(tObjectToGeoJson.bind(null, options, symbols))
     .filter(f => f)
 
   if (options.assignIds) {
@@ -23,12 +30,8 @@ module.exports = function (ocadFile, options) {
   }
 
   if (options.generateSymbolElements) {
-    const symbols = ocadFile.symbols.reduce((ss, s) => {
-      ss[s.symNum] = s
-      return ss
-    }, {})
     const elementFeatures = features
-      .map(generateSymbolElements.bind(null, symbols))
+      .map(generateSymbolElements.bind(null, options, symbols))
       .filter(f => f)
 
     if (options.assignIds) {
@@ -52,7 +55,10 @@ module.exports = function (ocadFile, options) {
   return featureCollection
 }
 
-const tObjectToGeoJson = object => {
+const tObjectToGeoJson = (options, symbols, object) => {
+  const symbol = symbols[object.sym]
+  if (!options.exportHidden && (!symbol || symbol.isHidden())) return
+
   var geometry
   switch (object.objType) {
     case PointObjectType:
@@ -74,7 +80,7 @@ const tObjectToGeoJson = object => {
       }
       break
     default:
-      return null
+      return
   }
 
   return {
@@ -84,11 +90,11 @@ const tObjectToGeoJson = object => {
   }
 }
 
-const generateSymbolElements = (symbols, feature) => {
+const generateSymbolElements = (options, symbols, feature) => {
   const symbol = symbols[feature.properties.sym]
   let elements = []
 
-  if (!symbol) return elements
+  if (!options.exportHidden && (!symbol || symbol.isHidden())) return elements
 
   switch (symbol.type) {
     case PointSymbolType:

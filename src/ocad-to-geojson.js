@@ -7,10 +7,17 @@ const defaultOptions = {
 }
 
 module.exports = function (ocadFile, options) {
+  let id = 1
   options = { ...defaultOptions, ...options }
   let features = ocadFile.objects
     .map(tObjectToGeoJson)
     .filter(f => f)
+
+  if (options.assignIds) {
+    features.forEach(o => {
+      o.id = id++
+    })
+  }
 
   if (options.generateSymbolElements) {
     const symbols = ocadFile.symbols.reduce((ss, s) => {
@@ -20,18 +27,19 @@ module.exports = function (ocadFile, options) {
     const elementFeatures = features
       .map(generateSymbolElements.bind(null, symbols))
       .filter(f => f)
+
+    if (options.assignIds) {
+      elementFeatures.forEach(o => {
+        o.id = id++
+      })
+    }
+
     features = features.concat(Array.prototype.concat.apply([], elementFeatures))
   }
 
   const featureCollection = {
     type: 'FeatureCollection',
     features
-  }
-
-  if (options.assignIds) {
-    features.forEach((o, i) => {
-      o.id = i + 1
-    })
   }
 
   if (options.applyCrs) {

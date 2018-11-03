@@ -3,6 +3,7 @@ const toBuffer = require('blob-to-buffer')
 const bbox = require('@turf/bbox').default
 const { toWgs84 } = require('reproject')
 const { readOcad, ocadToGeoJson, ocadToMapboxGlStyle } = require('../../')
+const { coordEach } = require('@turf/meta')
 
 Vue.use(MuseUI);
 MuseUI.theme.use('dark')
@@ -54,6 +55,11 @@ Vue.component('info', {
 Vue.component('file-info', {
   template: '#file-info-template',
   props: ['name', 'file', 'error', 'geojson'],
+  data () {
+    return {
+      menuOpen: false
+    }
+  },
   computed: {
     crs () {
       return this.file && this.file.parameterStrings[1039] && this.file.parameterStrings[1039][0]
@@ -69,7 +75,7 @@ Vue.component('file-info', {
       if (!this.geojson || this.error) { return }
 
       const link = document.createElement('a')
-      const blob = new Blob([JSON.stringify(this.geojson)], { type: "application/json" })
+      const blob = new Blob([JSON.stringify(this.geojson, null, 2)], { type: "application/json" })
       const url = URL.createObjectURL(blob)
       link.href = url
       link.download = this.name + '.json'
@@ -172,6 +178,10 @@ const app = new Vue({
 
             crsDef.then(projDef => {
               this.geojson = toWgs84(ocadToGeoJson(this.file), projDef)
+              coordEach(this.geojson, c => {
+                c[0] = formatNum(c[0], 6)
+                c[1] = formatNum(c[1], 6)
+              })            
             })
           })
           .catch(err => {
@@ -182,3 +192,8 @@ const app = new Vue({
     }
   }
 })
+
+function formatNum(num, digits) {
+	var pow = Math.pow(10, (digits === undefined ? 6 : digits));
+	return Math.round(num * pow) / pow;
+}

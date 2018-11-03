@@ -27,8 +27,12 @@
   <div id="app">
     <mu-container fluid>
       <mu-row gutter>
-        <mu-col xl="3" lg="4" md="5" sm="7" class="sidebar">
+        <mu-col span="12">
           <mu-appbar color="primary" title="OCAD Viewer / Converter" style="width:100%;"></mu-appbar>
+        </mu-col>
+      </mu-row>
+      <mu-row gutter>
+        <mu-col xl="3" lg="4" md="5" sm="7" class="sidebar">
           <info></info>
           <upload-form v-bind:loading="loading" v-on:fileselected="selectFile"></upload-form>
           <file-info v-bind:name="name" v-bind:file="file" v-bind:error="error" v-bind:geojson="geojson"></file-info>
@@ -42,7 +46,7 @@
 
   <script type="text/x-template" id="info-template">
     <mu-expansion-panel :expand="open" @change="toggle()" style="width: 100%;">
-      <div slot="header"><i class="im im-info"></i> What is this?</div>
+      <div slot="header"><mu-icon value="info"></mu-icon> What is this?</div>
       <mu-paper v-if="open">
         <p>
           This tool lets you view and convert OCAD files to other formats.
@@ -99,8 +103,19 @@
 
   <script type="text/x-template" id="file-info-template">
     <mu-paper :z-depth="1">
+      <mu-appbar :title="name" v-if="!error && file">
+        <mu-menu cover placement="bottom-end" :open.sync="menuOpen" slot="right">
+          <mu-button flat icon>
+            <mu-icon value="more_vert"></mu-icon>
+          </mu-button>
+          <mu-list slot="content">
+            <mu-list-item button @click="downloadGeoJson">
+              <mu-list-item-title>Download as GeoJSON</mu-list-item-title>
+            </mu-list-item>
+          </mu-list>
+        </mu-menu>
+      </mu-appbar>
       <mu-list v-if="!error && file">
-        <mu-sub-header>{{name}}</mu-sub-header>
         <mu-list-item nested open>
           <mu-list-item-title>General</mu-list-item-title>
 
@@ -135,7 +150,7 @@
               </mu-list-item-title>
             </mu-list-item-content>
             <mu-list-item-action>
-              <mu-badge color="primary" :content="crs.m"></mu-badge>
+              <mu-badge color="primary" :content="`1:${crs.m}`"></mu-badge>
             </mu-list-item-action>
           </mu-list-item>
           <mu-list-item slot="nested">

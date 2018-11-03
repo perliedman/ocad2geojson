@@ -4,11 +4,9 @@
   <title>OCAD Converter</title>
 
   <link href='https://api.tiles.mapbox.com/mapbox-gl-js/v0.50.0/mapbox-gl.css' rel='stylesheet' />
-  <link rel="stylesheet" href="//fonts.googleapis.com/css?family=Roboto:300,300italic,700,700italic">
-  <link rel="stylesheet" href="//cdn.rawgit.com/necolas/normalize.css/master/normalize.css">
-  <link rel="stylesheet" href="//cdn.rawgit.com/milligram/milligram/master/dist/milligram.min.css">
-  <link rel="stylesheet" href="dark2.css">
-  <link rel="stylesheet" href="https://cdn.iconmonstr.com/1.3.0/css/iconmonstr-iconic-font.min.css">
+  <link rel="stylesheet" href="https://unpkg.com/muse-ui/dist/muse-ui.css">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700,400italic">
+  <link rel="stylesheet" href="https://cdn.bootcss.com/material-design-icons/3.0.1/iconfont/material-icons.css">
   <style type="text/css">
     #app {
       min-height: 100vh;
@@ -18,101 +16,173 @@
       width: 100%;
       height: 100vh;
     }
-    .column {
-      overflow-x: hidden;
-      overflow-y: auto;
-      max-height: 100vh;
-    }
-    input {
-      color: #f2f2f2;
-    }
-    .im {
-      font-size: 1.1rem;
-    }
-    .fade-enter-active, .fade-leave-active {
-      transition: opacity .5s;
-    }
-    .fade-enter, .fade-leave-to {
-      opacity: 0;
+    .form {
+      padding: 24px;
+      margin-top: 1rem;
+      margin-bottom: 1rem;
     }
   </style>
 </head>
 <body>
-  <div id="app" class="container">
-    <div class="row">
-      <div class="column column-25">
-        <h3>OCAD Viewer / Converter</h3>
-        <info></info>
-        <upload-form v-bind:loading="loading" v-on:fileselected="selectFile"></upload-form>
-        <hr/>
-        <file-info v-bind:name="name" v-bind:file="file" v-bind:error="error" v-bind:geojson="geojson"></file-info>
-      </div>
-      <div class="column column-75">
-        <map-view v-bind:layers="layers" v-bind:geojson="geojson"></map-view>
-      </div>
-    </div>
+  <div id="app">
+    <mu-container fluid>
+      <mu-row gutter>
+        <mu-col span="12">
+          <mu-appbar color="primary" title="OCAD Viewer / Converter" style="width:100%;"></mu-appbar>
+        </mu-col>
+      </mu-row>
+      <mu-row gutter>
+        <mu-col xl="3" lg="4" md="5" sm="7" class="sidebar">
+          <info></info>
+          <upload-form v-bind:loading="loading" v-on:fileselected="selectFile"></upload-form>
+          <file-info v-bind:name="name" v-bind:file="file" v-bind:error="error" v-bind:geojson="geojson"></file-info>
+        </mu-col>
+        <mu-col xl="9" lg="8" md="7" sm="5">
+          <map-view v-bind:layers="layers" v-bind:geojson="geojson"></map-view>
+        </mu-col>
+      </mu-row>
+    </mu-container>
   </div>
 
   <script type="text/x-template" id="info-template">
-    <div>
-      <a href="#" v-on:click="toggle">
-        <i class="im im-info"></i> What is this?
-      </a>
-      <transition name="fade">
-        <div v-if="open">
-          <p>
-            This tool lets you view and convert OCAD files to other formats.
-            OCAD is mostly used for orienteering maps.
-          </p>
-          <p>
-            After conversion, you can use the map data in a lot of other
-            programs, like for example QGIS, which is a free and open source
-            map editing program.
-          </p>
-          <p>
-            This is a work in progress: not every map detail is perfect, and
-            only files from OCAD version 10 and up are currently supported.
-            More features will be added in the future, so stay tuned (or
-            come help out!). 
-          </p>
-          <p>
-            The tool runs strictly in your browser, so the files never leave
-            your computer, and is never stored anywhere else, which might be
-            good to know if you worry about the files copyright.
-          </p>
-          <p>
-            Source code, report bugs and other technical details:
-            <a href="https://github.com/perliedman/ocad2geojson/">
-              ocad2geojson on GitHub
-            </a> 
-          </p>
-        </div>
-      </transition>
-    </div>
+    <mu-expansion-panel :expand="open" @change="toggle()" style="width: 100%;">
+      <div slot="header"><mu-icon value="info"></mu-icon> What is this?</div>
+      <mu-paper v-if="open">
+        <p>
+          This tool lets you view and convert OCAD files to other formats.
+          OCAD is mostly used for orienteering maps.
+        </p>
+        <p>
+          After conversion, you can use the map data in a lot of other
+          programs, like for example QGIS, which is a free and open source
+          map editing program.
+        </p>
+        <p>
+          This is a work in progress: not every map detail is perfect, and
+          only files from OCAD version 10 and up are currently supported.
+          More features will be added in the future, so stay tuned (or
+          come help out!). 
+        </p>
+        <p>
+          The tool runs strictly in your browser, so the files never leave
+          your computer, and is never stored anywhere else, which might be
+          good to know if you worry about the files copyright.
+        </p>
+        <p>
+          Source code, report bugs and other technical details:
+          <a href="https://github.com/perliedman/ocad2geojson/">
+            ocad2geojson on GitHub
+          </a> 
+        </p>
+      </mu-paper>
+    </mu-expansion-panel>
   </script>
 
   <script type="text/x-template" id="upload-form-template">
-    <form>
+    <mu-paper class="form" :z-depth="2">
+      <mu-form :model="form">
         <label for="file">Select file</label>
-        <input id="file" type="file" v-on:change="fileSelected"/>
+        <input id="file" type="file" @change="fileSelected"/>
 
-        <label for="epsg">Map projection (<a href="https://epsg.io/">EPSG code</a>)</label>
-        <input id="epsg" type="text" v-model="epsg" placeholder="EPSG code" />
+        <mu-form-item label="EPSG" help-text="Coordinate reference system used in the map">
+          <mu-text-field v-model="form.epsg" placeholder="EPSG code"></mu-text-field>
+        </mu-form-item>
 
-        <button
-          class="button-primary"
-          v-bind:disabled="!this.files.length"
-          type="button"
-          v-on:click="loadFile"
-          v-bind:title="!this.files.length ? 'Select a file first' : 'Load selected file'">
-          {{!loading ? 'Load' : 'Loading...'}}
-        </button>
-    </form>
+        <mu-form-item>
+          <mu-button
+            color="primary"
+            :disabled="!form.files.length"
+            @click="loadFile"
+            :title="!form.files.length ? 'Select a file first' : 'Load selected file'">
+            {{!loading ? 'Load' : 'Loading...'}}
+          </mu-button>
+        </mu-form-item>
+      </mu-form>
+    </mu-paper>
   </script>
 
   <script type="text/x-template" id="file-info-template">
-    <div>
-      <div v-if="!error && file">
+    <mu-paper :z-depth="1">
+      <mu-appbar :title="name" v-if="!error && file">
+        <mu-menu cover placement="bottom-end" :open.sync="menuOpen" slot="right">
+          <mu-button flat icon>
+            <mu-icon value="more_vert"></mu-icon>
+          </mu-button>
+          <mu-list slot="content">
+            <mu-list-item button @click="downloadGeoJson">
+              <mu-list-item-title>Download as GeoJSON</mu-list-item-title>
+            </mu-list-item>
+          </mu-list>
+        </mu-menu>
+      </mu-appbar>
+      <mu-list v-if="!error && file">
+        <mu-list-item nested open>
+          <mu-list-item-title>General</mu-list-item-title>
+
+          <mu-list-item slot="nested">
+            <mu-list-item-content>
+              <mu-list-item-title>
+                OCAD Version
+              </mu-list-item-title>
+            </mu-list-item-content>
+            <mu-list-item-action>
+              <mu-badge color="primary" :content="version"></mu-badge>
+            </mu-list-item-action>
+          </mu-list-item>
+          <mu-list-item slot="nested">
+            <mu-list-item-content>
+              <mu-list-item-title>
+                Total Objects
+              </mu-list-item-title>
+            </mu-list-item-content>
+            <mu-list-item-action>
+              <mu-badge color="primary" :content="file && file.objects.length.toString()"></mu-badge>
+            </mu-list-item-action>
+          </mu-list-item>
+        </mu-list-item>
+        <mu-list-item nested open>
+          <mu-list-item-title>CRS</mu-list-item-title>
+
+          <mu-list-item slot="nested">
+            <mu-list-item-content>
+              <mu-list-item-title>
+                Scale
+              </mu-list-item-title>
+            </mu-list-item-content>
+            <mu-list-item-action>
+              <mu-badge color="primary" :content="`1:${crs.m}`"></mu-badge>
+            </mu-list-item-action>
+          </mu-list-item>
+          <mu-list-item slot="nested">
+            <mu-list-item-content>
+              <mu-list-item-title>
+                Northing
+              </mu-list-item-title>
+            </mu-list-item-content>
+            <mu-list-item-action>
+              <mu-badge color="primary" :content="crs.y"></mu-badge>
+            </mu-list-item-action>
+          </mu-list-item>
+          <mu-list-item slot="nested">
+            <mu-list-item-content>
+              <mu-list-item-title>
+                Easting
+              </mu-list-item-title>
+            </mu-list-item-content>
+            <mu-list-item-action>
+              <mu-badge color="primary" :content="crs.x"></mu-badge>
+            </mu-list-item-action>
+          </mu-list-item>
+        </mu-list-item>
+      </mu-list>
+      <mu-alert v-if="error" color="error">
+        <div>
+          <mu-icon left value="warning"></mu-icon>
+          O noes, an error occured :( <br/><br/> {{error}}
+        </div>
+      </mu-alert>
+    
+      <!--<div v-if="!error && file">
         <h4>{{name}}</h4>
         <button
           ref="geoJsonLink"
@@ -139,15 +209,16 @@
       <div v-if="error">
         <p>O noes, an error occured :(</p>
         <blockquote>{{error}}</blockquote>
-      </div>
-    </div>
+      </div>-->
+    </mu-paper>
   </script>
 
   <script type="text/x-template" id="map-view-template">
     <div class="map" ref="mapContainer"></div>
   </script>
 
-  <script src="https://unpkg.com/vue@2.5.17/dist/vue.min.js"></script>
+  <script src="https://unpkg.com/vue@2.5.17/dist/vue.js"></script>
+  <script src="https://unpkg.com/muse-ui/dist/muse-ui.js"></script>
   <script src='https://api.tiles.mapbox.com/mapbox-gl-js/v0.50.0/mapbox-gl.js'></script>
   <script src="bundle.js"></script>
 </body>

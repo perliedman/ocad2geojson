@@ -4,19 +4,25 @@ const toBuffer = require('blob-to-buffer')
 const bbox = require('@turf/bbox').default
 const { toWgs84 } = require('reproject')
 const { readOcad, ocadToGeoJson, ocadToMapboxGlStyle } = require('ocad2geojson')
+const { coordEach } = require('@turf/meta')
+
+Vue.use(MuseUI);
+MuseUI.theme.use('dark')
 
 Vue.component('upload-form', {
   template: '#upload-form-template',
   props: ['loading'],
   data () {
     return {
-      files: [],
-      epsg: 3006
+      form: {
+        files: [],
+        epsg: 3006
+      }
     }
   },
   methods: {
     fileSelected (e) {
-      this.files = e.target.files
+      this.form.files = e.target.files
     },
     loadFile () {
       const reader = new FileReader()
@@ -26,12 +32,12 @@ Vue.component('upload-form', {
           this.$emit('fileselected', {
             name: file.name,
             content: buffer,
-            epsg: this.epsg
+            epsg: this.form.epsg
           })
         })
       }
 
-      const file = this.files[0]
+      const file = this.form.files[0]
       reader.readAsArrayBuffer(file)
     }
   }
@@ -50,9 +56,19 @@ Vue.component('info', {
 Vue.component('file-info', {
   template: '#file-info-template',
   props: ['name', 'file', 'error', 'geojson'],
+  data () {
+    return {
+      menuOpen: false
+    }
+  },
   computed: {
     crs () {
       return this.file && this.file.parameterStrings[1039] && this.file.parameterStrings[1039][0]
+    },
+    version () {
+      if (!this.file || !this.file.header) return '-'
+      const header = this.file.header
+      return `${header.version}.${header.subVersion}.${header.subSubVersion}`
     }
   },
   methods: {
@@ -60,7 +76,7 @@ Vue.component('file-info', {
       if (!this.geojson || this.error) { return }
 
       const link = document.createElement('a')
-      const blob = new Blob([JSON.stringify(this.geojson)], { type: "application/json" })
+      const blob = new Blob([JSON.stringify(this.geojson, null, 2)], { type: "application/json" })
       const url = URL.createObjectURL(blob)
       link.href = url
       link.download = this.name + '.json'
@@ -148,7 +164,7 @@ const app = new Vue({
       Vue.nextTick(() => {
         const crsDef = this.epsgCache[epsg]
           ? Promise.resolve(this.epsgCache[epsg])
-          : fetch(`https://epsg.io/${epsg}.proj4`)
+          : fetch(`http://epsg.io/${epsg}.proj4`)
             .then(res => res.text())
             .then(projDef => {
               this.epsgCache[epsg] = projDef
@@ -163,6 +179,10 @@ const app = new Vue({
 
             crsDef.then(projDef => {
               this.geojson = toWgs84(ocadToGeoJson(this.file), projDef)
+              coordEach(this.geojson, c => {
+                c[0] = formatNum(c[0], 6)
+                c[1] = formatNum(c[1], 6)
+              })            
             })
           })
           .catch(err => {
@@ -174,7 +194,12 @@ const app = new Vue({
   }
 })
 
-},{"@turf/bbox":2,"blob-to-buffer":6,"ocad2geojson":11,"reproject":30}],2:[function(require,module,exports){
+function formatNum(num, digits) {
+	var pow = Math.pow(10, (digits === undefined ? 6 : digits));
+	return Math.round(num * pow) / pow;
+}
+
+},{"@turf/bbox":2,"@turf/meta":4,"blob-to-buffer":6,"ocad2geojson":11,"reproject":33}],2:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 var meta_1 = require("@turf/meta");
@@ -4185,7 +4210,7 @@ module.exports = {
   ocadToMapboxGlStyle
 }
 
-},{"./ocad-reader":15,"./ocad-to-geojson":27,"./ocad-to-mapbox-gl-style":28}],12:[function(require,module,exports){
+},{"./ocad-reader":15,"./ocad-to-geojson":30,"./ocad-to-mapbox-gl-style":31}],12:[function(require,module,exports){
 const { Symbol10, Symbol11 } = require('./symbol')
 
 class AreaSymbol10 extends Symbol10 {
@@ -4231,7 +4256,7 @@ module.exports = {
   12: AreaSymbol11
 }
 
-},{"./symbol":24}],13:[function(require,module,exports){
+},{"./symbol":27}],13:[function(require,module,exports){
 module.exports = class Block {
   constructor (buffer, offset) {
     this.buffer = buffer
@@ -4439,7 +4464,7 @@ class OcadFile {
   }
 }
 
-},{"../cmyk-to-rgb":10,"./file-header":14,"./object-index":18,"./string-index":21,"./symbol-index":23,"buffer":8,"fs":7}],16:[function(require,module,exports){
+},{"../cmyk-to-rgb":10,"./file-header":14,"./object-index":18,"./string-index":22,"./symbol-index":25,"buffer":8,"fs":7}],16:[function(require,module,exports){
 const Block = require('./block')
 const { Symbol10, Symbol11 } = require('./symbol')
 
@@ -4568,7 +4593,7 @@ module.exports = {
   12: LineSymbol11
 }
 
-},{"./block":13,"./symbol":24}],17:[function(require,module,exports){
+},{"./block":13,"./symbol":27}],17:[function(require,module,exports){
 const Block = require('./block')
 
 module.exports = class LRect extends Block {
@@ -4637,7 +4662,14 @@ module.exports = class ObjectIndex extends Block {
   }
 }
 
-},{"./block":13,"./lrect":17,"./tobject":26}],19:[function(require,module,exports){
+},{"./block":13,"./lrect":17,"./tobject":29}],19:[function(require,module,exports){
+module.exports = {
+  PointObjectType: 1,
+  LineObjectType: 2,
+  AreaObjectType: 3
+}
+
+},{}],20:[function(require,module,exports){
 const Block = require('./block')
 
 module.exports = class ParameterString extends Block {
@@ -4660,7 +4692,7 @@ module.exports = class ParameterString extends Block {
   }
 }
 
-},{"./block":13}],20:[function(require,module,exports){
+},{"./block":13}],21:[function(require,module,exports){
 const { Symbol10, Symbol11 } = require('./symbol')
 
 class PointSymbol10 extends Symbol10 {
@@ -4697,7 +4729,7 @@ module.exports = {
   12: PointSymbol11
 }
 
-},{"./symbol":24}],21:[function(require,module,exports){
+},{"./symbol":27}],22:[function(require,module,exports){
 const Block = require('./block')
 const ParameterString = require('./parameter-string')
 
@@ -4734,7 +4766,15 @@ module.exports = class StringIndex extends Block {
   }
 }
 
-},{"./block":13,"./parameter-string":19}],22:[function(require,module,exports){
+},{"./block":13,"./parameter-string":20}],23:[function(require,module,exports){
+module.exports = {
+  LineElementType: 1,
+  AreaElementType: 2,
+  CircleElementType: 3,
+  DotElementType: 4
+}
+
+},{}],24:[function(require,module,exports){
 const Block = require('./block')
 const TdPoly = require('./td-poly')
 
@@ -4757,11 +4797,12 @@ module.exports = class SymbolElement extends Block {
   }
 }
 
-},{"./block":13,"./td-poly":25}],23:[function(require,module,exports){
+},{"./block":13,"./td-poly":28}],25:[function(require,module,exports){
 const Block = require('./block')
 const PointSymbol = require('./point-symbol')
 const LineSymbol = require('./line-symbol')
 const AreaSymbol = require('./area-symbol')
+const { PointSymbolType, LineSymbolType, AreaSymbolType } = require('./symbol-types')
 
 module.exports = class SymbolIndex extends Block {
   constructor (buffer, offset, version) {
@@ -4787,11 +4828,11 @@ module.exports = class SymbolIndex extends Block {
 
     const type = this.buffer.readInt8(offset + 8)
     switch (type) {
-      case 1:
+      case PointSymbolType:
         return new PointSymbol[this.version](this.buffer, offset)
-      case 2:
+      case LineSymbolType:
         return new LineSymbol[this.version](this.buffer, offset)
-      case 3:
+      case AreaSymbolType:
         return new AreaSymbol[this.version](this.buffer, offset)
     }
 
@@ -4799,7 +4840,14 @@ module.exports = class SymbolIndex extends Block {
   }
 }
 
-},{"./area-symbol":12,"./block":13,"./line-symbol":16,"./point-symbol":20}],24:[function(require,module,exports){
+},{"./area-symbol":12,"./block":13,"./line-symbol":16,"./point-symbol":21,"./symbol-types":26}],26:[function(require,module,exports){
+module.exports = {
+  PointSymbolType: 1,
+  LineSymbolType: 2,
+  AreaSymbolType: 3
+}
+
+},{}],27:[function(require,module,exports){
 const Block = require('./block')
 const SymbolElement = require('./symbol-element')
 
@@ -4833,6 +4881,10 @@ class BaseSymbol extends Block {
     }
 
     return elements
+  }
+
+  isHidden () {
+    return (this.status & 0xf) === 2
   }
 }
 
@@ -4897,7 +4949,7 @@ module.exports = {
   Symbol11
 }
 
-},{"./block":13,"./symbol-element":22}],25:[function(require,module,exports){
+},{"./block":13,"./symbol-element":24}],28:[function(require,module,exports){
 module.exports = class TdPoly extends Array {
   constructor (ocadX, ocadY, xFlags, yFlags) {
     super(xFlags === undefined ? ocadX >> 8 : ocadX, yFlags === undefined ? ocadY >> 8 : ocadY)
@@ -4967,7 +5019,7 @@ module.exports = class TdPoly extends Array {
   }
 }
 
-},{}],26:[function(require,module,exports){
+},{}],29:[function(require,module,exports){
 const Block = require('./block')
 const TdPoly = require('./td-poly')
 
@@ -5090,29 +5142,50 @@ module.exports = {
   12: TObject12
 }
 
-},{"./block":13,"./td-poly":25}],27:[function(require,module,exports){
+},{"./block":13,"./td-poly":28}],30:[function(require,module,exports){
 const { coordEach } = require('@turf/meta')
+const { PointSymbolType, LineSymbolType } = require('./ocad-reader/symbol-types')
+const { PointObjectType, LineObjectType, AreaObjectType } = require('./ocad-reader/object-types')
+const { LineElementType, AreaElementType, CircleElementType, DotElementType } = require('./ocad-reader/symbol-element-types')
 
 const defaultOptions = {
   assignIds: true,
   applyCrs: true,
-  generateSymbolElements: true
+  generateSymbolElements: true,
+  exportHidden: false,
+  coordinatePrecision: 6
 }
 
 module.exports = function (ocadFile, options) {
   options = { ...defaultOptions, ...options }
+
+  let id = 1
+  const symbols = ocadFile.symbols.reduce((ss, s) => {
+    ss[s.symNum] = s
+    return ss
+  }, {})
+
   let features = ocadFile.objects
-    .map(tObjectToGeoJson)
+    .map(tObjectToGeoJson.bind(null, options, symbols))
     .filter(f => f)
 
+  if (options.assignIds) {
+    features.forEach(o => {
+      o.id = id++
+    })
+  }
+
   if (options.generateSymbolElements) {
-    const symbols = ocadFile.symbols.reduce((ss, s) => {
-      ss[s.symNum] = s
-      return ss
-    }, {})
     const elementFeatures = features
-      .map(generateSymbolElements.bind(null, symbols))
+      .map(generateSymbolElements.bind(null, options, symbols))
       .filter(f => f)
+
+    if (options.assignIds) {
+      elementFeatures.forEach(o => {
+        o.id = id++
+      })
+    }
+
     features = features.concat(Array.prototype.concat.apply([], elementFeatures))
   }
 
@@ -5121,42 +5194,44 @@ module.exports = function (ocadFile, options) {
     features
   }
 
-  if (options.assignIds) {
-    features.forEach((o, i) => {
-      o.id = i + 1
-    })
-  }
-
   if (options.applyCrs) {
     applyCrs(featureCollection, ocadFile.getCrs())
   }
 
+  coordEach(featureCollection, c => {
+    c[0] = formatNum(c[0], options.coordinatePrecision)
+    c[1] = formatNum(c[1], options.coordinatePrecision)
+  })
+
   return featureCollection
 }
 
-const tObjectToGeoJson = object => {
+const tObjectToGeoJson = (options, symbols, object) => {
+  const symbol = symbols[object.sym]
+  if (!options.exportHidden && (!symbol || symbol.isHidden())) return
+
   var geometry
   switch (object.objType) {
-    case 1:
+    case PointObjectType:
       geometry = {
         type: 'Point',
         coordinates: object.coordinates[0]
       }
       break
-    case 2:
+    case LineObjectType:
       geometry = {
         type: 'LineString',
         coordinates: object.coordinates
       }
       break
-    case 3:
+    case AreaObjectType:
       geometry = {
         type: 'Polygon',
         coordinates: coordinatesToRings(object.coordinates)
       }
       break
     default:
-      return null
+      return
   }
 
   return {
@@ -5166,19 +5241,19 @@ const tObjectToGeoJson = object => {
   }
 }
 
-const generateSymbolElements = (symbols, feature) => {
+const generateSymbolElements = (options, symbols, feature) => {
   const symbol = symbols[feature.properties.sym]
   let elements = []
 
-  if (!symbol) return elements
+  if (!options.exportHidden && (!symbol || symbol.isHidden())) return elements
 
   switch (symbol.type) {
-    case 1:
+    case PointSymbolType:
       const angle = feature.properties.ang ? feature.properties.ang / 10 / 180 * Math.PI : 0
       elements = symbol.elements
         .map((e, i) => createElement(symbol, 'element', i, feature, e, feature.geometry.coordinates, angle))
       break
-    case 2:
+    case LineSymbolType:
       if (symbol.primSymElements.length > 0) {
         const coords = feature.geometry.coordinates
         const endLength = symbol.endLength
@@ -5222,20 +5297,20 @@ const createElement = (symbol, name, index, parentFeature, element, c, angle) =>
   const translatedCoords = rotatedCoords.map(lc => lc.add(c))
 
   switch (element.type) {
-    case 1:
+    case LineElementType:
       geometry = {
         type: 'LineString',
         coordinates: translatedCoords
       }
       break
-    case 2:
+    case AreaElementType:
       geometry = {
         type: 'Polygon',
         coordinates: coordinatesToRings(translatedCoords)
       }
       break
-    case 3:
-    case 4:
+    case CircleElementType:
+    case DotElementType:
       geometry = {
         type: 'Point',
         coordinates: translatedCoords[0]
@@ -5264,6 +5339,11 @@ const applyCrs = (featureCollection, crs) => {
   })
 }
 
+function formatNum(num, digits) {
+	var pow = Math.pow(10, (digits === undefined ? 6 : digits));
+	return Math.round(num * pow) / pow;
+}
+
 const coordinatesToRings = coordinates => {
   const rings = []
   let currentRing = []
@@ -5286,7 +5366,10 @@ const coordinatesToRings = coordinates => {
   return rings
 }
 
-},{"@turf/meta":4}],28:[function(require,module,exports){
+},{"./ocad-reader/object-types":19,"./ocad-reader/symbol-element-types":23,"./ocad-reader/symbol-types":26,"@turf/meta":4}],31:[function(require,module,exports){
+const { PointSymbolType, LineSymbolType, AreaSymbolType } = require('./ocad-reader/symbol-types')
+const { LineElementType, AreaElementType, CircleElementType, DotElementType } = require('./ocad-reader/symbol-element-types')
+
 module.exports = function ocadToMapboxGlStyle (ocadFile, options) {
   const usedSymbols = usedSymbolNumbers(ocadFile)
     .map(symNum => ocadFile.symbols.find(s => symNum === s.symNum))
@@ -5329,10 +5412,10 @@ const symbolToMapboxLayer = (symbol, colors, options) => {
     //   }
 
     //   break
-    case 2:
+    case LineSymbolType:
       if (!symbol.lineWidth) return
       return lineLayer(id, options.source, options.sourceLayer, filter, symbol, colors)
-    case 3:
+    case AreaSymbolType:
       return areaLayer(id, options.source, options.sourceLayer, filter, symbol, colors)
   }
 }
@@ -5341,11 +5424,11 @@ const symbolElementsToMapboxLayer = (symbol, colors, options) => {
   var elements = []
   var name
   switch (symbol.type) {
-    case 1:
+    case PointSymbolType:
       elements = symbol.elements
       name = 'element'
       break
-    case 2:
+    case LineSymbolType:
       elements = symbol.primSymElements
       name = 'prim'
       break
@@ -5361,22 +5444,22 @@ const createElementLayer = (element, name, index, symbol, colors, options) => {
   const filter = ['==', ['get', 'element'], `${symbol.symNum}-${name}-${index}`]
 
   switch (element.type) {
-    case 1:
+    case LineElementType:
       return lineLayer(
         id,
         options.source,
         options.sourceLayer,
         filter,
         element, colors)
-    case 2:
+    case AreaElementType:
       return areaLayer(
         id,
         options.source,
         options.sourceLayer,
         filter,
         element, colors)
-    case 3:
-    case 4:
+    case CircleElementType:
+    case DotElementType:
       return circleLayer(
         id,
         options.source,
@@ -5453,12 +5536,13 @@ const circleLayer = (id, source, sourceLayer, filter, element, colors) => {
   }
 
   const color = colors[element.color].rgb
-  if (element.type === 3) {
+  if (element.type === CircleElementType) {
     const baseWidth = element.lineWidth / 10
     layer.paint['circle-opacity'] = 0
     layer.paint['circle-stroke-color'] = color
     layer.paint['circle-stroke-width'] = expFunc(baseWidth)
   } else {
+    // DotElementType
     layer.paint['circle-color'] = color
   }
 
@@ -5474,7 +5558,7 @@ const expFunc = base => ({
   ]
 })
 
-},{}],29:[function(require,module,exports){
+},{"./ocad-reader/symbol-element-types":23,"./ocad-reader/symbol-types":26}],32:[function(require,module,exports){
 (function (global, factory) {
 	typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory() :
 	typeof define === 'function' && define.amd ? define(factory) :
@@ -12005,7 +12089,7 @@ const expFunc = base => ({
 
 })));
 
-},{}],30:[function(require,module,exports){
+},{}],33:[function(require,module,exports){
 'use strict';
 
 var proj4 = require('proj4').hasOwnProperty('default') ? require('proj4').default : require('proj4');
@@ -12147,4 +12231,4 @@ module.exports = {
   }
 };
 
-},{"proj4":29}]},{},[1]);
+},{"proj4":32}]},{},[1]);

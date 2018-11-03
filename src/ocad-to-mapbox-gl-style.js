@@ -1,3 +1,5 @@
+const { usedSymbolNumbers } = require('./common')
+
 module.exports = function ocadToMapboxGlStyle (ocadFile, options) {
   const usedSymbols = usedSymbolNumbers(ocadFile)
     .map(symNum => ocadFile.symbols.find(s => symNum === s.symNum))
@@ -14,16 +16,6 @@ module.exports = function ocadToMapboxGlStyle (ocadFile, options) {
   return symbolLayers.concat(elementLayers)
     .sort((a, b) => b.metadata.sort - a.metadata.sort)
 }
-
-const usedSymbolNumbers = ocadFile => ocadFile.objects.reduce((a, f) => {
-  const symbolNum = f.sym
-  if (!a.idSet.has(symbolNum)) {
-    a.symbolNums.push(symbolNum)
-    a.idSet.add(symbolNum)
-  }
-
-  return a
-}, { symbolNums: [], idSet: new Set() }).symbolNums
 
 const symbolToMapboxLayer = (symbol, colors, options) => {
   const id = `symbol-${symbol.symNum}`

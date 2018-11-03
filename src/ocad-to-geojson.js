@@ -7,7 +7,8 @@ const defaultOptions = {
   assignIds: true,
   applyCrs: true,
   generateSymbolElements: true,
-  exportHidden: false
+  exportHidden: false,
+  coordinatePrecision: 6
 }
 
 module.exports = function (ocadFile, options) {
@@ -51,6 +52,11 @@ module.exports = function (ocadFile, options) {
   if (options.applyCrs) {
     applyCrs(featureCollection, ocadFile.getCrs())
   }
+
+  coordEach(featureCollection, c => {
+    c[0] = formatNum(c[0], options.coordinatePrecision)
+    c[1] = formatNum(c[1], options.coordinatePrecision)
+  })
 
   return featureCollection
 }
@@ -186,6 +192,11 @@ const applyCrs = (featureCollection, crs) => {
     coord[0] = (coord[0] * hundredsMmToMeter) * crs.scale + crs.easting
     coord[1] = (coord[1] * hundredsMmToMeter) * crs.scale + crs.northing
   })
+}
+
+function formatNum(num, digits) {
+	var pow = Math.pow(10, (digits === undefined ? 6 : digits));
+	return Math.round(num * pow) / pow;
 }
 
 const coordinatesToRings = coordinates => {

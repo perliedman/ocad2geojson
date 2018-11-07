@@ -20,7 +20,11 @@
     "blob-to-buffer": "^1.2.8",
     "brfs": "^2.0.1",
     "color": "^3.0.0",
+    "file-saver": "^2.0.0-rc.4",
+    "geojson-vt": "^3.2.1",
+    "jszip": "^3.1.5",
     "ocad2geojson": "^1.0.1",
-    "reproject": "^1.2.2"
+    "reproject": "^1.2.2",
+    "vt-pbf": "^3.1.1"
   }
 }

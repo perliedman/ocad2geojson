@@ -4,6 +4,10 @@ const bbox = require('@turf/bbox').default
 const { toWgs84 } = require('reproject')
 const { readOcad, ocadToGeoJson, ocadToMapboxGlStyle } = require('ocad2geojson')
 const { coordEach } = require('@turf/meta')
+const { saveAs } = require('file-saver')
+const geojsonvt = require('geojson-vt')
+const vtpbf = require('vt-pbf') 
+const JSZip = require('jszip')
 
 Vue.use(MuseUI);
 MuseUI.theme.use('dark')
@@ -54,7 +58,7 @@ Vue.component('info', {
 
 Vue.component('file-info', {
   template: '#file-info-template',
-  props: ['name', 'file', 'error', 'geojson'],
+  props: ['name', 'file', 'error', 'geojson', 'layers'],
   data () {
     return {
       menuOpen: false
@@ -90,6 +94,25 @@ Vue.component('file-info', {
       }
 
       link.addEventListener('pointerup', remove)
+    },
+    downloadMvt () {
+      const tileIndex = geojsonvt(this.geojson, {
+        maxZoom: 14,
+        indexMaxZoom: 14,
+        indexMaxPoints: 0
+      })
+      const zip = new JSZip()
+      tileIndex.tileCoords.forEach(tc => {
+        const tile = tileIndex.getTile(tc.z, tc.x, tc.y)
+        const pbf = vtpbf.fromGeojsonVt({ ocad: tile })
+        const tilePath = `${tc.z}/${tc.x}/${tc.y}.pbf`
+        zip.file(tilePath, pbf)
+      })
+
+      zip.file('layers.json', JSON.stringify(this.layers, null, 2))
+
+      zip.generateAsync({type: 'blob'})
+        .then(blob => saveAs(blob, this.name + '.mvt.zip'))
     }
   }
 })

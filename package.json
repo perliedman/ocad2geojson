@@ -17,6 +17,7 @@
     "@turf/bbox": "^6.0.1",
     "@turf/bearing": "^6.0.1",
     "@turf/distance": "^6.0.1",
+    "b64-to-blob": "^1.2.19",
     "blob-to-buffer": "^1.2.8",
     "brfs": "^2.0.1",
     "color": "^3.0.0",
@@ -25,6 +26,7 @@
     "jszip": "^3.1.5",
     "ocad2geojson": "^1.0.1",
     "reproject": "^1.2.2",
+    "shp-write": "^0.3.2",
     "vt-pbf": "^3.1.1"
   }
 }

@@ -7,7 +7,9 @@ const { coordEach } = require('@turf/meta')
 const { saveAs } = require('file-saver')
 const geojsonvt = require('geojson-vt')
 const vtpbf = require('vt-pbf') 
+const shpwrite = require('shp-write')
 const JSZip = require('jszip')
+const b64toblob = require('b64-to-blob')
 
 Vue.use(MuseUI);
 MuseUI.theme.use('dark')
@@ -76,6 +78,7 @@ Vue.component('file-info', {
   },
   methods: {
     downloadGeoJson () {
+      this.menuOpen = false
       if (!this.geojson || this.error) { return }
 
       const link = document.createElement('a')
@@ -96,6 +99,7 @@ Vue.component('file-info', {
       link.addEventListener('pointerup', remove)
     },
     downloadMvt () {
+      this.menuOpen = false
       const tileIndex = geojsonvt(this.geojson, {
         maxZoom: 14,
         indexMaxZoom: 14,
@@ -113,6 +117,12 @@ Vue.component('file-info', {
 
       zip.generateAsync({type: 'blob'})
         .then(blob => saveAs(blob, this.name + '.mvt.zip'))
+    },
+    downloadShp () {
+      this.menuOpen = false
+      const zip = shpwrite.zip(this.geojson)
+      const blob = b64toblob(zip)
+      saveAs(blob, this.name + '.shp.zip')
     }
   }
 })

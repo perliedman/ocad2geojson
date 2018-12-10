@@ -11,7 +11,7 @@ class BaseTObject extends Block {
     return {
       sym: this.sym,
       otp: this.otp,
-      _customer: this._customer,
+      unicode: this.unicode,
       ang: this.ang,
       col: this.col,
       lineWidth: this.lineWidth,
@@ -26,7 +26,8 @@ class BaseTObject extends Block {
       nObjectString: this.nObjectString,
       nDatabaseString: this.nDatabaseString,
       objectStringType: this.objectStringType,
-      res1: this.res1
+      res1: this.res1,
+      text: this.text
     }
   }
 }
@@ -37,7 +38,7 @@ class TObject11 extends BaseTObject {
 
     this.sym = this.readInteger()
     this.otp = this.readByte()
-    this._customer = this.readByte()
+    this.unicode = this.readByte()
     this.ang = this.readSmallInt()
     this.nItem = this.readCardinal()
     this.nText = this.readWord()
@@ -54,6 +55,8 @@ class TObject11 extends BaseTObject {
     for (let i = 0; i < this.nItem; i++) {
       this.coordinates[i] = new TdPoly(this.readInteger(), this.readInteger())
     }
+
+    this.text = readWideString(this, this.nText)
   }
 }
 
@@ -63,7 +66,7 @@ class TObject12 extends BaseTObject {
 
     this.sym = this.readInteger()
     this.otp = this.readByte()
-    this._customer = this.readByte()
+    this.unicode = this.readByte()
     this.ang = this.readSmallInt()
     this.col = this.readInteger()
     this.lineWidth = this.readSmallInt()
@@ -84,7 +87,19 @@ class TObject12 extends BaseTObject {
     for (let i = 0; i < this.nItem; i++) {
       this.coordinates[i] = new TdPoly(this.readInteger(), this.readInteger())
     }
+
+    this.text = readWideString(this, this.nText)
   }
+}
+
+const readWideString = (object, len) => {
+  const textChars = new Array(len)
+  for (let i = 0; i < len * (object.unicode ? 2 : 4); i++) {
+    const c = object.unicode ? object.readByte() : object.readWord()
+    textChars[i] = String.fromCharCode(c !== 0 ? c : '\n')
+  }
+
+  return textChars.join('').trim()
 }
 
 module.exports = {
@@ -94,7 +109,7 @@ module.exports = {
 
       this.sym = this.readInteger()
       this.otp = this.readByte()
-      this._customer = this.readByte()
+      this.unicode = this.readByte()
       this.ang = this.readSmallInt()
       this.nItem = this.readCardinal()
       this.nText = this.readWord()
@@ -114,6 +129,8 @@ module.exports = {
       for (let i = 0; i < this.nItem; i++) {
         this.coordinates[i] = new TdPoly(this.readInteger(), this.readInteger())
       }
+
+      this.text = readWideString(this, this.nText)
     }
   },
   11: TObject11,

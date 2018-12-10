@@ -1,6 +1,6 @@
 const { coordEach } = require('@turf/meta')
 const { PointSymbolType, LineSymbolType } = require('./ocad-reader/symbol-types')
-const { PointObjectType, LineObjectType, AreaObjectType } = require('./ocad-reader/object-types')
+const { PointObjectType, LineObjectType, AreaObjectType, UnformattedTextObjectType, FormattedTextObjectType } = require('./ocad-reader/object-types')
 const { LineElementType, AreaElementType, CircleElementType, DotElementType } = require('./ocad-reader/symbol-element-types')
 
 const defaultOptions = {
@@ -83,6 +83,13 @@ const tObjectToGeoJson = (options, symbols, object) => {
       geometry = {
         type: 'Polygon',
         coordinates: coordinatesToRings(object.coordinates)
+      }
+      break
+    case UnformattedTextObjectType:
+    case FormattedTextObjectType:
+      geometry = {
+        type: 'Point',
+        coordinates: object.coordinates[0]
       }
       break
     default:

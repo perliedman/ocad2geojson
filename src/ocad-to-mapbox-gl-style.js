@@ -1,5 +1,6 @@
-const { PointSymbolType, LineSymbolType, AreaSymbolType } = require('./ocad-reader/symbol-types')
+const { PointSymbolType, LineSymbolType, AreaSymbolType, TextSymbolType } = require('./ocad-reader/symbol-types')
 const { LineElementType, AreaElementType, CircleElementType, DotElementType } = require('./ocad-reader/symbol-element-types')
+const { HorizontalAlignCenter, HorizontalAlignRight } = require('./ocad-reader/text-symbol')
 
 module.exports = function ocadToMapboxGlStyle (ocadFile, options) {
   const usedSymbols = usedSymbolNumbers(ocadFile)
@@ -31,24 +32,21 @@ const usedSymbolNumbers = ocadFile => ocadFile.objects.reduce((a, f) => {
 const symbolToMapboxLayer = (symbol, colors, options) => {
   const id = `symbol-${symbol.symNum}`
   const filter = ['==', ['get', 'sym'], symbol.symNum]
+  let layerFactory
 
   switch (symbol.type) {
-    // case 1:
-    //   const element = symbol.elements[0]
-
-    //   switch (element.type) {
-    //     case 3:
-    //     case 4:
-    //       return circleLayer(`symbol-${symbol.symNum}`, options.source, options.sourceLayer, filter, element, colors)
-    //   }
-
-    //   break
     case LineSymbolType:
-      if (!symbol.lineWidth) return
-      return lineLayer(id, options.source, options.sourceLayer, filter, symbol, colors)
+      layerFactory = symbol.lineWidth && lineLayer
+      break;
     case AreaSymbolType:
-      return areaLayer(id, options.source, options.sourceLayer, filter, symbol, colors)
+      layerFactory = areaLayer
+      break;
+    case TextSymbolType:
+      layerFactory = textLayer
+      break;
   }
+  
+  return layerFactory && layerFactory(id, options.source, options.sourceLayer, filter, symbol, colors)
 }
 
 const symbolElementsToMapboxLayer = (symbol, colors, options) => {
@@ -175,6 +173,41 @@ const circleLayer = (id, source, sourceLayer, filter, element, colors) => {
   } else {
     // DotElementType
     layer.paint['circle-color'] = color
+  }
+
+  return layer
+}
+
+const textLayer = (id, source, sourceLayer, filter, element, colors) => {
+  const horizontalAlign = element.getHorizontalAlignment()
+  const justify = horizontalAlign === HorizontalAlignCenter
+    ? 'center'
+    : horizontalAlign === HorizontalAlignRight
+    ? 'right'
+    : 'left'
+
+  const layer = {
+    id,
+    source,
+    'source-layer': sourceLayer,
+    type: 'symbol',
+    filter,
+    layout: {
+      'symbol-placement': 'point',
+      'text-field': ['get', 'text'],
+      'text-size': expFunc(element.fontSize / 3),
+      'text-allow-overlap': true,
+      'text-ignore-placement': true,
+      'text-max-width': Infinity,
+      'text-justify': justify,
+      'text-anchor': `top-${justify}`
+    },
+    paint: {
+      'text-color': colors[element.fontColor].rgb
+    },
+    metadata: {
+      sort: colors[element.fontColor].renderOrder
+    }
   }
 
   return layer

@@ -32,6 +32,37 @@ class BaseTObject extends Block {
   }
 }
 
+class TObject10 extends BaseTObject {
+  constructor (buffer, offset, objType) {
+    super(buffer, offset, objType)
+
+    this.sym = this.readInteger()
+    this.otp = this.readByte()
+    this.unicode = this.readByte()
+    this.ang = this.readSmallInt()
+    this.nItem = this.readCardinal()
+    this.nText = this.readWord()
+    this.readSmallInt() // Reserved
+    this.col = this.readInteger()
+    this.lineWidth = this.readSmallInt()
+    this.diamFlags = this.readSmallInt()
+    this.readInteger() // Reserved
+    this.readByte() // Reserved
+    this.readByte() // Reserved
+    this.readSmallInt() // Reserved
+    this.height = this.readInteger()
+    this.coordinates = new Array(this.nItem)
+
+    this.offset += 4
+
+    for (let i = 0; i < this.nItem; i++) {
+      this.coordinates[i] = new TdPoly(this.readInteger(), this.readInteger())
+    }
+
+    this.text = readWideString(this, this.nText)
+  }
+}
+
 class TObject11 extends BaseTObject {
   constructor (buffer, offset, objType) {
     super(buffer, offset, objType)
@@ -93,46 +124,20 @@ class TObject12 extends BaseTObject {
 }
 
 const readWideString = (object, len) => {
-  const textChars = new Array(len)
+  const textChars = []
   for (let i = 0; i < len * (object.unicode ? 2 : 4); i++) {
     const c = object.unicode ? object.readByte() : object.readWord()
-    textChars[i] = String.fromCharCode(c !== 0 ? c : '\n')
+    if (!c) break
+    if (c !== 13) {
+      textChars.push(String.fromCharCode(c))
+    }
   }
 
   return textChars.join('').trim()
 }
 
 module.exports = {
-  10: class TObject10 extends BaseTObject {
-    constructor (buffer, offset, objType) {
-      super(buffer, offset, objType)
-
-      this.sym = this.readInteger()
-      this.otp = this.readByte()
-      this.unicode = this.readByte()
-      this.ang = this.readSmallInt()
-      this.nItem = this.readCardinal()
-      this.nText = this.readWord()
-      this.readSmallInt() // Reserved
-      this.col = this.readInteger()
-      this.lineWidth = this.readSmallInt()
-      this.diamFlags = this.readSmallInt()
-      this.readInteger() // Reserved
-      this.readByte() // Reserved
-      this.readByte() // Reserved
-      this.readSmallInt() // Reserved
-      this.height = this.readInteger()
-      this.coordinates = new Array(this.nItem)
-
-      this.offset += 4
-
-      for (let i = 0; i < this.nItem; i++) {
-        this.coordinates[i] = new TdPoly(this.readInteger(), this.readInteger())
-      }
-
-      this.text = readWideString(this, this.nText)
-    }
-  },
+  10: TObject10,
   11: TObject11,
   12: TObject12
 }

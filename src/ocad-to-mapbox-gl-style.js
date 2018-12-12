@@ -1,6 +1,6 @@
 const { PointSymbolType, LineSymbolType, AreaSymbolType, TextSymbolType } = require('./ocad-reader/symbol-types')
 const { LineElementType, AreaElementType, CircleElementType, DotElementType } = require('./ocad-reader/symbol-element-types')
-const { HorizontalAlignCenter, HorizontalAlignRight } = require('./ocad-reader/text-symbol')
+const { HorizontalAlignCenter, HorizontalAlignRight, VerticalAlignBottom, VerticalAlignMiddle, VerticalAlignTop } = require('./ocad-reader/text-symbol')
 
 module.exports = function ocadToMapboxGlStyle (ocadFile, options) {
   const usedSymbols = usedSymbolNumbers(ocadFile)
@@ -37,15 +37,15 @@ const symbolToMapboxLayer = (symbol, colors, options) => {
   switch (symbol.type) {
     case LineSymbolType:
       layerFactory = symbol.lineWidth && lineLayer
-      break;
+      break
     case AreaSymbolType:
       layerFactory = areaLayer
-      break;
+      break
     case TextSymbolType:
       layerFactory = textLayer
-      break;
+      break
   }
-  
+
   return layerFactory && layerFactory(id, options.source, options.sourceLayer, filter, symbol, colors)
 }
 
@@ -180,11 +180,18 @@ const circleLayer = (id, source, sourceLayer, filter, element, colors) => {
 
 const textLayer = (id, source, sourceLayer, filter, element, colors) => {
   const horizontalAlign = element.getHorizontalAlignment()
+  const verticalAlign = element.getVerticalAlignment()
   const justify = horizontalAlign === HorizontalAlignCenter
     ? 'center'
     : horizontalAlign === HorizontalAlignRight
-    ? 'right'
-    : 'left'
+      ? 'right'
+      : 'left'
+  const anchor = verticalAlign === VerticalAlignMiddle
+    ? 'center'
+    : 'top'
+
+  const weightModifier = element.weight > 400 ? ' Bold' : ''
+  const fontVariant = `${weightModifier}${element.italic ? ' Italic' : !weightModifier ? ' Regular' : ''}`
 
   const layer = {
     id,
@@ -194,13 +201,14 @@ const textLayer = (id, source, sourceLayer, filter, element, colors) => {
     filter,
     layout: {
       'symbol-placement': 'point',
+      'text-font': [`Open Sans${fontVariant}`], // , `Arial Unicode MS${fontVariant}`
       'text-field': ['get', 'text'],
-      'text-size': expFunc(element.fontSize / 3),
+      'text-size': expFunc(element.fontSize / 2.3),
       'text-allow-overlap': true,
       'text-ignore-placement': true,
       'text-max-width': Infinity,
       'text-justify': justify,
-      'text-anchor': `top-${justify}`
+      'text-anchor': `${anchor}${anchor !== 'center' ? `-${justify}` : ''}`
     },
     paint: {
       'text-color': colors[element.fontColor].rgb

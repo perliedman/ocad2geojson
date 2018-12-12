@@ -2,6 +2,7 @@ const { coordEach } = require('@turf/meta')
 const { PointSymbolType, LineSymbolType } = require('./ocad-reader/symbol-types')
 const { PointObjectType, LineObjectType, AreaObjectType, UnformattedTextObjectType, FormattedTextObjectType } = require('./ocad-reader/object-types')
 const { LineElementType, AreaElementType, CircleElementType, DotElementType } = require('./ocad-reader/symbol-element-types')
+const { HorizontalAlignCenter, HorizontalAlignRight, VerticalAlignBottom, VerticalAlignMiddle, VerticalAlignTop } = require('./ocad-reader/text-symbol')
 
 const defaultOptions = {
   assignIds: true,
@@ -87,9 +88,34 @@ const tObjectToGeoJson = (options, symbols, object) => {
       break
     case UnformattedTextObjectType:
     case FormattedTextObjectType:
+      const isPolygon = object.coordinates.length > 1
+      let anchorCoord
+      // if (isPolygon) {
+      //   const polyCoords = object.coordinates.slice(1, 5)
+      //   const hAlign = symbol.getHorizontalAlignment()
+      //   const vAlign = symbol.getHorizontalAlignment()
+      //   const anchorX = hAlign === HorizontalAlignRight
+      //     ? polyCoords[1][0]
+      //     : hAlign === HorizontalAlignCenter
+      //       ? (polyCoords[0][0] + polyCoords[1][0]) / 2
+      //       : polyCoords[0][0]
+      //   const anchorY = vAlign === VerticalAlignBottom
+      //     ? polyCoords[2][1]
+      //     : hAlign === HorizontalAlignCenter
+      //       ? (polyCoords[0][1] + polyCoords[2][1]) / 2
+      //       : polyCoords[0][1]
+      //   anchorCoord = [anchorX, anchorY]
+      // } else {
+      //   anchorCoord = object.coordinates[0]
+      // }
+      // lineSpace is percent, but unit should be 1/100s of mm, so
+      // we don't have to divide by 100.
+      const lineHeight = symbol.fontSize / 10 * 0.352778 * 100
+      anchorCoord = [object.coordinates[0][0], object.coordinates[0][1] + lineHeight]
+
       geometry = {
         type: 'Point',
-        coordinates: object.coordinates[0]
+        coordinates: anchorCoord
       }
       break
     default:

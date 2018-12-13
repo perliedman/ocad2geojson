@@ -1,8 +1,10 @@
 OCAD to GeoJSON
 ===============
 
-Work in progress to export OCAD files to GeoJSON, put put some more GIS in the orienteering world.
+Work in progress to export OCAD files to open formats, primarily [GeoJSON](http://geojson.org/) and [Mapbox Style Spec](https://www.mapbox.com/mapbox-gl-js/style-spec/), to put some more GIS in the orienteering world.
 
+![Example Map Output](example-map-2.png)
+![Example Map Output](example-map-3.png)
 ![Example Map Output](example-map.png)
 
 Demo: [OCAD map viewer and converter in your browser](https://www.liedman.net/ocad2geojson/)
@@ -23,9 +25,11 @@ OCAD version 10, 11 and 12 files are mostly supported.
 const { readOcad, ocadToGeoJson, ocadToMapboxGlStyle } = require('../')
 
 readOcad(filePath)
-  .then(map => {
+  .then(ocadFile => {
     const geojson = ocadToGeoJson(ocadFile)
     console.log(JSON.stringify(geojson))
+    const layerStyles = ocadToMapboxGlStyle(ocadFile)
+    console.log(JSON.stringify(layerStyles))
   })
 ```
 

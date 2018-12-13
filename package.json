@@ -31,7 +31,7 @@
     "geojson-vt": "^3.2.0",
     "minimist": "^1.2.0",
     "mkdirp": "^0.5.1",
-    "reproject": "^1.2.2",
+    "reproject": "^1.2.3",
     "vt-pbf": "^3.1.1"
   }
 }

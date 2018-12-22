@@ -1,3 +1,4 @@
+const { AreaSymbolType } = require('./ocad-reader/symbol-types')
 const { PointObjectType, LineObjectType, AreaObjectType, UnformattedTextObjectType, FormattedTextObjectType } = require('./ocad-reader/object-types')
 const { LineElementType, AreaElementType, CircleElementType, DotElementType } = require('./ocad-reader/symbol-element-types')
 const transformFeatures = require('./transform-features')
@@ -12,20 +13,65 @@ module.exports = function (ocadFile, options) {
 
   const createSvgNode = n => {
     const node = document.createElementNS('http://www.w3.org/2000/svg', n.type)
+    n.id && (node.id = n.id)
     n.attrs && Object.keys(n.attrs).forEach(attrName => node.setAttribute(attrName, n.attrs[attrName]))
     n.children && n.children.forEach(child => node.appendChild(createSvgNode(child)))
 
     return node
   }
 
+  const usedSymbols = usedSymbolNumbers(ocadFile)
+    .map(symNum => ocadFile.symbols.find(s => symNum === s.symNum))
+    .filter(s => s)
+
+  const patterns = usedSymbols
+    .filter(s => s.type === AreaSymbolType && s.hatchMode)
+    .map(s => {
+      const height = s.hatchLineWidth + s.hatchDist
+      const width = 10
+      const fillColorIndex = s.fillOn !== undefined
+        ? s.fillOn ? s.fillColor : s.colors[0]
+        : s.color
+
+      return {
+        id: `fill-${s.symNum}`,
+        'data-symbol-name': s.name,
+        type: 'pattern',
+        attrs: { patternUnits: 'userSpaceOnUse', width, height },
+        children: [
+          { type: 'rect', attrs: { width, height, fill: 'transparent' } },
+          { type: 'rect', attrs: { x: 0, y: 0, width, height: s.hatchLineWidth, fill: ocadFile.colors[s.hatchColor].rgb } }
+        ]
+      }
+    })
+
   const root = {
-    type: 'g',
-    children: transformFeatures(ocadFile, objectToSvg, elementToSvg, options)
-      .sort((a, b) => b.order - a.order)
+    type: 'svg',
+    attrs: { fill: 'transparent' },
+    children: [
+      {
+        type: 'defs',
+        children: patterns
+      }
+    ].concat({
+      type: 'g',
+      children: transformFeatures(ocadFile, objectToSvg, elementToSvg, options)
+        .sort((a, b) => b.order - a.order)
+    })
   }
 
   return createSvgNode(root)
 }
+
+const usedSymbolNumbers = ocadFile => ocadFile.objects.reduce((a, f) => {
+  const symbolNum = f.sym
+  if (!a.idSet.has(symbolNum)) {
+    a.symbolNums.push(symbolNum)
+    a.idSet.add(symbolNum)
+  }
+
+  return a
+}, { symbolNums: [], idSet: new Set() }).symbolNums
 
 const objectToSvg = (options, symbols, object) => {
   const symbol = symbols[object.sym]
@@ -57,7 +103,7 @@ const objectToSvg = (options, symbols, object) => {
         type: 'path',
         attrs: {
           d: coordsToPath(object.coordinates),
-          style: `fill: ${options.colors[fillColorIndex].rgb}`
+          style: `fill: ${symbol.hatchMode ? `url(#fill-${symbol.symNum})` : options.colors[fillColorIndex].rgb};`
         },
         order: options.colors[fillColorIndex].renderOrder
       }

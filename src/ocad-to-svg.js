@@ -21,6 +21,7 @@ module.exports = function (ocadFile, options) {
   const root = {
     type: 'g',
     children: transformFeatures(ocadFile, objectToSvg, elementToSvg, options)
+      .sort((a, b) => b.order - a.order)
   }
 
   return createSvgNode(root)
@@ -36,19 +37,31 @@ const objectToSvg = (options, symbols, object) => {
     //   node = symbol.elements.map(e => elementToSvg(symbol, null, 0, null, e, object.coordinates[0], 0))
     //   break
     case LineObjectType:
+      const baseMainLength = symbol.mainLength
+      const baseMainGap = symbol.mainGap
+
+      node = symbol.lineWidth && {
+        type: 'path',
+        attrs: {
+          d: coordsToPath(object.coordinates),
+          style: `stroke: ${options.colors[symbol.lineColor].rgb}; stroke-width: ${symbol.lineWidth}; ${baseMainGap && baseMainLength ? `stroke-dasharray: ${baseMainLength} ${baseMainGap};` : ''}`
+        },
+        order: options.colors[symbol.lineColor].renderOrder
+      }
+      break
+    case AreaObjectType:
+      const fillColorIndex = symbol.fillOn !== undefined
+        ? symbol.fillOn ? symbol.fillColor : symbol.colors[0]
+        : symbol.color
       node = {
         type: 'path',
         attrs: {
-          d: `M ${object.coordinates[0][0]} ${-object.coordinates[0][1]} L ${object.coordinates.slice(1).map(c => `${c[0]} ${-c[1]}`).join(' L ')}`
-        }
+          d: coordsToPath(object.coordinates),
+          style: `fill: ${options.colors[fillColorIndex].rgb}`
+        },
+        order: options.colors[fillColorIndex].renderOrder
       }
       break
-      // case AreaObjectType:
-      //   node = {
-      //     type: 'Polygon',
-      //     coordinates: coordinatesToRings(object.coordinates)
-      //   }
-      //   break
       // case UnformattedTextObjectType:
       // case FormattedTextObjectType:
       //   const lineHeight = symbol.fontSize / 10 * 0.352778 * 100
@@ -71,7 +84,7 @@ const objectToSvg = (options, symbols, object) => {
   return node
 }
 
-const elementToSvg = (symbol, name, index, parentFeature, element, c, angle) => {
+const elementToSvg = (symbol, name, index, element, c, angle) => {
   var geometry
   const rotatedCoords = angle ? element.coords.map(lc => lc.rotate(angle)) : element.coords
   const translatedCoords = rotatedCoords.map(lc => lc.add(c))
@@ -101,12 +114,16 @@ const elementToSvg = (symbol, name, index, parentFeature, element, c, angle) => 
   return {
     type: 'Feature',
     properties: {
-      element: `${symbol.symNum}-${name}-${index}`,
-      parentId: parentFeature.id
+      element: `${symbol.symNum}-${name}-${index}`
     },
     geometry
   }
 }
+
+const coordsToPath = coords =>
+  coords
+    .map((c, i) => `${i === 0 || c.isFirstHolePoint() ? 'M' : 'L'} ${c[0]} ${-c[1]}`)
+    .join(' ')
 
 const applyCrs = (featureCollection, crs) => {
   // OCAD uses 1/100 mm of "paper coordinates" as units, we

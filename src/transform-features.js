@@ -9,7 +9,7 @@ const defaultOptions = {
 }
 
 module.exports = function (ocadFile, createObject, createElement, options) {
-  options = { ...defaultOptions, ...options }
+  options = { ...defaultOptions, ...options, colors: ocadFile.colors }
 
   const symbols = ocadFile.symbols.reduce((ss, s) => {
     ss[s.symNum] = s
@@ -31,21 +31,21 @@ module.exports = function (ocadFile, createObject, createElement, options) {
   return features
 }
 
-const generateSymbolElements = (createElement, options, symbols, feature) => {
-  const symbol = symbols[feature.properties.sym]
+const generateSymbolElements = (createElement, options, symbols, object) => {
+  const symbol = symbols[object.sym]
   let elements = []
 
   if (!options.exportHidden && (!symbol || symbol.isHidden())) return elements
 
   switch (symbol.type) {
     case PointSymbolType:
-      const angle = feature.properties.ang ? feature.properties.ang / 10 / 180 * Math.PI : 0
+      const angle = object.ang ? object.ang / 10 / 180 * Math.PI : 0
       elements = symbol.elements
-        .map((e, i) => createElement(symbol, 'element', i, feature, e, feature.geometry.coordinates, angle))
+        .map((e, i) => createElement(symbol, 'element', i, e, object.coordinates, angle))
       break
     case LineSymbolType:
       if (symbol.primSymElements.length > 0) {
-        const coords = feature.geometry.coordinates
+        const coords = object.coordinates
         const endLength = symbol.endLength
         const mainLength = symbol.mainLength
         const spotDist = symbol.primSymDist
@@ -64,7 +64,7 @@ const generateSymbolElements = (createElement, options, symbols, feature) => {
           let j = 0
           while (d < segmentLength) {
             elements = elements.concat(symbol.primSymElements
-              .map((e, i) => createElement(symbol, 'prim', i, feature, e, c, angle)))
+              .map((e, i) => createElement(symbol, 'prim', i, e, c, angle)))
 
             j++
             const step = (spotDist && j % symbol.nPrimSym) ? spotDist : mainLength

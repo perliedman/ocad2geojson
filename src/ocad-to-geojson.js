@@ -85,7 +85,7 @@ const tObjectToGeoJson = (options, symbols, object) => {
   }
 }
 
-const createElement = (symbol, name, index, parentFeature, element, c, angle) => {
+const createElement = (symbol, name, index, element, c, angle) => {
   var geometry
   const rotatedCoords = angle ? element.coords.map(lc => lc.rotate(angle)) : element.coords
   const translatedCoords = rotatedCoords.map(lc => lc.add(c))
@@ -115,8 +115,7 @@ const createElement = (symbol, name, index, parentFeature, element, c, angle) =>
   return {
     type: 'Feature',
     properties: {
-      element: `${symbol.symNum}-${name}-${index}`,
-      parentId: parentFeature.id
+      element: `${symbol.symNum}-${name}-${index}`
     },
     geometry
   }

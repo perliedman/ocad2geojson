@@ -5,6 +5,8 @@ const { toWgs84 } = require('reproject')
 const { readOcad, ocadToGeoJson, ocadToMapboxGlStyle } = require('../../')
 const { coordEach } = require('@turf/meta')
 
+mapboxgl.accessToken = 'pk.eyJ1IjoibGllZG1hbiIsImEiOiJZc3U4UXowIn0.d4yPyJ_Bl7CAROv15im36Q';
+
 Vue.use(MuseUI);
 MuseUI.theme.use('dark')
 
@@ -129,6 +131,7 @@ Vue.component('map-view', {
       return {
         version: 8,
         name: 'OCAD demo',
+        glyphs: 'mapbox://fonts/mapbox/{fontstack}/{range}.pbf',
         sources: {
           map: {
             type: 'geojson',

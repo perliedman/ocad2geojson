@@ -6,6 +6,7 @@
   "scripts": {
     "viewer": "watchify viewer/index.js -o viewer/bundle.js -d",
     "tracker": "watchify tracker/index.js -o tracker/bundle.js -d",
+    "svg": "watchify svg/index.js -o svg/bundle.js -d",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "Per Liedman <per@liedman.net>",

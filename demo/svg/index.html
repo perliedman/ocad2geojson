@@ -8,16 +8,20 @@
       margin: 0;
       padding: 0;
     }
+    #pdf-frame {
+      position: absolute;
+      top: 0;
+      right: 0;
+      background-color: white;
+      width: 800px;
+      height: 100%;
+    }
   </style>
 </head>
 <body>
-  <svg id="container"
-    version="1.1"
-    baseProfile="full"
-    width="1280" height="1280"
-    fill="transparent"
-    xmlns="http://www.w3.org/2000/svg">
-  </svg>
+  <div id="container"></div>
+  <iframe id="pdf-frame" width=800 height=120></iframe>
+
   <script src="bundle.js"></script>
 </body>
 </html>

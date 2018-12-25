@@ -1,7 +1,8 @@
 const { readOcad, ocadToSvg } = require('../../')
 const toBuffer = require('blob-to-buffer')
-
-
+const PDFDocument = require('pdfkit')
+const SVGtoPDF = require('svg-to-pdfkit')
+const blobStream = require('blob-stream')
 
 fetch('example.ocd')
   .then(res => res.blob())
@@ -10,8 +11,28 @@ fetch('example.ocd')
     resolve(buffer)
   })))
   .then(buffer => readOcad(buffer))
-  .then(ocadFile => ocadToSvg(ocadFile))
-  .then(svg => {
-    svg.setAttribute('transform', 'scale(0.04) translate(14000, 16000)')
-    document.getElementById('container').appendChild(svg)
+  .then(ocadFile => {
+    const svg = ocadToSvg(ocadFile)
+    const container = document.getElementById('container')
+    svg.setAttribute('width', '595')
+    svg.setAttribute('height', '842')
+    svg.querySelector('g').setAttribute('transform', 'scale(0.028) translate(14000, 16000)')
+    container.appendChild(svg)
+
+    const doc = new PDFDocument()
+    stream = doc.pipe(blobStream())
+    SVGtoPDF(doc, svg, 0, 0, {
+      assumePt: true,
+      colorCallback: x => {
+        const color = x && ocadFile.colors.find(c => c && c.rgbArray[0] === x[0][0] && c.rgbArray[1] === x[0][1] && c.rgbArray[2] === x[0][2])
+        return color && color.cmyk && [color.cmyk, x[1]] || x
+      }
+    })
+
+    doc.end()
+    stream.on('finish', () => {
+      // const blob = stream.toBlob('application/pdf')
+      url = stream.toBlobURL('application/pdf')
+      document.getElementById('pdf-frame').src = url
+    })
   })

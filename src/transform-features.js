@@ -21,7 +21,7 @@ module.exports = function (ocadFile, createObject, createElement, options) {
     .filter(f => f)
 
   if (options.generateSymbolElements) {
-    const elementFeatures = features
+    const elementFeatures = ocadFile.objects
       .map(generateSymbolElements.bind(null, createElement, options, symbols))
       .filter(f => f)
 
@@ -41,7 +41,7 @@ const generateSymbolElements = (createElement, options, symbols, object) => {
     case PointSymbolType:
       const angle = object.ang ? object.ang / 10 / 180 * Math.PI : 0
       elements = symbol.elements
-        .map((e, i) => createElement(symbol, 'element', i, e, object.coordinates, angle))
+        .map((e, i) => createElement(symbol, 'element', i, e, object.coordinates[0], angle))
       break
     case LineSymbolType:
       if (symbol.primSymElements.length > 0) {

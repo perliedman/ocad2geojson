@@ -23,9 +23,9 @@ module.exports = function (ocadFile, createObject, createElement, options) {
   if (options.generateSymbolElements) {
     const elementFeatures = ocadFile.objects
       .map(generateSymbolElements.bind(null, createElement, options, symbols))
-      .filter(f => f)
 
     features = features.concat(Array.prototype.concat.apply([], elementFeatures))
+      .filter(f => f)
   }
 
   return features
@@ -41,7 +41,7 @@ const generateSymbolElements = (createElement, options, symbols, object) => {
     case PointSymbolType:
       const angle = object.ang ? object.ang / 10 / 180 * Math.PI : 0
       elements = symbol.elements
-        .map((e, i) => createElement(symbol, 'element', i, e, object.coordinates[0], angle))
+        .map((e, i) => createElement(symbol, 'element', i, e, object.coordinates[0], angle, options))
       break
     case LineSymbolType:
       if (symbol.primSymElements.length > 0) {
@@ -64,7 +64,7 @@ const generateSymbolElements = (createElement, options, symbols, object) => {
           let j = 0
           while (d < segmentLength) {
             elements = elements.concat(symbol.primSymElements
-              .map((e, i) => createElement(symbol, 'prim', i, e, c, angle)))
+              .map((e, i) => createElement(symbol, 'prim', i, e, c, angle, options)))
 
             j++
             const step = (spotDist && j % symbol.nPrimSym) ? spotDist : mainLength

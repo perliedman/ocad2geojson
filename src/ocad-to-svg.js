@@ -92,47 +92,21 @@ const objectToSvg = (options, symbols, object) => {
 
   let node
   switch (object.objType) {
-    // case PointObjectType:
-    //   node = symbol.elements.map(e => elementToSvg(symbol, null, 0, null, e, object.coordinates[0], 0))
-    //   break
     case LineObjectType:
-      const baseMainLength = symbol.mainLength
-      const baseMainGap = symbol.mainGap
-
-      node = symbol.lineWidth && {
-        type: 'path',
-        attrs: {
-          d: coordsToPath(object.coordinates),
-          style: `stroke: ${options.colors[symbol.lineColor].rgb}; stroke-width: ${symbol.lineWidth}; ${baseMainGap && baseMainLength ? `stroke-dasharray: ${baseMainLength} ${baseMainGap};` : ''}`
-        },
-        order: options.colors[symbol.lineColor].renderOrder
-      }
+      node = symbol.lineWidth && lineToPath(object.coordinates, symbol.lineWidth, options.colors[symbol.lineColor], symbol.mainGap, symbol.mainLength)
       break
     case AreaObjectType:
       const fillColorIndex = symbol.fillOn !== undefined
         ? symbol.fillOn ? symbol.fillColor : symbol.colors[0]
         : symbol.color
-      node = {
-        type: 'path',
-        attrs: {
-          d: coordsToPath(object.coordinates),
-          style: `fill: ${symbol.hatchMode ? `url(#fill-${symbol.symNum}-1)` : options.colors[fillColorIndex].rgb};`
-        },
-        order: options.colors[fillColorIndex].renderOrder
-      }
+      node = areaToPath(object.coordinates, symbol.hatchMode && `url(#fill-${symbol.symNum}-1)`, options.colors[fillColorIndex])
 
       if (symbol.hatchMode === 2) {
         node = {
           type: 'g',
           children: [
             node,
-            {
-              type: 'path',
-              attrs: {
-                d: coordsToPath(object.coordinates),
-                style: `fill: ${symbol.hatchMode ? `url(#fill-${symbol.symNum}-2)` : options.colors[fillColorIndex].rgb};`
-              }
-            }
+            areaToPath(object.coordinates, `url(#fill-${symbol.symNum}-2)`, options.colors[fillColorIndex])
           ],
           order: options.colors[fillColorIndex].renderOrder
         }
@@ -161,81 +135,60 @@ const objectToSvg = (options, symbols, object) => {
   return node
 }
 
-const elementToSvg = (symbol, name, index, element, c, angle) => {
-  var geometry
+const elementToSvg = (symbol, name, index, element, c, angle, options) => {
+  let node
   const rotatedCoords = angle ? element.coords.map(lc => lc.rotate(angle)) : element.coords
   const translatedCoords = rotatedCoords.map(lc => lc.add(c))
 
   switch (element.type) {
     case LineElementType:
-      geometry = {
-        type: 'LineString',
-        coordinates: translatedCoords
-      }
+      node = lineToPath(translatedCoords, element.lineWidth, options.colors[element.color], element.mainGap, element.mainLength)
       break
     case AreaElementType:
-      geometry = {
-        type: 'Polygon',
-        coordinates: coordinatesToRings(translatedCoords)
-      }
+      node = areaToPath(translatedCoords, null, options.colors[element.color])
       break
     case CircleElementType:
     case DotElementType:
-      geometry = {
-        type: 'Point',
-        coordinates: translatedCoords[0]
+      node = {
+        type: 'circle',
+        attrs: {
+          cx: c[0],
+          cy: -c[1],
+          r: element.diameter / 2
+        },
+        order: options.colors[element.color].renderOrder
       }
+
+      node.attrs[element.type === CircleElementType ? 'stroke' : 'fill'] = options.colors[element.color].rgb
+      if (element.type === CircleElementType) {
+        node.attrs['stroke-width'] = element.lineWidth
+      }
+
       break
   }
 
-  return {
-    type: 'Feature',
-    properties: {
-      element: `${symbol.symNum}-${name}-${index}`
-    },
-    geometry
-  }
+  return node
 }
+
+const lineToPath = (coordinates, width, color, baseMainGap, baseMainLength) => ({
+  type: 'path',
+  attrs: {
+    d: coordsToPath(coordinates),
+    style: `stroke: ${color.rgb}; stroke-width: ${width}; ${baseMainGap && baseMainLength ? `stroke-dasharray: ${baseMainLength} ${baseMainGap};` : ''}`
+  },
+  order: color.renderOrder
+})
+
+const areaToPath = (coordinates, fillPattern, color) => ({
+  type: 'path',
+  attrs: {
+    d: coordsToPath(coordinates),
+    style: `fill: ${fillPattern || color.rgb};`
+  },
+  order: color.renderOrder
+})
 
 const coordsToPath = coords =>
   coords
     .map((c, i) => `${i === 0 || c.isFirstHolePoint() ? 'M' : 'L'} ${c[0]} ${-c[1]}`)
     .join(' ')
-
-const applyCrs = (featureCollection, crs) => {
-  // OCAD uses 1/100 mm of "paper coordinates" as units, we
-  // want to convert to meters in real world
-  const hundredsMmToMeter = 1 / (100 * 1000)
-
-  coordEach(featureCollection, coord => {
-    coord[0] = (coord[0] * hundredsMmToMeter) * crs.scale + crs.easting
-    coord[1] = (coord[1] * hundredsMmToMeter) * crs.scale + crs.northing
-  })
-}
-
-function formatNum (num, digits) {
-  var pow = Math.pow(10, (digits === undefined ? 6 : digits))
-  return Math.round(num * pow) / pow
-}
-
-const coordinatesToRings = coordinates => {
-  const rings = []
-  let currentRing = []
-  rings.push(currentRing)
-  for (let i = 0; i < coordinates.length; i++) {
-    const c = coordinates[i]
-    if (c.isFirstHolePoint()) {
-      // Copy first coordinate
-      currentRing.push(currentRing[0].slice())
-      currentRing = []
-      rings.push(currentRing)
-    }
-
-    currentRing.push(c)
-  }
-
-  // Copy first coordinate
-  currentRing.push(currentRing[0].slice())
-
-  return rings
-}

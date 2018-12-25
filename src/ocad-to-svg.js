@@ -2,6 +2,7 @@ const { AreaSymbolType } = require('./ocad-reader/symbol-types')
 const { PointObjectType, LineObjectType, AreaObjectType, UnformattedTextObjectType, FormattedTextObjectType } = require('./ocad-reader/object-types')
 const { LineElementType, AreaElementType, CircleElementType, DotElementType } = require('./ocad-reader/symbol-element-types')
 const transformFeatures = require('./transform-features')
+const flatten = require('arr-flatten')
 
 const defaultOptions = {
   generateSymbolElements: true,
@@ -24,26 +25,38 @@ module.exports = function (ocadFile, options) {
     .map(symNum => ocadFile.symbols.find(s => symNum === s.symNum))
     .filter(s => s)
 
-  const patterns = usedSymbols
+  const patterns = flatten(usedSymbols
     .filter(s => s.type === AreaSymbolType && s.hatchMode)
     .map(s => {
       const height = s.hatchLineWidth + s.hatchDist
       const width = 10
-      const fillColorIndex = s.fillOn !== undefined
-        ? s.fillOn ? s.fillColor : s.colors[0]
-        : s.color
+      const a1 = s.hatchAngle1
+      const a2 = s.hatchAngle2
 
-      return {
-        id: `fill-${s.symNum}`,
+      const patterns = [{
+        id: `fill-${s.symNum}-1`,
         'data-symbol-name': s.name,
         type: 'pattern',
-        attrs: { patternUnits: 'userSpaceOnUse', width, height },
+        attrs: { patternUnits: 'userSpaceOnUse', patternTransform: `rotate(${a1 / 10})`, width, height },
         children: [
-          { type: 'rect', attrs: { width, height, fill: 'transparent' } },
           { type: 'rect', attrs: { x: 0, y: 0, width, height: s.hatchLineWidth, fill: ocadFile.colors[s.hatchColor].rgb } }
         ]
+      }]
+
+      if (s.hatchMode === 2) {
+        patterns.push({
+          id: `fill-${s.symNum}-2`,
+          'data-symbol-name': s.name,
+          type: 'pattern',
+          attrs: { patternUnits: 'userSpaceOnUse', patternTransform: `rotate(${a2 / 10})`, width, height },
+          children: [
+            { type: 'rect', attrs: { x: 0, y: 0, width, height: s.hatchLineWidth, fill: ocadFile.colors[s.hatchColor].rgb } }
+          ]
+        })
       }
-    })
+
+      return patterns
+    }))
 
   const root = {
     type: 'svg',
@@ -103,10 +116,28 @@ const objectToSvg = (options, symbols, object) => {
         type: 'path',
         attrs: {
           d: coordsToPath(object.coordinates),
-          style: `fill: ${symbol.hatchMode ? `url(#fill-${symbol.symNum})` : options.colors[fillColorIndex].rgb};`
+          style: `fill: ${symbol.hatchMode ? `url(#fill-${symbol.symNum}-1)` : options.colors[fillColorIndex].rgb};`
         },
         order: options.colors[fillColorIndex].renderOrder
       }
+
+      if (symbol.hatchMode === 2) {
+        node = {
+          type: 'g',
+          children: [
+            node,
+            {
+              type: 'path',
+              attrs: {
+                d: coordsToPath(object.coordinates),
+                style: `fill: ${symbol.hatchMode ? `url(#fill-${symbol.symNum}-2)` : options.colors[fillColorIndex].rgb};`
+              }
+            }
+          ],
+          order: options.colors[fillColorIndex].renderOrder
+        }
+      }
+
       break
       // case UnformattedTextObjectType:
       // case FormattedTextObjectType:

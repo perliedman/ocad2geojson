@@ -42,5 +42,5 @@ module.exports = function convertToRgb (src) {
          -193.58209356861505) +
     k * (-22.33816807309886 * k - 180.12613974708367)
 
-  return `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`
+  return rgb
 }

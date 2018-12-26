@@ -12,7 +12,7 @@
   "author": "Per Liedman <per@liedman.net>",
   "license": "ISC",
   "devDependencies": {
-    "browserify": "^16.2.2",
+    "browserify": "^16.2.3",
     "watchify": "^3.11.0"
   },
   "dependencies": {

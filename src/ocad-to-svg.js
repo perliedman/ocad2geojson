@@ -1,5 +1,5 @@
 const { AreaSymbolType } = require('./ocad-reader/symbol-types')
-const { PointObjectType, LineObjectType, AreaObjectType, UnformattedTextObjectType, FormattedTextObjectType } = require('./ocad-reader/object-types')
+const { LineObjectType, AreaObjectType, UnformattedTextObjectType, FormattedTextObjectType } = require('./ocad-reader/object-types')
 const { LineElementType, AreaElementType, CircleElementType, DotElementType } = require('./ocad-reader/symbol-element-types')
 const transformFeatures = require('./transform-features')
 const flatten = require('arr-flatten')
@@ -188,7 +188,23 @@ const areaToPath = (coordinates, fillPattern, color) => ({
   order: color.renderOrder
 })
 
-const coordsToPath = coords =>
-  coords
-    .map((c, i) => `${i === 0 || c.isFirstHolePoint() ? 'M' : 'L'} ${c[0]} ${-c[1]}`)
+const coordsToPath = coords => {
+  const parts = coords.reduce((a, c) => {
+    const currentPart = a[a.length - 1]
+    currentPart.push(c)
+
+    if (c.isSecondBezier()) {
+      currentPart.isCurve = true
+      a.push([])
+    }
+
+    return a
+  }, [[]])
+
+  return parts.map((p, i) => p.isCurve
+    ? [`M ${coordToSvg(p[0])}`, `C ${p.slice(1).concat([parts[i + 1][0]]).map(c => coordToSvg(c)).join(', ')}`]
+    : p.map((c, j) => `${j === 0 || c.isFirstHolePoint() ? 'M' : 'L'} ${coordToSvg(c)}`))
     .join(' ')
+}
+
+const coordToSvg = c => `${c[0]} ${-c[1]}`

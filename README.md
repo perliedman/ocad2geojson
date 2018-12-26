@@ -52,7 +52,7 @@ readOcad(filePath)
 
 The argument to `readOcad` can either be a file path (string) or a `Buffer` object.
 
-I will try to write some docs, in the meantime, check out the [demo directory](tree/master/demo) for some examples of how to use this module.
+I will try to write some docs, in the meantime, check out the [demo directory](demo) for some examples of how to use this module.
 
 ## Command line
 

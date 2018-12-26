@@ -1,7 +1,12 @@
 OCAD to GeoJSON
 ===============
 
-Work in progress to export OCAD files to open formats, primarily [GeoJSON](http://geojson.org/) and [Mapbox Style Spec](https://www.mapbox.com/mapbox-gl-js/style-spec/), to put some more GIS in the orienteering world.
+Export OCAD files to open formats:
+
+* [GeoJSON](http://geojson.org/)
+* [Mapbox Style Spec](https://www.mapbox.com/mapbox-gl-js/style-spec/)
+* SVG
+* PDF
 
 ![Example Map Output](example-map-2.png)
 ![Example Map Output](example-map-3.png)
@@ -9,15 +14,27 @@ Work in progress to export OCAD files to open formats, primarily [GeoJSON](http:
 
 Demo: [OCAD map viewer and converter in your browser](https://www.liedman.net/ocad2geojson/)
 
-You can use this to get geo/GIS data out of an OCAD file. This is currently more or less three modules
+You can use this to get geo/GIS data out of an OCAD file. This is currently more or less four modules
 working together:
 
 * _OCAD file reader_, to get meaningful data out of the binary OCAD files
 * _OCAD to GeoJSON_, to export the geographic objects from OCAD files
+* _OCAD to SVG_, to export the map to vector graphics; SVG can then also easily be used to produce PDFs 
 * _OCAD to Mapbox GL style_, to get the styling (colors, line widths, etc.) into something you can
   use with other tools
 
-OCAD version 10, 11 and 12 files are mostly supported.
+OCAD version 10, 11 and 12 files are mostly supported. Some OCAD features are currently not fully supported:
+
+* Hatch fills are not supported when exported to Mapbox styles and emulated by semi-transparent fills
+* Fill patterns are not supported
+* Curves are not supported
+* Some texts are not exported
+* SVG / PDF currently lack any text
+* ...and probably a lot more that I do not even know is missing
+
+Feel free to open issues for lacking features - I will not promise to add them, but good to keep track of what is missing.
+
+Have you built something with this module, or want to help out improving it? I'd love to know; open an issue, pull request or contact [per@liedman.net](mailto:per@liedman.net).
 
 ## Usage
 
@@ -34,6 +51,8 @@ readOcad(filePath)
 ```
 
 The argument to `readOcad` can either be a file path (string) or a `Buffer` object.
+
+I will try to write some docs, in the meantime, check out the [demo directory](tree/master/demo) for some examples of how to use this module.
 
 ## Command line
 

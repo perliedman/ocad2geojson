@@ -49,13 +49,13 @@ const tObjectToGeoJson = (options, symbols, object) => {
     case PointObjectType:
       geometry = {
         type: 'Point',
-        coordinates: object.coordinates[0]
+        coordinates: object.coordinates[0].slice()
       }
       break
     case LineObjectType:
       geometry = {
         type: 'LineString',
-        coordinates: object.coordinates
+        coordinates: object.coordinates.slice()
       }
       break
     case AreaObjectType:
@@ -150,7 +150,7 @@ const coordinatesToRings = coordinates => {
       rings.push(currentRing)
     }
 
-    currentRing.push(c)
+    currentRing.push(c.slice())
   }
 
   // Copy first coordinate

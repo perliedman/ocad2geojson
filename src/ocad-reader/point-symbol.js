@@ -31,5 +31,6 @@ class PointSymbol11 extends Symbol11 {
 module.exports = {
   10: PointSymbol10,
   11: PointSymbol11,
-  12: PointSymbol11
+  12: PointSymbol11,
+  2018: PointSymbol11
 }

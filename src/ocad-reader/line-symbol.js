@@ -123,5 +123,6 @@ const readLineSymbol = (block, DoubleLine, Decrease) => {
 module.exports = {
   10: LineSymbol10,
   11: LineSymbol11,
-  12: LineSymbol11
+  12: LineSymbol11,
+  2018: LineSymbol11
 }

@@ -40,5 +40,6 @@ class AreaSymbol11 extends Symbol11 {
 module.exports = {
   10: AreaSymbol10,
   11: AreaSymbol11,
-  12: AreaSymbol11
+  12: AreaSymbol11,
+  2018: AreaSymbol11
 }

@@ -23,7 +23,7 @@ working together:
 * _OCAD to Mapbox GL style_, to get the styling (colors, line widths, etc.) into something you can
   use with other tools
 
-OCAD version 10, 11 and 12 files are mostly supported. Some OCAD features are currently not fully supported:
+OCAD version 10, 11 and 12 and 2018 files are mostly supported. Some OCAD features are currently not fully supported:
 
 * Hatch fills are not supported when exported to Mapbox styles and emulated by semi-transparent fills
 * Fill patterns are not supported

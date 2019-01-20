@@ -82,6 +82,7 @@ module.exports = {
   10: TextSymbol10,
   11: TextSymbol11,
   12: TextSymbol11,
+  2018: TextSymbol11,
   VerticalAlignBottom: 0,
   VerticalAlignMiddle: 4,
   VerticalAlignTop: 8,

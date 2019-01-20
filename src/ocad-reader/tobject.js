@@ -139,5 +139,6 @@ const readWideString = (object, len) => {
 module.exports = {
   10: TObject10,
   11: TObject11,
-  12: TObject12
+  12: TObject12,
+  2018: TObject12
 }

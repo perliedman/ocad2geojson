@@ -8,6 +8,18 @@ const { readOcad, ocadToGeoJson, ocadToMapboxGlStyle } = require('./')
 const filePath = argv._[0]
 var outStream
 
+const deleteBuffer = x => {
+  if (x instanceof Object) {
+    Object.keys(x).forEach(k => {
+      if (k === 'buffer') {
+        delete x[k]
+      } else {
+        deleteBuffer(x[k])
+      }
+    })
+  }
+}
+
 readOcad(filePath)
   .then(ocadFile => {
     if (argv.v) {
@@ -15,14 +27,17 @@ readOcad(filePath)
     }
 
     let mode = 'geojson'
+    let symNum
 
     if (argv.p) {
       mode = 'params'
     } else if (argv.s) {
       mode = 'symbols'
-      const n = Number(argv.s)
-      const t = Math.trunc(n)
-      symNum = (t + (n - t) / 100) * 1000
+      if (argv.s !== true) {
+        const n = Number(argv.s)
+        const t = Math.trunc(n)
+        symNum = (t + (n - t) / 100) * 1000
+      }
     } else if (argv['vector-tiles']) {
       mode = 'vectortiles'
     }
@@ -41,19 +56,21 @@ readOcad(filePath)
         outStream.write(JSON.stringify(ocadFile.parameterStrings, null, 2))
         break
       case 'symbols':
-        const symbol = ocadFile.symbols.find(s => s.symNum === symNum)
+        const symbols = symNum ? ocadFile.symbols.filter(s => s.symNum === symNum) : ocadFile.symbols
 
-        if (!symbol) {
+        if (symbols.length === 0) {
           console.error(`No such symbol ${argv.s} (${symNum})`)
           process.exit(1)
         }
 
-        delete symbol.buffer
-        if (!argv.iconBits) {
-          delete symbol.iconBits
-        }
+        symbols.forEach(symbol => {
+          deleteBuffer(symbol)
+          if (!argv.iconBits) {
+            delete symbol.iconBits
+          }
 
-        outStream.write(JSON.stringify(symbol, null, 2))
+          outStream.write(JSON.stringify(symbol, null, 2))
+        })
         break
       case 'vectortiles':
         const geoJson = toWgs84(ocadToGeoJson(ocadFile), '+proj=utm +zone=33 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs')

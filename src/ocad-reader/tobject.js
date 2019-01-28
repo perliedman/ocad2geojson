@@ -27,7 +27,9 @@ class BaseTObject extends Block {
       nDatabaseString: this.nDatabaseString,
       objectStringType: this.objectStringType,
       res1: this.res1,
-      text: this.text
+      text: this.text,
+      objectString: this.objectString,
+      databaseString: this.databaseString
     }
   }
 }
@@ -120,6 +122,8 @@ class TObject12 extends BaseTObject {
     }
 
     this.text = readWideString(this, this.nText)
+    this.objectString = readWideString(this, this.nObjectString)
+    this.databaseString = readWideString(this, this.nDatabaseString)
   }
 }
 

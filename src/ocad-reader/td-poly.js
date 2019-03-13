@@ -1,4 +1,4 @@
-module.exports = class TdPoly extends Array {
+class TdPoly extends Array {
   constructor (ocadX, ocadY, xFlags, yFlags) {
     super(xFlags === undefined ? ocadX >> 8 : ocadX, yFlags === undefined ? ocadY >> 8 : ocadY)
     this.xFlags = xFlags === undefined ? ocadX & 0xff : xFlags
@@ -66,3 +66,7 @@ module.exports = class TdPoly extends Array {
       this.yFlags)
   }
 }
+
+TdPoly.fromCoords = (x, y) => new TdPoly(x << 8, y << 8)
+
+module.exports = TdPoly

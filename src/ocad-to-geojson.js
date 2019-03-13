@@ -1,7 +1,10 @@
 const { coordEach } = require('@turf/meta')
+const Bezier = require('bezier-js')
+const flatten = require('arr-flatten')
 const { PointObjectType, LineObjectType, AreaObjectType, UnformattedTextObjectType, FormattedTextObjectType } = require('./ocad-reader/object-types')
 const { LineElementType, AreaElementType, CircleElementType, DotElementType } = require('./ocad-reader/symbol-element-types')
 const transformFeatures = require('./transform-features')
+const TdPoly = require('./ocad-reader/td-poly')
 
 const defaultOptions = {
   assignIds: true,
@@ -85,9 +88,39 @@ const tObjectToGeoJson = (options, symbols, object) => {
   }
 }
 
+const extractCoords = coords => {
+  const cs = []
+  let lastC
+  let cp1
+  let cp2
+
+  for (let i = 0; i < coords.length; i++) {
+    const c = coords[i]
+
+    if (c.isFirstBezier()) {
+      cp1 = c
+    } else if (c.isSecondBezier()) {
+      cp2 = c
+    } else if (cp1 && cp2) {
+      const l = cp2.sub(cp1).vLength()
+      const bezier = new Bezier(flatten([lastC, cp1, cp2, c]))
+      const bezierCoords = bezier.getLUT(Math.round(l / 2)).map(bc => TdPoly.fromCoords(bc.x, bc.y))
+      cs.push.apply(cs, bezierCoords.slice(1))
+      cp1 = cp2 = undefined
+      lastC = c
+    } else {
+      cs.push(c)
+      lastC = c
+    }
+  }
+
+  return cs
+}
+
 const createElement = (symbol, name, index, element, c, angle) => {
   var geometry
-  const rotatedCoords = angle ? element.coords.map(lc => lc.rotate(angle)) : element.coords
+  const coords = extractCoords(element.coords)
+  const rotatedCoords = angle ? coords.map(lc => lc.rotate(angle)) : coords
   const translatedCoords = rotatedCoords.map(lc => lc.add(c))
 
   switch (element.type) {

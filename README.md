@@ -27,7 +27,7 @@ OCAD version 10, 11 and 12 and 2018 files are mostly supported. Some OCAD featur
 
 * Hatch fills are not supported when exported to Mapbox styles and emulated by semi-transparent fills
 * Fill patterns are not supported
-* Curves are not supported
+* ~~Curves are not supported~~ Bezier curves now supported!
 * Some texts are not exported
 * SVG / PDF currently lack any text
 * ...and probably a lot more that I do not even know is missing

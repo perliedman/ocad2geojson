@@ -13,7 +13,7 @@
   "license": "ISC",
   "devDependencies": {
     "browserify": "^16.2.3",
-    "watchify": "^3.11.0"
+    "watchify": "^3.11.1"
   },
   "dependencies": {
     "@mapbox/togeojson": "^0.16.0",
@@ -25,7 +25,7 @@
     "blob-to-buffer": "^1.2.8",
     "brfs": "^2.0.1",
     "color": "^3.0.0",
-    "pdfkit": "^0.8.3",
+    "pdfkit": "^0.9.0",
     "reproject": "^1.2.2",
     "svg-to-pdfkit": "^0.1.7"
   }

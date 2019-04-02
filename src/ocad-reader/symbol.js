@@ -25,6 +25,7 @@ class BaseSymbol extends Block {
 
     for (let i = 0; i < dataSize; i += 2) {
       const element = new SymbolElement(this.buffer, this.offset)
+      this.offset += element.getSize()
       elements.push(element)
 
       i += element.numberCoords

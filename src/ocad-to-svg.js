@@ -9,71 +9,99 @@ const defaultOptions = {
   exportHidden: false
 }
 
-module.exports = function (ocadFile, options) {
-  options = { ...defaultOptions, ...options }
+const patternToSvg = (colors, s) => {
+  const patterns = []
 
-  const createSvgNode = n => {
-    const node = document.createElementNS('http://www.w3.org/2000/svg', n.type)
-    n.id && (node.id = n.id)
-    n.attrs && Object.keys(n.attrs).forEach(attrName => node.setAttribute(attrName, n.attrs[attrName]))
-    n.children && n.children.forEach(child => node.appendChild(createSvgNode(child)))
+  if (s.hatchMode) {
+    const height = s.hatchLineWidth + s.hatchDist
+    const width = 10
+    const a1 = s.hatchAngle1
+    const a2 = s.hatchAngle2
 
-    return node
-  }
+    patterns.push({
+      id: `hatch-fill-${s.symNum}-1`,
+      'data-symbol-name': s.name,
+      type: 'pattern',
+      attrs: { patternUnits: 'userSpaceOnUse', patternTransform: `rotate(${a1 / 10})`, width, height },
+      children: [
+        { type: 'rect', attrs: { x: 0, y: 0, width, height: s.hatchLineWidth, fill: colors[s.hatchColor].rgb } }
+      ]
+    })
 
-  const usedSymbols = usedSymbolNumbers(ocadFile)
-    .map(symNum => ocadFile.symbols.find(s => symNum === s.symNum))
-    .filter(s => s)
-
-  const patterns = flatten(usedSymbols
-    .filter(s => s.type === AreaSymbolType && s.hatchMode)
-    .map(s => {
-      const height = s.hatchLineWidth + s.hatchDist
-      const width = 10
-      const a1 = s.hatchAngle1
-      const a2 = s.hatchAngle2
-
-      const patterns = [{
-        id: `fill-${s.symNum}-1`,
+    if (s.hatchMode === 2) {
+      patterns.push({
+        id: `hatch-fill-${s.symNum}-2`,
         'data-symbol-name': s.name,
         type: 'pattern',
-        attrs: { patternUnits: 'userSpaceOnUse', patternTransform: `rotate(${a1 / 10})`, width, height },
+        attrs: { patternUnits: 'userSpaceOnUse', patternTransform: `rotate(${a2 / 10})`, width, height },
         children: [
-          { type: 'rect', attrs: { x: 0, y: 0, width, height: s.hatchLineWidth, fill: ocadFile.colors[s.hatchColor].rgb } }
+          { type: 'rect', attrs: { x: 0, y: 0, width, height: s.hatchLineWidth, fill: colors[s.hatchColor].rgb } }
         ]
-      }]
+      })
+    }
+  }
 
-      if (s.hatchMode === 2) {
-        patterns.push({
-          id: `fill-${s.symNum}-2`,
-          'data-symbol-name': s.name,
-          type: 'pattern',
-          attrs: { patternUnits: 'userSpaceOnUse', patternTransform: `rotate(${a2 / 10})`, width, height },
-          children: [
-            { type: 'rect', attrs: { x: 0, y: 0, width, height: s.hatchLineWidth, fill: ocadFile.colors[s.hatchColor].rgb } }
-          ]
-        })
-      }
+  if (s.structMode) {
+    const width = s.structWidth
+    const height = s.structHeight
 
-      return patterns
-    }))
-
-  const root = {
-    type: 'svg',
-    attrs: { fill: 'transparent' },
-    children: [
-      {
-        type: 'defs',
-        children: patterns
-      }
-    ].concat({
-      type: 'g',
-      children: transformFeatures(ocadFile, objectToSvg, elementToSvg, options)
-        .sort((a, b) => b.order - a.order)
+    patterns.push({
+      id: `struct-fill-${s.symNum}`,
+      'data-symbol-name': s.name,
+      type: 'pattern',
+      // , viewbox: `${-width / 2} ${-height / 2} ${width * 1.5} ${height * 1.5}`
+      attrs: { patternUnits: 'userSpaceOnUse', width, height },
+      children: s.elements.map((e, i) => elementToSvg(s, '', i, e, [s.structWidth * 0.5, -s.structHeight * 0.25], 0, { colors }))
+        .concat(s.structMode === 2
+          ? s.elements.map((e, i) => elementToSvg(s, '', i, e, [s.structWidth, -s.structHeight * 0.75], 0, { colors }))
+            .concat(s.elements.map((e, i) => elementToSvg(s, '', i, e, [0, -s.structHeight * 0.75], 0, { colors })))
+          : [])
     })
   }
 
-  return createSvgNode(root)
+  return patterns
+}
+
+const createSvgNode = n => {
+  const node = document.createElementNS('http://www.w3.org/2000/svg', n.type)
+  n.id && (node.id = n.id)
+  n.attrs && Object.keys(n.attrs).forEach(attrName => node.setAttribute(attrName, n.attrs[attrName]))
+  n.children && n.children.forEach(child => node.appendChild(createSvgNode(child)))
+
+  return node
+}
+
+module.exports = {
+  ocadToSvg: function (ocadFile, options) {
+    options = { ...defaultOptions, ...options }
+
+    const usedSymbols = usedSymbolNumbers(ocadFile)
+      .map(symNum => ocadFile.symbols.find(s => symNum === s.symNum))
+      .filter(s => s)
+
+    const patterns = flatten(usedSymbols
+      .filter(s => s.type === AreaSymbolType && (s.hatchMode || s.structMode))
+      .map(patternToSvg.bind(null, ocadFile.colors)))
+
+    const root = {
+      type: 'svg',
+      attrs: { fill: 'transparent' },
+      children: [
+        {
+          type: 'defs',
+          children: patterns
+        }
+      ].concat({
+        type: 'g',
+        children: transformFeatures(ocadFile, objectToSvg, elementToSvg, options)
+          .sort((a, b) => b.order - a.order)
+      })
+    }
+
+    return createSvgNode(root)
+  },
+  patternToSvg,
+  createSvgNode
 }
 
 const usedSymbolNumbers = ocadFile => ocadFile.objects.reduce((a, f) => {
@@ -99,14 +127,16 @@ const objectToSvg = (options, symbols, object) => {
       const fillColorIndex = symbol.fillOn !== undefined
         ? symbol.fillOn ? symbol.fillColor : symbol.colors[0]
         : symbol.color
-      node = areaToPath(object.coordinates, symbol.hatchMode && `url(#fill-${symbol.symNum}-1)`, options.colors[fillColorIndex])
+      const fillPattern = (symbol.hatchMode && `url(#hatch-fill-${symbol.symNum}-1)`) ||
+        (symbol.structMode && `url(#struct-fill-${symbol.symNum})`)
+      node = areaToPath(object.coordinates, fillPattern, options.colors[fillColorIndex])
 
       if (symbol.hatchMode === 2) {
         node = {
           type: 'g',
           children: [
             node,
-            areaToPath(object.coordinates, `url(#fill-${symbol.symNum}-2)`, options.colors[fillColorIndex])
+            areaToPath(object.coordinates, `url(#hatch-fill-${symbol.symNum}-2)`, options.colors[fillColorIndex])
           ],
           order: options.colors[fillColorIndex].renderOrder
         }

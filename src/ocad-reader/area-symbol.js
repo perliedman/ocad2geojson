@@ -14,6 +14,15 @@ class AreaSymbol10 extends Symbol10 {
     this.hatchAngle2 = this.readSmallInt()
     this.fillOn = !!this.readByte()
     this.borderOn = !!this.readByte()
+    this.structMode = this.readByte()
+    this.structDraw = this.readByte()
+    this.structWidth = this.readSmallInt()
+    this.structHeight = this.readSmallInt()
+    this.structAngle = this.readSmallInt()
+    this.structRes = this.readSmallInt()
+    this.dataSize = this.readWord()
+
+    this.elements = this.readElements(this.dataSize)
   }
 }
 
@@ -34,6 +43,18 @@ class AreaSymbol11 extends Symbol11 {
     this.hatchAngle2 = this.readSmallInt()
     this.fillOn = !!this.readByte()
     this.borderOn = !!this.readByte()
+    this.structMode = this.readByte()
+    this.structDraw = this.readByte()
+    this.structWidth = this.readSmallInt()
+    this.structHeight = this.readSmallInt()
+    this.structAngle = this.readSmallInt()
+    this.structIrregularVarX = this.readByte()
+    this.structIrregularVarY = this.readByte()
+    this.structIrregularMinDist = this.readSmallInt()
+    this.structRes = this.readSmallInt()
+    this.dataSize = this.readWord()
+
+    this.elements = this.readElements(this.dataSize)
   }
 }
 

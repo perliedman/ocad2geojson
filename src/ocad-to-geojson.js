@@ -58,7 +58,7 @@ const tObjectToGeoJson = (options, symbols, object) => {
     case LineObjectType:
       geometry = {
         type: 'LineString',
-        coordinates: object.coordinates.map(c => c.slice())
+        coordinates: extractCoords(object.coordinates).map(c => c.slice())
       }
       break
     case AreaObjectType:

@@ -24,6 +24,8 @@ module.exports = async (path, options) => {
 }
 
 const parseOcadBuffer = async (buffer, options) => new Promise((resolve, reject) => {
+  let warnings = []
+
   const header = new FileHeader(buffer, 0)
   if (!header.isValid()) {
     throw new Error(`Not an OCAD file (invalid header ${header.ocadMark} !== ${0x0cad})`)
@@ -36,8 +38,9 @@ const parseOcadBuffer = async (buffer, options) => new Promise((resolve, reject)
   let symbols = []
   let symbolIndexOffset = header.symbolIndexBlock
   while (symbolIndexOffset) {
-    let symbolIndex = new SymbolIndex(buffer, symbolIndexOffset, header.version)
+    let symbolIndex = new SymbolIndex(buffer, symbolIndexOffset, header.version, options)
     Array.prototype.push.apply(symbols, symbolIndex.parseSymbols())
+    warnings = warnings.concat(symbolIndex.warnings)
 
     symbolIndexOffset = symbolIndex.nextObjectIndexBlock
   }
@@ -67,20 +70,26 @@ const parseOcadBuffer = async (buffer, options) => new Promise((resolve, reject)
     stringIndexOffset = stringIndex.nextStringIndexBlock
   }
 
+  if (!options.quietWarnings) {
+    warnings.forEach(console.warn)
+  }
+
   resolve(new OcadFile(
     header,
     parameterStrings,
     objects,
-    symbols
+    symbols,
+    warnings
   ))
 })
 
 class OcadFile {
-  constructor (header, parameterStrings, objects, symbols) {
+  constructor (header, parameterStrings, objects, symbols, warnings) {
     this.header = header
     this.parameterStrings = parameterStrings
     this.objects = objects
     this.symbols = symbols
+    this.warnings = warnings
 
     this.colors = parameterStrings[9]
       .map((colorDef, i) => {

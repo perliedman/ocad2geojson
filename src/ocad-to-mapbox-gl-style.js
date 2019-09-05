@@ -3,6 +3,7 @@ const { LineElementType, AreaElementType, CircleElementType, DotElementType } = 
 const { HorizontalAlignCenter, HorizontalAlignRight, VerticalAlignBottom, VerticalAlignMiddle, VerticalAlignTop } = require('./ocad-reader/text-symbol')
 
 module.exports = function ocadToMapboxGlStyle (ocadFile, options) {
+  options = { scaleFactor: ocadFile.getCrs().scale / 15000, ...options }
   const usedSymbols = usedSymbolNumbers(ocadFile)
     .map(symNum => ocadFile.symbols.find(s => symNum === s.symNum))
     .filter(s => s)
@@ -46,7 +47,7 @@ const symbolToMapboxLayer = (symbol, colors, options) => {
       break
   }
 
-  return layerFactory && layerFactory(id, options.source, options.sourceLayer, filter, symbol, colors)
+  return layerFactory && layerFactory(id, options.source, options.sourceLayer, options.scaleFactor, filter, symbol, colors)
 }
 
 const symbolElementsToMapboxLayer = (symbol, colors, options) => {
@@ -78,6 +79,7 @@ const createElementLayer = (element, name, index, symbol, colors, options) => {
         id,
         options.source,
         options.sourceLayer,
+        options.scaleFactor,
         filter,
         element, colors)
     case AreaElementType:
@@ -85,6 +87,7 @@ const createElementLayer = (element, name, index, symbol, colors, options) => {
         id,
         options.source,
         options.sourceLayer,
+        options.scaleFactor,
         filter,
         element, colors)
     case CircleElementType:
@@ -93,13 +96,14 @@ const createElementLayer = (element, name, index, symbol, colors, options) => {
         id,
         options.source,
         options.sourceLayer,
+        options.scaleFactor,
         filter,
         element, colors)
   }
 }
 
-const lineLayer = (id, source, sourceLayer, filter, lineDef, colors) => {
-  const baseWidth = (lineDef.lineWidth / 10)
+const lineLayer = (id, source, sourceLayer, scaleFactor, filter, lineDef, colors) => {
+  const baseWidth = (lineDef.lineWidth / 10) * scaleFactor
   const baseMainLength = lineDef.mainLength / (10 * baseWidth)
   const baseMainGap = lineDef.mainGap / (10 * baseWidth)
   const colorIndex = lineDef.lineColor !== undefined ? lineDef.lineColor : lineDef.color
@@ -128,7 +132,7 @@ const lineLayer = (id, source, sourceLayer, filter, lineDef, colors) => {
   return layer
 }
 
-const areaLayer = (id, source, sourceLayer, filter, areaDef, colors) => {
+const areaLayer = (id, source, sourceLayer, scaleFactor, filter, areaDef, colors) => {
   const fillColorIndex = areaDef.fillOn !== undefined
     ? areaDef.fillOn ? areaDef.fillColor : areaDef.colors[0]
     : areaDef.color
@@ -150,7 +154,7 @@ const areaLayer = (id, source, sourceLayer, filter, areaDef, colors) => {
   }
 }
 
-const circleLayer = (id, source, sourceLayer, filter, element, colors) => {
+const circleLayer = (id, source, sourceLayer, scaleFactor, filter, element, colors) => {
   const baseRadius = (element.diameter / 2 / 10) || 1
   const layer = {
     id,
@@ -159,7 +163,7 @@ const circleLayer = (id, source, sourceLayer, filter, element, colors) => {
     type: 'circle',
     filter,
     paint: {
-      'circle-radius': expFunc(baseRadius)
+      'circle-radius': expFunc(baseRadius * scaleFactor)
     },
     metadata: {
       sort: colors[element.color].renderOrder
@@ -180,7 +184,7 @@ const circleLayer = (id, source, sourceLayer, filter, element, colors) => {
   return layer
 }
 
-const textLayer = (id, source, sourceLayer, filter, element, colors) => {
+const textLayer = (id, source, sourceLayer, scaleFactor, filter, element, colors) => {
   const horizontalAlign = element.getHorizontalAlignment()
   const verticalAlign = element.getVerticalAlignment()
   const justify = horizontalAlign === HorizontalAlignCenter
@@ -205,7 +209,7 @@ const textLayer = (id, source, sourceLayer, filter, element, colors) => {
       'symbol-placement': 'point',
       'text-font': [`Open Sans${fontVariant}`], // , `Arial Unicode MS${fontVariant}`
       'text-field': ['get', 'text'],
-      'text-size': expFunc(element.fontSize / 2.3),
+      'text-size': expFunc(element.fontSize / 2.3 * scaleFactor),
       'text-allow-overlap': true,
       'text-ignore-placement': true,
       'text-max-width': Infinity,

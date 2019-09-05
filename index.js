@@ -11,6 +11,8 @@ const shpwrite = require('shp-write')
 const JSZip = require('jszip')
 const b64toblob = require('b64-to-blob')
 
+mapboxgl.accessToken = 'pk.eyJ1IjoibGllZG1hbiIsImEiOiJjanM3aWljOXEwZXVjNDNvMWNocmR4NGc5In0.RxDwwoTTPoJtEw6VcIHiWQ'
+
 Vue.use(MuseUI);
 MuseUI.theme.use('dark')
 
@@ -162,6 +164,7 @@ Vue.component('map-view', {
       return {
         version: 8,
         name: 'OCAD demo',
+        glyphs: 'mapbox://fonts/mapbox/{fontstack}/{range}.pbf',
         sources: {
           map: {
             type: 'geojson',

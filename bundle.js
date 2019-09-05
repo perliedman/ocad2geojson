@@ -12,6 +12,8 @@ const shpwrite = require('shp-write')
 const JSZip = require('jszip')
 const b64toblob = require('b64-to-blob')
 
+mapboxgl.accessToken = 'pk.eyJ1IjoibGllZG1hbiIsImEiOiJjanM3aWljOXEwZXVjNDNvMWNocmR4NGc5In0.RxDwwoTTPoJtEw6VcIHiWQ'
+
 Vue.use(MuseUI);
 MuseUI.theme.use('dark')
 
@@ -163,6 +165,7 @@ Vue.component('map-view', {
       return {
         version: 8,
         name: 'OCAD demo',
+        glyphs: 'mapbox://fonts/mapbox/{fontstack}/{range}.pbf',
         sources: {
           map: {
             type: 'geojson',
@@ -232,7 +235,7 @@ function formatNum(num, digits) {
 	return Math.round(num * pow) / pow;
 }
 
-},{"@turf/bbox":7,"@turf/meta":9,"b64-to-blob":14,"blob-to-buffer":16,"file-saver":48,"geojson-vt":49,"jszip":64,"ocad2geojson":92,"reproject":143,"shp-write":144,"vt-pbf":198}],2:[function(require,module,exports){
+},{"@turf/bbox":7,"@turf/meta":9,"b64-to-blob":15,"blob-to-buffer":23,"file-saver":56,"geojson-vt":57,"jszip":72,"ocad2geojson":100,"reproject":154,"shp-write":156,"vt-pbf":210}],2:[function(require,module,exports){
 'use strict';
 
 module.exports = Point;
@@ -2776,6 +2779,30 @@ exports.findSegment = findSegment;
 exports.findPoint = findPoint;
 
 },{"@turf/helpers":8}],10:[function(require,module,exports){
+/*!
+ * arr-flatten <https://github.com/jonschlinkert/arr-flatten>
+ *
+ * Copyright (c) 2014-2017, Jon Schlinkert.
+ * Released under the MIT License.
+ */
+
+'use strict';
+
+module.exports = function (arr) {
+  return flat(arr, []);
+};
+
+function flat(arr, res) {
+  var i = 0, cur;
+  var len = arr.length;
+  for (; i < len; i++) {
+    cur = arr[i];
+    Array.isArray(cur) ? flat(cur, res) : res.push(cur);
+  }
+  return res;
+}
+
+},{}],11:[function(require,module,exports){
 (function (global){
 'use strict';
 
@@ -3269,7 +3296,7 @@ var objectKeys = Object.keys || function (obj) {
 };
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"util/":13}],11:[function(require,module,exports){
+},{"util/":14}],12:[function(require,module,exports){
 if (typeof Object.create === 'function') {
   // implementation from standard node.js 'util' module
   module.exports = function inherits(ctor, superCtor) {
@@ -3294,14 +3321,14 @@ if (typeof Object.create === 'function') {
   }
 }
 
-},{}],12:[function(require,module,exports){
+},{}],13:[function(require,module,exports){
 module.exports = function isBuffer(arg) {
   return arg && typeof arg === 'object'
     && typeof arg.copy === 'function'
     && typeof arg.fill === 'function'
     && typeof arg.readUInt8 === 'function';
 }
-},{}],13:[function(require,module,exports){
+},{}],14:[function(require,module,exports){
 (function (process,global){
 // Copyright Joyent, Inc. and other Node contributors.
 //
@@ -3891,7 +3918,7 @@ function hasOwnProperty(obj, prop) {
 }
 
 }).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./support/isBuffer":12,"_process":131,"inherits":11}],14:[function(require,module,exports){
+},{"./support/isBuffer":13,"_process":142,"inherits":12}],15:[function(require,module,exports){
 (function(root, globalName, factory) {
   if (typeof define === 'function' && define.amd) {
     // AMD:
@@ -3933,7 +3960,7 @@ function hasOwnProperty(obj, prop) {
   };
 }));
 
-},{}],15:[function(require,module,exports){
+},{}],16:[function(require,module,exports){
 'use strict'
 
 exports.byteLength = byteLength
@@ -4086,7 +4113,2174 @@ function fromByteArray (uint8) {
   return parts.join('')
 }
 
-},{}],16:[function(require,module,exports){
+},{}],17:[function(require,module,exports){
+module.exports = require('./lib/bezier');
+
+},{"./lib/bezier":18}],18:[function(require,module,exports){
+/**
+  A javascript Bezier curve library by Pomax.
+
+  Based on http://pomax.github.io/bezierinfo
+
+  This code is MIT licensed.
+**/
+(function() {
+  "use strict";
+
+  // math-inlining.
+  var abs = Math.abs,
+    min = Math.min,
+    max = Math.max,
+    cos = Math.cos,
+    sin = Math.sin,
+    acos = Math.acos,
+    sqrt = Math.sqrt,
+    pi = Math.PI,
+    // a zero coordinate, which is surprisingly useful
+    ZERO = { x: 0, y: 0, z: 0 };
+
+  // quite needed
+  var utils = require("./utils.js");
+
+  // only used for outlines atm.
+  var PolyBezier = require("./poly-bezier.js");
+
+  /**
+   * Bezier curve constructor. The constructor argument can be one of three things:
+   *
+   * 1. array/4 of {x:..., y:..., z:...}, z optional
+   * 2. numerical array/8 ordered x1,y1,x2,y2,x3,y3,x4,y4
+   * 3. numerical array/12 ordered x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4
+   *
+   */
+  var Bezier = function(coords) {
+    var args = coords && coords.forEach ? coords : [].slice.call(arguments);
+    var coordlen = false;
+    if (typeof args[0] === "object") {
+      coordlen = args.length;
+      var newargs = [];
+      args.forEach(function(point) {
+        ["x", "y", "z"].forEach(function(d) {
+          if (typeof point[d] !== "undefined") {
+            newargs.push(point[d]);
+          }
+        });
+      });
+      args = newargs;
+    }
+    var higher = false;
+    var len = args.length;
+    if (coordlen) {
+      if (coordlen > 4) {
+        if (arguments.length !== 1) {
+          throw new Error(
+            "Only new Bezier(point[]) is accepted for 4th and higher order curves"
+          );
+        }
+        higher = true;
+      }
+    } else {
+      if (len !== 6 && len !== 8 && len !== 9 && len !== 12) {
+        if (arguments.length !== 1) {
+          throw new Error(
+            "Only new Bezier(point[]) is accepted for 4th and higher order curves"
+          );
+        }
+      }
+    }
+    var _3d =
+      (!higher && (len === 9 || len === 12)) ||
+      (coords && coords[0] && typeof coords[0].z !== "undefined");
+    this._3d = _3d;
+    var points = [];
+    for (var idx = 0, step = _3d ? 3 : 2; idx < len; idx += step) {
+      var point = {
+        x: args[idx],
+        y: args[idx + 1]
+      };
+      if (_3d) {
+        point.z = args[idx + 2];
+      }
+      points.push(point);
+    }
+    this.order = points.length - 1;
+    this.points = points;
+    var dims = ["x", "y"];
+    if (_3d) dims.push("z");
+    this.dims = dims;
+    this.dimlen = dims.length;
+
+    (function(curve) {
+      var order = curve.order;
+      var points = curve.points;
+      var a = utils.align(points, { p1: points[0], p2: points[order] });
+      for (var i = 0; i < a.length; i++) {
+        if (abs(a[i].y) > 0.0001) {
+          curve._linear = false;
+          return;
+        }
+      }
+      curve._linear = true;
+    })(this);
+
+    this._t1 = 0;
+    this._t2 = 1;
+    this.update();
+  };
+
+  var svgToBeziers = require("./svg-to-beziers");
+
+  /**
+   * turn an svg <path> d attribute into a sequence of Bezier segments.
+   */
+  Bezier.SVGtoBeziers = function(d) {
+    return svgToBeziers(Bezier, d);
+  };
+
+  function getABC(n, S, B, E, t) {
+    if (typeof t === "undefined") {
+      t = 0.5;
+    }
+    var u = utils.projectionratio(t, n),
+      um = 1 - u,
+      C = {
+        x: u * S.x + um * E.x,
+        y: u * S.y + um * E.y
+      },
+      s = utils.abcratio(t, n),
+      A = {
+        x: B.x + (B.x - C.x) / s,
+        y: B.y + (B.y - C.y) / s
+      };
+    return { A: A, B: B, C: C };
+  }
+
+  Bezier.quadraticFromPoints = function(p1, p2, p3, t) {
+    if (typeof t === "undefined") {
+      t = 0.5;
+    }
+    // shortcuts, although they're really dumb
+    if (t === 0) {
+      return new Bezier(p2, p2, p3);
+    }
+    if (t === 1) {
+      return new Bezier(p1, p2, p2);
+    }
+    // real fitting.
+    var abc = getABC(2, p1, p2, p3, t);
+    return new Bezier(p1, abc.A, p3);
+  };
+
+  Bezier.cubicFromPoints = function(S, B, E, t, d1) {
+    if (typeof t === "undefined") {
+      t = 0.5;
+    }
+    var abc = getABC(3, S, B, E, t);
+    if (typeof d1 === "undefined") {
+      d1 = utils.dist(B, abc.C);
+    }
+    var d2 = d1 * (1 - t) / t;
+
+    var selen = utils.dist(S, E),
+      lx = (E.x - S.x) / selen,
+      ly = (E.y - S.y) / selen,
+      bx1 = d1 * lx,
+      by1 = d1 * ly,
+      bx2 = d2 * lx,
+      by2 = d2 * ly;
+    // derivation of new hull coordinates
+    var e1 = { x: B.x - bx1, y: B.y - by1 },
+      e2 = { x: B.x + bx2, y: B.y + by2 },
+      A = abc.A,
+      v1 = { x: A.x + (e1.x - A.x) / (1 - t), y: A.y + (e1.y - A.y) / (1 - t) },
+      v2 = { x: A.x + (e2.x - A.x) / t, y: A.y + (e2.y - A.y) / t },
+      nc1 = { x: S.x + (v1.x - S.x) / t, y: S.y + (v1.y - S.y) / t },
+      nc2 = {
+        x: E.x + (v2.x - E.x) / (1 - t),
+        y: E.y + (v2.y - E.y) / (1 - t)
+      };
+    // ...done
+    return new Bezier(S, nc1, nc2, E);
+  };
+
+  var getUtils = function() {
+    return utils;
+  };
+
+  Bezier.getUtils = getUtils;
+
+  Bezier.PolyBezier = PolyBezier;
+
+  Bezier.prototype = {
+    getUtils: getUtils,
+    valueOf: function() {
+      return this.toString();
+    },
+    toString: function() {
+      return utils.pointsToString(this.points);
+    },
+    toSVG: function(relative) {
+      if (this._3d) return false;
+      var p = this.points,
+        x = p[0].x,
+        y = p[0].y,
+        s = ["M", x, y, this.order === 2 ? "Q" : "C"];
+      for (var i = 1, last = p.length; i < last; i++) {
+        s.push(p[i].x);
+        s.push(p[i].y);
+      }
+      return s.join(" ");
+    },
+    setRatios: function(ratios) {
+      if (ratios.length !== this.points.length) {
+        throw new Error("incorrect number of ratio values");
+      }
+      this.ratios = ratios;
+      this._lut = []; //  invalidate any precomputed LUT
+    },
+    update: function() {
+      // invalidate any precomputed LUT
+      this._lut = [];
+      this.dpoints = utils.derive(this.points, this._3d);
+      this.computedirection();
+    },
+    computedirection: function() {
+      var points = this.points;
+      var angle = utils.angle(points[0], points[this.order], points[1]);
+      this.clockwise = angle > 0;
+    },
+    length: function() {
+      return utils.length(this.derivative.bind(this));
+    },
+    _lut: [],
+    getLUT: function(steps) {
+      steps = steps || 100;
+      if (this._lut.length === steps) {
+        return this._lut;
+      }
+      this._lut = [];
+      // We want a range from 0 to 1 inclusive, so
+      // we decrement and then use <= rather than <:
+      steps--;
+      for (var t = 0; t <= steps; t++) {
+        this._lut.push(this.compute(t / steps));
+      }
+      return this._lut;
+    },
+    on: function(point, error) {
+      error = error || 5;
+      var lut = this.getLUT(),
+        hits = [],
+        c,
+        t = 0;
+      for (var i = 0; i < lut.length; i++) {
+        c = lut[i];
+        if (utils.dist(c, point) < error) {
+          hits.push(c);
+          t += i / lut.length;
+        }
+      }
+      if (!hits.length) return false;
+      return (t /= hits.length);
+    },
+    project: function(point) {
+      // step 1: coarse check
+      var LUT = this.getLUT(),
+        l = LUT.length - 1,
+        closest = utils.closest(LUT, point),
+        mdist = closest.mdist,
+        mpos = closest.mpos;
+      if (mpos === 0 || mpos === l) {
+        var t = mpos / l,
+          pt = this.compute(t);
+        pt.t = t;
+        pt.d = mdist;
+        return pt;
+      }
+
+      // step 2: fine check
+      var ft,
+        t,
+        p,
+        d,
+        t1 = (mpos - 1) / l,
+        t2 = (mpos + 1) / l,
+        step = 0.1 / l;
+      mdist += 1;
+      for (t = t1, ft = t; t < t2 + step; t += step) {
+        p = this.compute(t);
+        d = utils.dist(point, p);
+        if (d < mdist) {
+          mdist = d;
+          ft = t;
+        }
+      }
+      p = this.compute(ft);
+      p.t = ft;
+      p.d = mdist;
+      return p;
+    },
+    get: function(t) {
+      return this.compute(t);
+    },
+    point: function(idx) {
+      return this.points[idx];
+    },
+    compute: function(t) {
+      if (this.ratios) return utils.computeWithRatios(t, this.points, this.ratios, this._3d);
+      return utils.compute(t, this.points, this._3d, this.ratios);
+    },
+    raise: function() {
+      var p = this.points,
+        np = [p[0]],
+        i,
+        k = p.length,
+        pi,
+        pim;
+      for (var i = 1; i < k; i++) {
+        pi = p[i];
+        pim = p[i - 1];
+        np[i] = {
+          x: (k - i) / k * pi.x + i / k * pim.x,
+          y: (k - i) / k * pi.y + i / k * pim.y
+        };
+      }
+      np[k] = p[k - 1];
+      return new Bezier(np);
+    },
+    derivative: function(t) {
+      var mt = 1 - t,
+        a,
+        b,
+        c = 0,
+        p = this.dpoints[0];
+      if (this.order === 2) {
+        p = [p[0], p[1], ZERO];
+        a = mt;
+        b = t;
+      }
+      if (this.order === 3) {
+        a = mt * mt;
+        b = mt * t * 2;
+        c = t * t;
+      }
+      var ret = {
+        x: a * p[0].x + b * p[1].x + c * p[2].x,
+        y: a * p[0].y + b * p[1].y + c * p[2].y
+      };
+      if (this._3d) {
+        ret.z = a * p[0].z + b * p[1].z + c * p[2].z;
+      }
+      return ret;
+    },
+    curvature: function(t) {
+      return utils.curvature(t, this.points, this._3d);
+    },
+    inflections: function() {
+      return utils.inflections(this.points);
+    },
+    normal: function(t) {
+      return this._3d ? this.__normal3(t) : this.__normal2(t);
+    },
+    __normal2: function(t) {
+      var d = this.derivative(t);
+      var q = sqrt(d.x * d.x + d.y * d.y);
+      return { x: -d.y / q, y: d.x / q };
+    },
+    __normal3: function(t) {
+      // see http://stackoverflow.com/questions/25453159
+      var r1 = this.derivative(t),
+        r2 = this.derivative(t + 0.01),
+        q1 = sqrt(r1.x * r1.x + r1.y * r1.y + r1.z * r1.z),
+        q2 = sqrt(r2.x * r2.x + r2.y * r2.y + r2.z * r2.z);
+      r1.x /= q1;
+      r1.y /= q1;
+      r1.z /= q1;
+      r2.x /= q2;
+      r2.y /= q2;
+      r2.z /= q2;
+      // cross product
+      var c = {
+        x: r2.y * r1.z - r2.z * r1.y,
+        y: r2.z * r1.x - r2.x * r1.z,
+        z: r2.x * r1.y - r2.y * r1.x
+      };
+      var m = sqrt(c.x * c.x + c.y * c.y + c.z * c.z);
+      c.x /= m;
+      c.y /= m;
+      c.z /= m;
+      // rotation matrix
+      var R = [
+        c.x * c.x,
+        c.x * c.y - c.z,
+        c.x * c.z + c.y,
+        c.x * c.y + c.z,
+        c.y * c.y,
+        c.y * c.z - c.x,
+        c.x * c.z - c.y,
+        c.y * c.z + c.x,
+        c.z * c.z
+      ];
+      // normal vector:
+      var n = {
+        x: R[0] * r1.x + R[1] * r1.y + R[2] * r1.z,
+        y: R[3] * r1.x + R[4] * r1.y + R[5] * r1.z,
+        z: R[6] * r1.x + R[7] * r1.y + R[8] * r1.z
+      };
+      return n;
+    },
+    hull: function(t) {
+      var p = this.points,
+        _p = [],
+        pt,
+        q = [],
+        idx = 0,
+        i = 0,
+        l = 0;
+      q[idx++] = p[0];
+      q[idx++] = p[1];
+      q[idx++] = p[2];
+      if (this.order === 3) {
+        q[idx++] = p[3];
+      }
+      // we lerp between all points at each iteration, until we have 1 point left.
+      while (p.length > 1) {
+        _p = [];
+        for (i = 0, l = p.length - 1; i < l; i++) {
+          pt = utils.lerp(t, p[i], p[i + 1]);
+          q[idx++] = pt;
+          _p.push(pt);
+        }
+        p = _p;
+      }
+      return q;
+    },
+    split: function(t1, t2) {
+      // shortcuts
+      if (t1 === 0 && !!t2) {
+        return this.split(t2).left;
+      }
+      if (t2 === 1) {
+        return this.split(t1).right;
+      }
+
+      // no shortcut: use "de Casteljau" iteration.
+      var q = this.hull(t1);
+      var result = {
+        left:
+          this.order === 2
+            ? new Bezier([q[0], q[3], q[5]])
+            : new Bezier([q[0], q[4], q[7], q[9]]),
+        right:
+          this.order === 2
+            ? new Bezier([q[5], q[4], q[2]])
+            : new Bezier([q[9], q[8], q[6], q[3]]),
+        span: q
+      };
+
+      // make sure we bind _t1/_t2 information!
+      result.left._t1 = utils.map(0, 0, 1, this._t1, this._t2);
+      result.left._t2 = utils.map(t1, 0, 1, this._t1, this._t2);
+      result.right._t1 = utils.map(t1, 0, 1, this._t1, this._t2);
+      result.right._t2 = utils.map(1, 0, 1, this._t1, this._t2);
+
+      // if we have no t2, we're done
+      if (!t2) {
+        return result;
+      }
+
+      // if we have a t2, split again:
+      t2 = utils.map(t2, t1, 1, 0, 1);
+      var subsplit = result.right.split(t2);
+      return subsplit.left;
+    },
+    extrema: function() {
+      var dims = this.dims,
+        result = {},
+        roots = [],
+        p,
+        mfn;
+      dims.forEach(
+        function(dim) {
+          mfn = function(v) {
+            return v[dim];
+          };
+          p = this.dpoints[0].map(mfn);
+          result[dim] = utils.droots(p);
+          if (this.order === 3) {
+            p = this.dpoints[1].map(mfn);
+            result[dim] = result[dim].concat(utils.droots(p));
+          }
+          result[dim] = result[dim].filter(function(t) {
+            return t >= 0 && t <= 1;
+          });
+          roots = roots.concat(result[dim].sort(utils.numberSort));
+        }.bind(this)
+      );
+      roots = roots.sort(utils.numberSort).filter(function(v, idx) {
+        return roots.indexOf(v) === idx;
+      });
+      result.values = roots;
+      return result;
+    },
+    bbox: function() {
+      var extrema = this.extrema(),
+        result = {};
+      this.dims.forEach(
+        function(d) {
+          result[d] = utils.getminmax(this, d, extrema[d]);
+        }.bind(this)
+      );
+      return result;
+    },
+    overlaps: function(curve) {
+      var lbbox = this.bbox(),
+        tbbox = curve.bbox();
+      return utils.bboxoverlap(lbbox, tbbox);
+    },
+    offset: function(t, d) {
+      if (typeof d !== "undefined") {
+        var c = this.get(t);
+        var n = this.normal(t);
+        var ret = {
+          c: c,
+          n: n,
+          x: c.x + n.x * d,
+          y: c.y + n.y * d
+        };
+        if (this._3d) {
+          ret.z = c.z + n.z * d;
+        }
+        return ret;
+      }
+      if (this._linear) {
+        var nv = this.normal(0);
+        var coords = this.points.map(function(p) {
+          var ret = {
+            x: p.x + t * nv.x,
+            y: p.y + t * nv.y
+          };
+          if (p.z && n.z) {
+            ret.z = p.z + t * nv.z;
+          }
+          return ret;
+        });
+        return [new Bezier(coords)];
+      }
+      var reduced = this.reduce();
+      return reduced.map(function(s) {
+        return s.scale(t);
+      });
+    },
+    simple: function() {
+      if (this.order === 3) {
+        var a1 = utils.angle(this.points[0], this.points[3], this.points[1]);
+        var a2 = utils.angle(this.points[0], this.points[3], this.points[2]);
+        if ((a1 > 0 && a2 < 0) || (a1 < 0 && a2 > 0)) return false;
+      }
+      var n1 = this.normal(0);
+      var n2 = this.normal(1);
+      var s = n1.x * n2.x + n1.y * n2.y;
+      if (this._3d) {
+        s += n1.z * n2.z;
+      }
+      var angle = abs(acos(s));
+      return angle < pi / 3;
+    },
+    reduce: function() {
+      var i,
+        t1 = 0,
+        t2 = 0,
+        step = 0.01,
+        segment,
+        pass1 = [],
+        pass2 = [];
+      // first pass: split on extrema
+      var extrema = this.extrema().values;
+      if (extrema.indexOf(0) === -1) {
+        extrema = [0].concat(extrema);
+      }
+      if (extrema.indexOf(1) === -1) {
+        extrema.push(1);
+      }
+
+      for (t1 = extrema[0], i = 1; i < extrema.length; i++) {
+        t2 = extrema[i];
+        segment = this.split(t1, t2);
+        segment._t1 = t1;
+        segment._t2 = t2;
+        pass1.push(segment);
+        t1 = t2;
+      }
+
+      // second pass: further reduce these segments to simple segments
+      pass1.forEach(function(p1) {
+        t1 = 0;
+        t2 = 0;
+        while (t2 <= 1) {
+          for (t2 = t1 + step; t2 <= 1 + step; t2 += step) {
+            segment = p1.split(t1, t2);
+            if (!segment.simple()) {
+              t2 -= step;
+              if (abs(t1 - t2) < step) {
+                // we can never form a reduction
+                return [];
+              }
+              segment = p1.split(t1, t2);
+              segment._t1 = utils.map(t1, 0, 1, p1._t1, p1._t2);
+              segment._t2 = utils.map(t2, 0, 1, p1._t1, p1._t2);
+              pass2.push(segment);
+              t1 = t2;
+              break;
+            }
+          }
+        }
+        if (t1 < 1) {
+          segment = p1.split(t1, 1);
+          segment._t1 = utils.map(t1, 0, 1, p1._t1, p1._t2);
+          segment._t2 = p1._t2;
+          pass2.push(segment);
+        }
+      });
+      return pass2;
+    },
+    scale: function(d) {
+      var order = this.order;
+      var distanceFn = false;
+      if (typeof d === "function") {
+        distanceFn = d;
+      }
+      if (distanceFn && order === 2) {
+        return this.raise().scale(distanceFn);
+      }
+
+      // TODO: add special handling for degenerate (=linear) curves.
+      var clockwise = this.clockwise;
+      var r1 = distanceFn ? distanceFn(0) : d;
+      var r2 = distanceFn ? distanceFn(1) : d;
+      var v = [this.offset(0, 10), this.offset(1, 10)];
+      var o = utils.lli4(v[0], v[0].c, v[1], v[1].c);
+      if (!o) {
+        throw new Error("cannot scale this curve. Try reducing it first.");
+      }
+      // move all points by distance 'd' wrt the origin 'o'
+      var points = this.points,
+        np = [];
+
+      // move end points by fixed distance along normal.
+      [0, 1].forEach(
+        function(t) {
+          var p = (np[t * order] = utils.copy(points[t * order]));
+          p.x += (t ? r2 : r1) * v[t].n.x;
+          p.y += (t ? r2 : r1) * v[t].n.y;
+        }.bind(this)
+      );
+
+      if (!distanceFn) {
+        // move control points to lie on the intersection of the offset
+        // derivative vector, and the origin-through-control vector
+        [0, 1].forEach(
+          function(t) {
+            if (this.order === 2 && !!t) return;
+            var p = np[t * order];
+            var d = this.derivative(t);
+            var p2 = { x: p.x + d.x, y: p.y + d.y };
+            np[t + 1] = utils.lli4(p, p2, o, points[t + 1]);
+          }.bind(this)
+        );
+        return new Bezier(np);
+      }
+
+      // move control points by "however much necessary to
+      // ensure the correct tangent to endpoint".
+      [0, 1].forEach(
+        function(t) {
+          if (this.order === 2 && !!t) return;
+          var p = points[t + 1];
+          var ov = {
+            x: p.x - o.x,
+            y: p.y - o.y
+          };
+          var rc = distanceFn ? distanceFn((t + 1) / order) : d;
+          if (distanceFn && !clockwise) rc = -rc;
+          var m = sqrt(ov.x * ov.x + ov.y * ov.y);
+          ov.x /= m;
+          ov.y /= m;
+          np[t + 1] = {
+            x: p.x + rc * ov.x,
+            y: p.y + rc * ov.y
+          };
+        }.bind(this)
+      );
+      return new Bezier(np);
+    },
+    outline: function(d1, d2, d3, d4) {
+      d2 = typeof d2 === "undefined" ? d1 : d2;
+      var reduced = this.reduce(),
+        len = reduced.length,
+        fcurves = [],
+        bcurves = [],
+        p,
+        alen = 0,
+        tlen = this.length();
+
+      var graduated = typeof d3 !== "undefined" && typeof d4 !== "undefined";
+
+      function linearDistanceFunction(s, e, tlen, alen, slen) {
+        return function(v) {
+          var f1 = alen / tlen,
+            f2 = (alen + slen) / tlen,
+            d = e - s;
+          return utils.map(v, 0, 1, s + f1 * d, s + f2 * d);
+        };
+      }
+
+      // form curve oulines
+      reduced.forEach(function(segment) {
+        slen = segment.length();
+        if (graduated) {
+          fcurves.push(
+            segment.scale(linearDistanceFunction(d1, d3, tlen, alen, slen))
+          );
+          bcurves.push(
+            segment.scale(linearDistanceFunction(-d2, -d4, tlen, alen, slen))
+          );
+        } else {
+          fcurves.push(segment.scale(d1));
+          bcurves.push(segment.scale(-d2));
+        }
+        alen += slen;
+      });
+
+      // reverse the "return" outline
+      bcurves = bcurves
+        .map(function(s) {
+          p = s.points;
+          if (p[3]) {
+            s.points = [p[3], p[2], p[1], p[0]];
+          } else {
+            s.points = [p[2], p[1], p[0]];
+          }
+          return s;
+        })
+        .reverse();
+
+      // form the endcaps as lines
+      var fs = fcurves[0].points[0],
+        fe = fcurves[len - 1].points[fcurves[len - 1].points.length - 1],
+        bs = bcurves[len - 1].points[bcurves[len - 1].points.length - 1],
+        be = bcurves[0].points[0],
+        ls = utils.makeline(bs, fs),
+        le = utils.makeline(fe, be),
+        segments = [ls]
+          .concat(fcurves)
+          .concat([le])
+          .concat(bcurves),
+        slen = segments.length;
+
+      return new PolyBezier(segments);
+    },
+    outlineshapes: function(d1, d2, curveIntersectionThreshold) {
+      d2 = d2 || d1;
+      var outline = this.outline(d1, d2).curves;
+      var shapes = [];
+      for (var i = 1, len = outline.length; i < len / 2; i++) {
+        var shape = utils.makeshape(
+          outline[i],
+          outline[len - i],
+          curveIntersectionThreshold
+        );
+        shape.startcap.virtual = i > 1;
+        shape.endcap.virtual = i < len / 2 - 1;
+        shapes.push(shape);
+      }
+      return shapes;
+    },
+    intersects: function(curve, curveIntersectionThreshold) {
+      if (!curve) return this.selfintersects(curveIntersectionThreshold);
+      if (curve.p1 && curve.p2) {
+        return this.lineIntersects(curve);
+      }
+      if (curve instanceof Bezier) {
+        curve = curve.reduce();
+      }
+      return this.curveintersects(
+        this.reduce(),
+        curve,
+        curveIntersectionThreshold
+      );
+    },
+    lineIntersects: function(line) {
+      var mx = min(line.p1.x, line.p2.x),
+        my = min(line.p1.y, line.p2.y),
+        MX = max(line.p1.x, line.p2.x),
+        MY = max(line.p1.y, line.p2.y),
+        self = this;
+      return utils.roots(this.points, line).filter(function(t) {
+        var p = self.get(t);
+        return utils.between(p.x, mx, MX) && utils.between(p.y, my, MY);
+      });
+    },
+    selfintersects: function(curveIntersectionThreshold) {
+      var reduced = this.reduce();
+      // "simple" curves cannot intersect with their direct
+      // neighbour, so for each segment X we check whether
+      // it intersects [0:x-2][x+2:last].
+      var i,
+        len = reduced.length - 2,
+        results = [],
+        result,
+        left,
+        right;
+      for (i = 0; i < len; i++) {
+        left = reduced.slice(i, i + 1);
+        right = reduced.slice(i + 2);
+        result = this.curveintersects(left, right, curveIntersectionThreshold);
+        results = results.concat(result);
+      }
+      return results;
+    },
+    curveintersects: function(c1, c2, curveIntersectionThreshold) {
+      var pairs = [];
+      // step 1: pair off any overlapping segments
+      c1.forEach(function(l) {
+        c2.forEach(function(r) {
+          if (l.overlaps(r)) {
+            pairs.push({ left: l, right: r });
+          }
+        });
+      });
+      // step 2: for each pairing, run through the convergence algorithm.
+      var intersections = [];
+      pairs.forEach(function(pair) {
+        var result = utils.pairiteration(
+          pair.left,
+          pair.right,
+          curveIntersectionThreshold
+        );
+        if (result.length > 0) {
+          intersections = intersections.concat(result);
+        }
+      });
+      return intersections;
+    },
+    arcs: function(errorThreshold) {
+      errorThreshold = errorThreshold || 0.5;
+      var circles = [];
+      return this._iterate(errorThreshold, circles);
+    },
+    _error: function(pc, np1, s, e) {
+      var q = (e - s) / 4,
+        c1 = this.get(s + q),
+        c2 = this.get(e - q),
+        ref = utils.dist(pc, np1),
+        d1 = utils.dist(pc, c1),
+        d2 = utils.dist(pc, c2);
+      return abs(d1 - ref) + abs(d2 - ref);
+    },
+    _iterate: function(errorThreshold, circles) {
+      var t_s = 0,
+        t_e = 1,
+        safety;
+      // we do a binary search to find the "good `t` closest to no-longer-good"
+      do {
+        safety = 0;
+
+        // step 1: start with the maximum possible arc
+        t_e = 1;
+
+        // points:
+        var np1 = this.get(t_s),
+          np2,
+          np3,
+          arc,
+          prev_arc;
+
+        // booleans:
+        var curr_good = false,
+          prev_good = false,
+          done;
+
+        // numbers:
+        var t_m = t_e,
+          prev_e = 1,
+          step = 0;
+
+        // step 2: find the best possible arc
+        do {
+          prev_good = curr_good;
+          prev_arc = arc;
+          t_m = (t_s + t_e) / 2;
+          step++;
+
+          np2 = this.get(t_m);
+          np3 = this.get(t_e);
+
+          arc = utils.getccenter(np1, np2, np3);
+
+          //also save the t values
+          arc.interval = {
+            start: t_s,
+            end: t_e
+          };
+
+          var error = this._error(arc, np1, t_s, t_e);
+          curr_good = error <= errorThreshold;
+
+          done = prev_good && !curr_good;
+          if (!done) prev_e = t_e;
+
+          // this arc is fine: we can move 'e' up to see if we can find a wider arc
+          if (curr_good) {
+            // if e is already at max, then we're done for this arc.
+            if (t_e >= 1) {
+              // make sure we cap at t=1
+              arc.interval.end = prev_e = 1;
+              prev_arc = arc;
+              // if we capped the arc segment to t=1 we also need to make sure that
+              // the arc's end angle is correct with respect to the bezier end point.
+              if (t_e > 1) {
+                var d = {
+                  x: arc.x + arc.r * cos(arc.e),
+                  y: arc.y + arc.r * sin(arc.e)
+                };
+                arc.e += utils.angle({ x: arc.x, y: arc.y }, d, this.get(1));
+              }
+              break;
+            }
+            // if not, move it up by half the iteration distance
+            t_e = t_e + (t_e - t_s) / 2;
+          } else {
+            // this is a bad arc: we need to move 'e' down to find a good arc
+            t_e = t_m;
+          }
+        } while (!done && safety++ < 100);
+
+        if (safety >= 100) {
+          break;
+        }
+
+        // console.log("L835: [F] arc found", t_s, prev_e, prev_arc.x, prev_arc.y, prev_arc.s, prev_arc.e);
+
+        prev_arc = prev_arc ? prev_arc : arc;
+        circles.push(prev_arc);
+        t_s = prev_e;
+      } while (t_e < 1);
+      return circles;
+    }
+  };
+
+  module.exports = Bezier;
+})();
+
+},{"./poly-bezier.js":20,"./svg-to-beziers":21,"./utils.js":22}],19:[function(require,module,exports){
+/**
+ * Normalise an SVG path to absolute coordinates
+ * and full commands, rather than relative coordinates
+ * and/or shortcut commands.
+ */
+function normalizePath(d) {
+  // preprocess "d" so that we have spaces between values
+  d = d
+    .replace(/,/g, " ") // replace commas with spaces
+    .replace(/-/g, " - ") // add spacing around minus signs
+    .replace(/-\s+/g, "-") // remove spacing to the right of minus signs.
+    .replace(/([a-zA-Z])/g, " $1 ");
+
+  // set up the variables used in this function
+  var instructions = d.replace(/([a-zA-Z])\s?/g, "|$1").split("|"),
+    instructionLength = instructions.length,
+    i,
+    instruction,
+    op,
+    lop,
+    args = [],
+    alen,
+    a,
+    sx = 0,
+    sy = 0,
+    x = 0,
+    y = 0,
+    cx = 0,
+    cy = 0,
+    cx2 = 0,
+    cy2 = 0,
+    normalized = "";
+
+  // we run through the instruction list starting at 1, not 0,
+  // because we split up "|M x y ...." so the first element will
+  // always be an empty string. By design.
+  for (i = 1; i < instructionLength; i++) {
+    // which instruction is this?
+    instruction = instructions[i];
+    op = instruction.substring(0, 1);
+    lop = op.toLowerCase();
+
+    // what are the arguments? note that we need to convert
+    // all strings into numbers, or + will do silly things.
+    args = instruction
+      .replace(op, "")
+      .trim()
+      .split(" ");
+    args = args
+      .filter(function(v) {
+        return v !== "";
+      })
+      .map(parseFloat);
+    alen = args.length;
+
+    // we could use a switch, but elaborate code in a "case" with
+    // fallthrough is just horrid to read. So let's use ifthen
+    // statements instead.
+
+    // moveto command (plus possible lineto)
+    if (lop === "m") {
+      normalized += "M ";
+      if (op === "m") {
+        x += args[0];
+        y += args[1];
+      } else {
+        x = args[0];
+        y = args[1];
+      }
+      // records start position, for dealing
+      // with the shape close operator ('Z')
+      sx = x;
+      sy = y;
+      normalized += x + " " + y + " ";
+      if (alen > 2) {
+        for (a = 0; a < alen; a += 2) {
+          if (op === "m") {
+            x += args[a];
+            y += args[a + 1];
+          } else {
+            x = args[a];
+            y = args[a + 1];
+          }
+          normalized += ["L",x,y,''].join(" ");
+        }
+      }
+    } else if (lop === "l") {
+      // lineto commands
+      for (a = 0; a < alen; a += 2) {
+        if (op === "l") {
+          x += args[a];
+          y += args[a + 1];
+        } else {
+          x = args[a];
+          y = args[a + 1];
+        }
+        normalized += ["L",x,y,''].join(" ");
+      }
+    } else if (lop === "h") {
+      for (a = 0; a < alen; a++) {
+        if (op === "h") {
+          x += args[a];
+        } else {
+          x = args[a];
+        }
+        normalized += ["L",x,y,''].join(" ");
+      }
+    } else if (lop === "v") {
+      for (a = 0; a < alen; a++) {
+        if (op === "v") {
+          y += args[a];
+        } else {
+          y = args[a];
+        }
+        normalized += ["L",x,y,''].join(" ");
+      }
+    } else if (lop === "q") {
+      // quadratic curveto commands
+      for (a = 0; a < alen; a += 4) {
+        if (op === "q") {
+          cx = x + args[a];
+          cy = y + args[a + 1];
+          x += args[a + 2];
+          y += args[a + 3];
+        } else {
+          cx = args[a];
+          cy = args[a + 1];
+          x = args[a + 2];
+          y = args[a + 3];
+        }
+        normalized += ["Q",cx,cy,x,y,''].join(" ");
+      }
+    } else if (lop === "t") {
+      for (a = 0; a < alen; a += 2) {
+        // reflect previous cx/cy over x/y
+        cx = x + (x - cx);
+        cy = y + (y - cy);
+        // then get real end point
+        if (op === "t") {
+          x += args[a];
+          y += args[a + 1];
+        } else {
+          x = args[a];
+          y = args[a + 1];
+        }
+        normalized += ["Q",cx,cy,x,y,''].join(" ");
+      }
+    } else if (lop === "c") {
+      // cubic curveto commands
+      for (a = 0; a < alen; a += 6) {
+        if (op === "c") {
+          cx = x + args[a];
+          cy = y + args[a + 1];
+          cx2 = x + args[a + 2];
+          cy2 = y + args[a + 3];
+          x += args[a + 4];
+          y += args[a + 5];
+        } else {
+          cx = args[a];
+          cy = args[a + 1];
+          cx2 = args[a + 2];
+          cy2 = args[a + 3];
+          x = args[a + 4];
+          y = args[a + 5];
+        }
+        normalized += ["C",cx,cy,cx2,cy2,x,y,''].join(" ");
+      }
+    } else if (lop === "s") {
+      for (a = 0; a < alen; a += 4) {
+        // reflect previous cx2/cy2 over x/y
+        cx = x + (x - cx2);
+        cy = y + (y - cy2);
+        // then get real control and end point
+        if (op === "s") {
+          cx2 = x + args[a];
+          cy2 = y + args[a + 1];
+          x += args[a + 2];
+          y += args[a + 3];
+        } else {
+          cx2 = args[a];
+          cy2 = args[a + 1];
+          x = args[a + 2];
+          y = args[a + 3];
+        }
+        normalized +=["C",cx,cy,cx2,cy2,x,y,''].join(" ");
+      }
+    } else if (lop === "z") {
+      normalized += "Z ";
+      // not unimportant: path closing changes the current x/y coordinate
+      x = sx;
+      y = sy;
+    }
+  }
+  return normalized.trim();
+}
+
+module.exports = normalizePath;
+
+},{}],20:[function(require,module,exports){
+(function() {
+  "use strict";
+
+  var utils = require("./utils.js");
+
+  /**
+   * Poly Bezier
+   * @param {[type]} curves [description]
+   */
+  var PolyBezier = function(curves) {
+    this.curves = [];
+    this._3d = false;
+    if (!!curves) {
+      this.curves = curves;
+      this._3d = this.curves[0]._3d;
+    }
+  };
+
+  PolyBezier.prototype = {
+    valueOf: function() {
+      return this.toString();
+    },
+    toString: function() {
+      return (
+        "[" +
+        this.curves
+          .map(function(curve) {
+            return utils.pointsToString(curve.points);
+          })
+          .join(", ") +
+        "]"
+      );
+    },
+    addCurve: function(curve) {
+      this.curves.push(curve);
+      this._3d = this._3d || curve._3d;
+    },
+    length: function() {
+      return this.curves
+        .map(function(v) {
+          return v.length();
+        })
+        .reduce(function(a, b) {
+          return a + b;
+        });
+    },
+    curve: function(idx) {
+      return this.curves[idx];
+    },
+    bbox: function() {
+      var c = this.curves;
+      var bbox = c[0].bbox();
+      for (var i = 1; i < c.length; i++) {
+        utils.expandbox(bbox, c[i].bbox());
+      }
+      return bbox;
+    },
+    offset: function(d) {
+      var offset = [];
+      this.curves.forEach(function(v) {
+        offset = offset.concat(v.offset(d));
+      });
+      return new PolyBezier(offset);
+    }
+  };
+
+  module.exports = PolyBezier;
+})();
+
+},{"./utils.js":22}],21:[function(require,module,exports){
+var normalise = require("./normalise-svg.js");
+
+var M = { x: false, y: false };
+
+function makeBezier(Bezier, term, values) {
+  if (term === 'Z') return;
+  if (term === 'M') {
+    M = {x: values[0], y: values[1]};
+    return;
+  }
+  // ES7: new Bezier(M.x, M.y, ...values)
+  var cvalues = [false, M.x, M.y].concat(values);
+  var PreboundConstructor = Bezier.bind.apply(Bezier, cvalues)
+  var curve = new PreboundConstructor();
+  var last = values.slice(-2);
+  M = { x : last[0], y: last[1] };
+  return curve;
+}
+
+function convertPath(Bezier, d) {
+  var terms = normalise(d).split(" "),
+    term,
+    matcher = new RegExp("[MLCQZ]", ""),
+    segment,
+    values,
+    segments = [],
+    ARGS = { "C": 6, "Q": 4, "L": 2, "M": 2};
+
+  while (terms.length) {
+    term = terms.splice(0,1)[0];
+    if (matcher.test(term)) {
+      values = terms.splice(0, ARGS[term]).map(parseFloat);
+      segment = makeBezier(Bezier, term, values);
+      if (segment) segments.push(segment);
+    }
+  }
+
+  return new Bezier.PolyBezier(segments);
+}
+
+module.exports = convertPath;
+
+},{"./normalise-svg.js":19}],22:[function(require,module,exports){
+(function() {
+  "use strict";
+
+  // math-inlining.
+  var abs = Math.abs,
+    cos = Math.cos,
+    sin = Math.sin,
+    acos = Math.acos,
+    atan2 = Math.atan2,
+    sqrt = Math.sqrt,
+    pow = Math.pow,
+    // cube root function yielding real roots
+    crt = function(v) {
+      return v < 0 ? -pow(-v, 1 / 3) : pow(v, 1 / 3);
+    },
+    // trig constants
+    pi = Math.PI,
+    tau = 2 * pi,
+    quart = pi / 2,
+    // float precision significant decimal
+    epsilon = 0.000001,
+    // extremas used in bbox calculation and similar algorithms
+    nMax = Number.MAX_SAFE_INTEGER || 9007199254740991,
+    nMin = Number.MIN_SAFE_INTEGER || -9007199254740991,
+    // a zero coordinate, which is surprisingly useful
+    ZERO = { x: 0, y: 0, z: 0 };
+
+  // Bezier utility functions
+  var utils = {
+    // Legendre-Gauss abscissae with n=24 (x_i values, defined at i=n as the roots of the nth order Legendre polynomial Pn(x))
+    Tvalues: [
+      -0.0640568928626056260850430826247450385909,
+      0.0640568928626056260850430826247450385909,
+      -0.1911188674736163091586398207570696318404,
+      0.1911188674736163091586398207570696318404,
+      -0.3150426796961633743867932913198102407864,
+      0.3150426796961633743867932913198102407864,
+      -0.4337935076260451384870842319133497124524,
+      0.4337935076260451384870842319133497124524,
+      -0.5454214713888395356583756172183723700107,
+      0.5454214713888395356583756172183723700107,
+      -0.6480936519369755692524957869107476266696,
+      0.6480936519369755692524957869107476266696,
+      -0.7401241915785543642438281030999784255232,
+      0.7401241915785543642438281030999784255232,
+      -0.8200019859739029219539498726697452080761,
+      0.8200019859739029219539498726697452080761,
+      -0.8864155270044010342131543419821967550873,
+      0.8864155270044010342131543419821967550873,
+      -0.9382745520027327585236490017087214496548,
+      0.9382745520027327585236490017087214496548,
+      -0.9747285559713094981983919930081690617411,
+      0.9747285559713094981983919930081690617411,
+      -0.9951872199970213601799974097007368118745,
+      0.9951872199970213601799974097007368118745
+    ],
+
+    // Legendre-Gauss weights with n=24 (w_i values, defined by a function linked to in the Bezier primer article)
+    Cvalues: [
+      0.1279381953467521569740561652246953718517,
+      0.1279381953467521569740561652246953718517,
+      0.1258374563468282961213753825111836887264,
+      0.1258374563468282961213753825111836887264,
+      0.121670472927803391204463153476262425607,
+      0.121670472927803391204463153476262425607,
+      0.1155056680537256013533444839067835598622,
+      0.1155056680537256013533444839067835598622,
+      0.1074442701159656347825773424466062227946,
+      0.1074442701159656347825773424466062227946,
+      0.0976186521041138882698806644642471544279,
+      0.0976186521041138882698806644642471544279,
+      0.086190161531953275917185202983742667185,
+      0.086190161531953275917185202983742667185,
+      0.0733464814110803057340336152531165181193,
+      0.0733464814110803057340336152531165181193,
+      0.0592985849154367807463677585001085845412,
+      0.0592985849154367807463677585001085845412,
+      0.0442774388174198061686027482113382288593,
+      0.0442774388174198061686027482113382288593,
+      0.0285313886289336631813078159518782864491,
+      0.0285313886289336631813078159518782864491,
+      0.0123412297999871995468056670700372915759,
+      0.0123412297999871995468056670700372915759
+    ],
+
+    arcfn: function(t, derivativeFn) {
+      var d = derivativeFn(t);
+      var l = d.x * d.x + d.y * d.y;
+      if (typeof d.z !== "undefined") {
+        l += d.z * d.z;
+      }
+      return sqrt(l);
+    },
+
+    compute: function(t, points, _3d) {
+      // shortcuts
+      if (t === 0) {
+        return points[0];
+      }
+
+      let order = points.length-1;
+
+      if (t === 1) {
+        return points[order];
+      }
+
+      var p = points;
+      var mt = 1 - t;
+
+      // constant?
+      if (order === 0) {
+        return points[0];
+      }
+
+      // linear?
+      if (order === 1) {
+        ret = {
+          x: mt * p[0].x + t * p[1].x,
+          y: mt * p[0].y + t * p[1].y
+        };
+        if (_3d) {
+          ret.z = mt * p[0].z + t * p[1].z;
+        }
+        return ret;
+      }
+
+      // quadratic/cubic curve?
+      if (order < 4) {
+        var mt2 = mt * mt,
+          t2 = t * t,
+          a,
+          b,
+          c,
+          d = 0;
+        if (order === 2) {
+          p = [p[0], p[1], p[2], ZERO];
+          a = mt2;
+          b = mt * t * 2;
+          c = t2;
+        } else if (order === 3) {
+          a = mt2 * mt;
+          b = mt2 * t * 3;
+          c = mt * t2 * 3;
+          d = t * t2;
+        }
+        var ret = {
+          x: a * p[0].x + b * p[1].x + c * p[2].x + d * p[3].x,
+          y: a * p[0].y + b * p[1].y + c * p[2].y + d * p[3].y
+        };
+        if (_3d) {
+          ret.z = a * p[0].z + b * p[1].z + c * p[2].z + d * p[3].z;
+        }
+        return ret;
+      }
+
+      // higher order curves: use de Casteljau's computation
+      var dCpts = JSON.parse(JSON.stringify(points));
+      while (dCpts.length > 1) {
+        for (var i = 0; i < dCpts.length - 1; i++) {
+          dCpts[i] = {
+            x: dCpts[i].x + (dCpts[i + 1].x - dCpts[i].x) * t,
+            y: dCpts[i].y + (dCpts[i + 1].y - dCpts[i].y) * t
+          };
+          if (typeof dCpts[i].z !== "undefined") {
+            dCpts[i] = dCpts[i].z + (dCpts[i + 1].z - dCpts[i].z) * t;
+          }
+        }
+        dCpts.splice(dCpts.length - 1, 1);
+      }
+      return dCpts[0];
+    },
+
+    computeWithRatios: function (t, points, ratios, _3d) {
+      var mt = 1 - t, r = ratios, p = points, d;
+      var f1 = r[0], f2 = r[1], f3 = r[2], f4 = r[3];
+
+      // spec for linear
+      f1 *= mt;
+      f2 *= t;
+
+      if (p.length === 2) {
+        d = f1 + f2;
+        return {
+          x: (f1 * p[0].x + f2 * p[1].x)/d,
+          y: (f1 * p[0].y + f2 * p[1].y)/d,
+          z: !_3d ? false : (f1 * p[0].z + f2 * p[1].z)/d
+        };
+      }
+
+      // upgrade to quadratic
+      f1 *= mt;
+      f2 *= 2 * mt;
+      f3 *= t * t;
+
+      if (p.length === 3) {
+        d = f1 + f2 + f3;
+        return {
+          x: (f1 * p[0].x + f2 * p[1].x + f3 * p[2].x)/d,
+          y: (f1 * p[0].y + f2 * p[1].y + f3 * p[2].y)/d,
+          z: !_3d ? false : (f1 * p[0].z + f2 * p[1].z + f3 * p[2].z)/d
+        };
+      }
+
+      // upgrade to cubic
+      f1 *= mt;
+      f2 *= 1.5 * mt;
+      f3 *= 3 * mt;
+      f4 *= t * t * t;
+
+      if (p.length === 4) {
+        d = f1 + f2 + f3 + f4;
+        return {
+          x: (f1 * p[0].x + f2 * p[1].x + f3 * p[2].x + f4 * p[3].x)/d,
+          y: (f1 * p[0].y + f2 * p[1].y + f3 * p[2].y + f4 * p[3].y)/d,
+          z: !_3d ? false : (f1 * p[0].z + f2 * p[1].z + f3 * p[2].z + f4 * p[3].z)/d
+        };
+      }
+    },
+
+    derive: function (points, _3d) {
+      var dpoints = [];
+      for (var p = points, d = p.length, c = d - 1; d > 1; d--, c--) {
+        var list = [];
+        for (var j = 0, dpt; j < c; j++) {
+          dpt = {
+            x: c * (p[j + 1].x - p[j].x),
+            y: c * (p[j + 1].y - p[j].y)
+          };
+          if (_3d) {
+            dpt.z = c * (p[j + 1].z - p[j].z);
+          }
+          list.push(dpt);
+        }
+        dpoints.push(list);
+        p = list;
+      }
+      return dpoints;
+    },
+
+    between: function(v, m, M) {
+      return (
+        (m <= v && v <= M) ||
+        utils.approximately(v, m) ||
+        utils.approximately(v, M)
+      );
+    },
+
+    approximately: function(a, b, precision) {
+      return abs(a - b) <= (precision || epsilon);
+    },
+
+    length: function(derivativeFn) {
+      var z = 0.5,
+        sum = 0,
+        len = utils.Tvalues.length,
+        i,
+        t;
+      for (i = 0; i < len; i++) {
+        t = z * utils.Tvalues[i] + z;
+        sum += utils.Cvalues[i] * utils.arcfn(t, derivativeFn);
+      }
+      return z * sum;
+    },
+
+    map: function(v, ds, de, ts, te) {
+      var d1 = de - ds,
+        d2 = te - ts,
+        v2 = v - ds,
+        r = v2 / d1;
+      return ts + d2 * r;
+    },
+
+    lerp: function(r, v1, v2) {
+      var ret = {
+        x: v1.x + r * (v2.x - v1.x),
+        y: v1.y + r * (v2.y - v1.y)
+      };
+      if (!!v1.z && !!v2.z) {
+        ret.z = v1.z + r * (v2.z - v1.z);
+      }
+      return ret;
+    },
+
+    pointToString: function(p) {
+      var s = p.x + "/" + p.y;
+      if (typeof p.z !== "undefined") {
+        s += "/" + p.z;
+      }
+      return s;
+    },
+
+    pointsToString: function(points) {
+      return "[" + points.map(utils.pointToString).join(", ") + "]";
+    },
+
+    copy: function(obj) {
+      return JSON.parse(JSON.stringify(obj));
+    },
+
+    angle: function(o, v1, v2) {
+      var dx1 = v1.x - o.x,
+        dy1 = v1.y - o.y,
+        dx2 = v2.x - o.x,
+        dy2 = v2.y - o.y,
+        cross = dx1 * dy2 - dy1 * dx2,
+        dot = dx1 * dx2 + dy1 * dy2;
+      return atan2(cross, dot);
+    },
+
+    // round as string, to avoid rounding errors
+    round: function(v, d) {
+      var s = "" + v;
+      var pos = s.indexOf(".");
+      return parseFloat(s.substring(0, pos + 1 + d));
+    },
+
+    dist: function(p1, p2) {
+      var dx = p1.x - p2.x,
+        dy = p1.y - p2.y;
+      return sqrt(dx * dx + dy * dy);
+    },
+
+    closest: function(LUT, point) {
+      var mdist = pow(2, 63),
+        mpos,
+        d;
+      LUT.forEach(function(p, idx) {
+        d = utils.dist(point, p);
+        if (d < mdist) {
+          mdist = d;
+          mpos = idx;
+        }
+      });
+      return { mdist: mdist, mpos: mpos };
+    },
+
+    abcratio: function(t, n) {
+      // see ratio(t) note on http://pomax.github.io/bezierinfo/#abc
+      if (n !== 2 && n !== 3) {
+        return false;
+      }
+      if (typeof t === "undefined") {
+        t = 0.5;
+      } else if (t === 0 || t === 1) {
+        return t;
+      }
+      var bottom = pow(t, n) + pow(1 - t, n),
+        top = bottom - 1;
+      return abs(top / bottom);
+    },
+
+    projectionratio: function(t, n) {
+      // see u(t) note on http://pomax.github.io/bezierinfo/#abc
+      if (n !== 2 && n !== 3) {
+        return false;
+      }
+      if (typeof t === "undefined") {
+        t = 0.5;
+      } else if (t === 0 || t === 1) {
+        return t;
+      }
+      var top = pow(1 - t, n),
+        bottom = pow(t, n) + top;
+      return top / bottom;
+    },
+
+    lli8: function(x1, y1, x2, y2, x3, y3, x4, y4) {
+      var nx =
+          (x1 * y2 - y1 * x2) * (x3 - x4) - (x1 - x2) * (x3 * y4 - y3 * x4),
+        ny = (x1 * y2 - y1 * x2) * (y3 - y4) - (y1 - y2) * (x3 * y4 - y3 * x4),
+        d = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4);
+      if (d == 0) {
+        return false;
+      }
+      return { x: nx / d, y: ny / d };
+    },
+
+    lli4: function(p1, p2, p3, p4) {
+      var x1 = p1.x,
+        y1 = p1.y,
+        x2 = p2.x,
+        y2 = p2.y,
+        x3 = p3.x,
+        y3 = p3.y,
+        x4 = p4.x,
+        y4 = p4.y;
+      return utils.lli8(x1, y1, x2, y2, x3, y3, x4, y4);
+    },
+
+    lli: function(v1, v2) {
+      return utils.lli4(v1, v1.c, v2, v2.c);
+    },
+
+    makeline: function(p1, p2) {
+      var Bezier = require("./bezier");
+      var x1 = p1.x,
+        y1 = p1.y,
+        x2 = p2.x,
+        y2 = p2.y,
+        dx = (x2 - x1) / 3,
+        dy = (y2 - y1) / 3;
+      return new Bezier(
+        x1,
+        y1,
+        x1 + dx,
+        y1 + dy,
+        x1 + 2 * dx,
+        y1 + 2 * dy,
+        x2,
+        y2
+      );
+    },
+
+    findbbox: function(sections) {
+      var mx = nMax,
+        my = nMax,
+        MX = nMin,
+        MY = nMin;
+      sections.forEach(function(s) {
+        var bbox = s.bbox();
+        if (mx > bbox.x.min) mx = bbox.x.min;
+        if (my > bbox.y.min) my = bbox.y.min;
+        if (MX < bbox.x.max) MX = bbox.x.max;
+        if (MY < bbox.y.max) MY = bbox.y.max;
+      });
+      return {
+        x: { min: mx, mid: (mx + MX) / 2, max: MX, size: MX - mx },
+        y: { min: my, mid: (my + MY) / 2, max: MY, size: MY - my }
+      };
+    },
+
+    shapeintersections: function(
+      s1,
+      bbox1,
+      s2,
+      bbox2,
+      curveIntersectionThreshold
+    ) {
+      if (!utils.bboxoverlap(bbox1, bbox2)) return [];
+      var intersections = [];
+      var a1 = [s1.startcap, s1.forward, s1.back, s1.endcap];
+      var a2 = [s2.startcap, s2.forward, s2.back, s2.endcap];
+      a1.forEach(function(l1) {
+        if (l1.virtual) return;
+        a2.forEach(function(l2) {
+          if (l2.virtual) return;
+          var iss = l1.intersects(l2, curveIntersectionThreshold);
+          if (iss.length > 0) {
+            iss.c1 = l1;
+            iss.c2 = l2;
+            iss.s1 = s1;
+            iss.s2 = s2;
+            intersections.push(iss);
+          }
+        });
+      });
+      return intersections;
+    },
+
+    makeshape: function(forward, back, curveIntersectionThreshold) {
+      var bpl = back.points.length;
+      var fpl = forward.points.length;
+      var start = utils.makeline(back.points[bpl - 1], forward.points[0]);
+      var end = utils.makeline(forward.points[fpl - 1], back.points[0]);
+      var shape = {
+        startcap: start,
+        forward: forward,
+        back: back,
+        endcap: end,
+        bbox: utils.findbbox([start, forward, back, end])
+      };
+      var self = utils;
+      shape.intersections = function(s2) {
+        return self.shapeintersections(
+          shape,
+          shape.bbox,
+          s2,
+          s2.bbox,
+          curveIntersectionThreshold
+        );
+      };
+      return shape;
+    },
+
+    getminmax: function(curve, d, list) {
+      if (!list) return { min: 0, max: 0 };
+      var min = nMax,
+        max = nMin,
+        t,
+        c;
+      if (list.indexOf(0) === -1) {
+        list = [0].concat(list);
+      }
+      if (list.indexOf(1) === -1) {
+        list.push(1);
+      }
+      for (var i = 0, len = list.length; i < len; i++) {
+        t = list[i];
+        c = curve.get(t);
+        if (c[d] < min) {
+          min = c[d];
+        }
+        if (c[d] > max) {
+          max = c[d];
+        }
+      }
+      return { min: min, mid: (min + max) / 2, max: max, size: max - min };
+    },
+
+    align: function(points, line) {
+      var tx = line.p1.x,
+        ty = line.p1.y,
+        a = -atan2(line.p2.y - ty, line.p2.x - tx),
+        d = function(v) {
+          return {
+            x: (v.x - tx) * cos(a) - (v.y - ty) * sin(a),
+            y: (v.x - tx) * sin(a) + (v.y - ty) * cos(a)
+          };
+        };
+      return points.map(d);
+    },
+
+    roots: function(points, line) {
+      line = line || { p1: { x: 0, y: 0 }, p2: { x: 1, y: 0 } };
+      var order = points.length - 1;
+      var p = utils.align(points, line);
+      var reduce = function(t) {
+        return 0 <= t && t <= 1;
+      };
+
+      if (order === 2) {
+        var a = p[0].y,
+          b = p[1].y,
+          c = p[2].y,
+          d = a - 2 * b + c;
+        if (d !== 0) {
+          var m1 = -sqrt(b * b - a * c),
+            m2 = -a + b,
+            v1 = -(m1 + m2) / d,
+            v2 = -(-m1 + m2) / d;
+          return [v1, v2].filter(reduce);
+        } else if (b !== c && d === 0) {
+          return [(2*b - c)/(2*b - 2*c)].filter(reduce);
+        }
+        return [];
+      }
+
+      // see http://www.trans4mind.com/personal_development/mathematics/polynomials/cubicAlgebra.htm
+      var pa = p[0].y,
+        pb = p[1].y,
+        pc = p[2].y,
+        pd = p[3].y,
+        d = -pa + 3 * pb - 3 * pc + pd,
+        a = 3 * pa - 6 * pb + 3 * pc,
+        b = -3 * pa + 3 * pb,
+        c = pa;
+
+      if (utils.approximately(d, 0)) {
+        // this is not a cubic curve.
+        if (utils.approximately(a, 0)) {
+          // in fact, this is not a quadratic curve either.
+          if (utils.approximately(b, 0)) {
+            // in fact in fact, there are no solutions.
+            return [];
+          }
+          // linear solution:
+          return [-c / b].filter(reduce);
+        }
+        // quadratic solution:
+        var q = sqrt(b * b - 4 * a * c),
+          a2 = 2 * a;
+        return [(q - b) / a2, (-b - q) / a2].filter(reduce);
+      }
+
+      // at this point, we know we need a cubic solution:
+
+      a /= d;
+      b /= d;
+      c /= d;
+
+      var p = (3 * b - a * a) / 3,
+        p3 = p / 3,
+        q = (2 * a * a * a - 9 * a * b + 27 * c) / 27,
+        q2 = q / 2,
+        discriminant = q2 * q2 + p3 * p3 * p3,
+        u1,
+        v1,
+        x1,
+        x2,
+        x3;
+      if (discriminant < 0) {
+        var mp3 = -p / 3,
+          mp33 = mp3 * mp3 * mp3,
+          r = sqrt(mp33),
+          t = -q / (2 * r),
+          cosphi = t < -1 ? -1 : t > 1 ? 1 : t,
+          phi = acos(cosphi),
+          crtr = crt(r),
+          t1 = 2 * crtr;
+        x1 = t1 * cos(phi / 3) - a / 3;
+        x2 = t1 * cos((phi + tau) / 3) - a / 3;
+        x3 = t1 * cos((phi + 2 * tau) / 3) - a / 3;
+        return [x1, x2, x3].filter(reduce);
+      } else if (discriminant === 0) {
+        u1 = q2 < 0 ? crt(-q2) : -crt(q2);
+        x1 = 2 * u1 - a / 3;
+        x2 = -u1 - a / 3;
+        return [x1, x2].filter(reduce);
+      } else {
+        var sd = sqrt(discriminant);
+        u1 = crt(-q2 + sd);
+        v1 = crt(q2 + sd);
+        return [u1 - v1 - a / 3].filter(reduce);
+      }
+    },
+
+    droots: function(p) {
+      // quadratic roots are easy
+      if (p.length === 3) {
+        var a = p[0],
+          b = p[1],
+          c = p[2],
+          d = a - 2 * b + c;
+        if (d !== 0) {
+          var m1 = -sqrt(b * b - a * c),
+            m2 = -a + b,
+            v1 = -(m1 + m2) / d,
+            v2 = -(-m1 + m2) / d;
+          return [v1, v2];
+        } else if (b !== c && d === 0) {
+          return [(2 * b - c) / (2 * (b - c))];
+        }
+        return [];
+      }
+
+      // linear roots are even easier
+      if (p.length === 2) {
+        var a = p[0],
+          b = p[1];
+        if (a !== b) {
+          return [a / (a - b)];
+        }
+        return [];
+      }
+    },
+
+    curvature: function(t, points, _3d, kOnly) {
+      var dpoints = utils.derive(points);
+      var d1 = dpoints[0];
+      var d2 = dpoints[1];
+      var num, dnm, adk, dk, k=0, r=0;
+
+      //
+      // We're using the following formula for curvature:
+      //
+      //              x'y" - y'x"
+      //   k(t) = ------------------
+      //           (x'² + y'²)^(2/3)
+      //
+      // from https://en.wikipedia.org/wiki/Radius_of_curvature#Definition
+      //
+      // With it corresponding 3D counterpart:
+      //
+      //          sqrt( (y'z" - y"z')² + (z'x" - z"x')² + (x'y" - x"y')²)
+      //   k(t) = -------------------------------------------------------
+      //                     (x'² + y'² + z'²)^(2/3)
+      //
+
+      var d = utils.compute(t, d1);
+      var dd = utils.compute(t, d2);
+      var qdsum = d.x*d.x + d.y*d.y;
+      if (_3d) {
+        num = sqrt(
+          pow(d.y*dd.z - dd.y*d.z, 2) +
+          pow(d.z*dd.x - dd.z*d.x, 2) +
+          pow(d.x*dd.y - dd.x*d.y, 2)
+        );
+        dnm = pow(qdsum + d.z*d.z, 2/3);
+      } else {
+        num = d.x*dd.y - d.y*dd.x;
+        dnm = pow(qdsum, 2/3);
+      }
+
+      if (num === 0 || dnm === 0) {
+        return { k:0, r:0 };
+      }
+
+      k = num/dnm;
+      r = dnm/num;
+
+      // We're also computing the derivative of kappa, because
+      // there is value in knowing the rate of change for the
+      // curvature along the curve. And we're just going to
+      // ballpark it based on an epsilon.
+      if (!kOnly) {
+        // compute k'(t) based on the interval before, and after it,
+        // to at least try to not introduce forward/backward pass bias.
+        var pk = utils.curvature(t-0.001, points, _3d, true).k;
+        var nk = utils.curvature(t+0.001, points, _3d, true).k;
+        dk = ((nk-k) + (k-pk))/2;
+        adk = (abs(nk-k) + abs(k-pk))/2;
+      }
+
+      return { k: k, r: r, dk: dk, adk:adk, };
+    },
+
+    inflections: function(points) {
+      if (points.length < 4) return [];
+
+      // FIXME: TODO: add in inflection abstraction for quartic+ curves?
+
+      var p = utils.align(points, { p1: points[0], p2: points.slice(-1)[0] }),
+        a = p[2].x * p[1].y,
+        b = p[3].x * p[1].y,
+        c = p[1].x * p[2].y,
+        d = p[3].x * p[2].y,
+        v1 = 18 * (-3 * a + 2 * b + 3 * c - d),
+        v2 = 18 * (3 * a - b - 3 * c),
+        v3 = 18 * (c - a);
+
+      if (utils.approximately(v1, 0)) {
+        if (!utils.approximately(v2, 0)) {
+          var t = -v3 / v2;
+          if (0 <= t && t <= 1) return [t];
+        }
+        return [];
+      }
+
+      var trm = v2 * v2 - 4 * v1 * v3,
+        sq = Math.sqrt(trm),
+        d = 2 * v1;
+
+      if (utils.approximately(d, 0)) return [];
+
+      return [(sq - v2) / d, -(v2 + sq) / d].filter(function(r) {
+        return 0 <= r && r <= 1;
+      });
+    },
+
+    bboxoverlap: function(b1, b2) {
+      var dims = ["x", "y"],
+        len = dims.length,
+        i,
+        dim,
+        l,
+        t,
+        d;
+      for (i = 0; i < len; i++) {
+        dim = dims[i];
+        l = b1[dim].mid;
+        t = b2[dim].mid;
+        d = (b1[dim].size + b2[dim].size) / 2;
+        if (abs(l - t) >= d) return false;
+      }
+      return true;
+    },
+
+    expandbox: function(bbox, _bbox) {
+      if (_bbox.x.min < bbox.x.min) {
+        bbox.x.min = _bbox.x.min;
+      }
+      if (_bbox.y.min < bbox.y.min) {
+        bbox.y.min = _bbox.y.min;
+      }
+      if (_bbox.z && _bbox.z.min < bbox.z.min) {
+        bbox.z.min = _bbox.z.min;
+      }
+      if (_bbox.x.max > bbox.x.max) {
+        bbox.x.max = _bbox.x.max;
+      }
+      if (_bbox.y.max > bbox.y.max) {
+        bbox.y.max = _bbox.y.max;
+      }
+      if (_bbox.z && _bbox.z.max > bbox.z.max) {
+        bbox.z.max = _bbox.z.max;
+      }
+      bbox.x.mid = (bbox.x.min + bbox.x.max) / 2;
+      bbox.y.mid = (bbox.y.min + bbox.y.max) / 2;
+      if (bbox.z) {
+        bbox.z.mid = (bbox.z.min + bbox.z.max) / 2;
+      }
+      bbox.x.size = bbox.x.max - bbox.x.min;
+      bbox.y.size = bbox.y.max - bbox.y.min;
+      if (bbox.z) {
+        bbox.z.size = bbox.z.max - bbox.z.min;
+      }
+    },
+
+    pairiteration: function(c1, c2, curveIntersectionThreshold) {
+      var c1b = c1.bbox(),
+        c2b = c2.bbox(),
+        r = 100000,
+        threshold = curveIntersectionThreshold || 0.5;
+      if (
+        c1b.x.size + c1b.y.size < threshold &&
+        c2b.x.size + c2b.y.size < threshold
+      ) {
+        return [
+          ((r * (c1._t1 + c1._t2) / 2) | 0) / r +
+            "/" +
+            ((r * (c2._t1 + c2._t2) / 2) | 0) / r
+        ];
+      }
+      var cc1 = c1.split(0.5),
+        cc2 = c2.split(0.5),
+        pairs = [
+          { left: cc1.left, right: cc2.left },
+          { left: cc1.left, right: cc2.right },
+          { left: cc1.right, right: cc2.right },
+          { left: cc1.right, right: cc2.left }
+        ];
+      pairs = pairs.filter(function(pair) {
+        return utils.bboxoverlap(pair.left.bbox(), pair.right.bbox());
+      });
+      var results = [];
+      if (pairs.length === 0) return results;
+      pairs.forEach(function(pair) {
+        results = results.concat(
+          utils.pairiteration(pair.left, pair.right, threshold)
+        );
+      });
+      results = results.filter(function(v, i) {
+        return results.indexOf(v) === i;
+      });
+      return results;
+    },
+
+    getccenter: function(p1, p2, p3) {
+      var dx1 = p2.x - p1.x,
+        dy1 = p2.y - p1.y,
+        dx2 = p3.x - p2.x,
+        dy2 = p3.y - p2.y;
+      var dx1p = dx1 * cos(quart) - dy1 * sin(quart),
+        dy1p = dx1 * sin(quart) + dy1 * cos(quart),
+        dx2p = dx2 * cos(quart) - dy2 * sin(quart),
+        dy2p = dx2 * sin(quart) + dy2 * cos(quart);
+      // chord midpoints
+      var mx1 = (p1.x + p2.x) / 2,
+        my1 = (p1.y + p2.y) / 2,
+        mx2 = (p2.x + p3.x) / 2,
+        my2 = (p2.y + p3.y) / 2;
+      // midpoint offsets
+      var mx1n = mx1 + dx1p,
+        my1n = my1 + dy1p,
+        mx2n = mx2 + dx2p,
+        my2n = my2 + dy2p;
+      // intersection of these lines:
+      var arc = utils.lli8(mx1, my1, mx1n, my1n, mx2, my2, mx2n, my2n),
+        r = utils.dist(arc, p1),
+        // arc start/end values, over mid point:
+        s = atan2(p1.y - arc.y, p1.x - arc.x),
+        m = atan2(p2.y - arc.y, p2.x - arc.x),
+        e = atan2(p3.y - arc.y, p3.x - arc.x),
+        _;
+      // determine arc direction (cw/ccw correction)
+      if (s < e) {
+        // if s<m<e, arc(s, e)
+        // if m<s<e, arc(e, s + tau)
+        // if s<e<m, arc(e, s + tau)
+        if (s > m || m > e) {
+          s += tau;
+        }
+        if (s > e) {
+          _ = e;
+          e = s;
+          s = _;
+        }
+      } else {
+        // if e<m<s, arc(e, s)
+        // if m<e<s, arc(s, e + tau)
+        // if e<s<m, arc(s, e + tau)
+        if (e < m && m < s) {
+          _ = e;
+          e = s;
+          s = _;
+        } else {
+          e += tau;
+        }
+      }
+      // assign and done.
+      arc.s = s;
+      arc.e = e;
+      arc.r = r;
+      return arc;
+    },
+
+    numberSort: function(a, b) {
+      return a - b;
+    }
+  };
+
+  module.exports = utils;
+})();
+
+},{"./bezier":18}],23:[function(require,module,exports){
 (function (Buffer){
 /* global Blob, FileReader */
 
@@ -4111,11 +6305,308 @@ module.exports = function blobToBuffer (blob, cb) {
 }
 
 }).call(this,require("buffer").Buffer)
-},{"buffer":19}],17:[function(require,module,exports){
+},{"buffer":27}],24:[function(require,module,exports){
 
-},{}],18:[function(require,module,exports){
-arguments[4][17][0].apply(exports,arguments)
-},{"dup":17}],19:[function(require,module,exports){
+},{}],25:[function(require,module,exports){
+arguments[4][24][0].apply(exports,arguments)
+},{"dup":24}],26:[function(require,module,exports){
+// Copyright Joyent, Inc. and other Node contributors.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a
+// copy of this software and associated documentation files (the
+// "Software"), to deal in the Software without restriction, including
+// without limitation the rights to use, copy, modify, merge, publish,
+// distribute, sublicense, and/or sell copies of the Software, and to permit
+// persons to whom the Software is furnished to do so, subject to the
+// following conditions:
+//
+// The above copyright notice and this permission notice shall be included
+// in all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+// OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
+// NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+// DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+// OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
+// USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+'use strict';
+
+/*<replacement>*/
+
+var Buffer = require('safe-buffer').Buffer;
+/*</replacement>*/
+
+var isEncoding = Buffer.isEncoding || function (encoding) {
+  encoding = '' + encoding;
+  switch (encoding && encoding.toLowerCase()) {
+    case 'hex':case 'utf8':case 'utf-8':case 'ascii':case 'binary':case 'base64':case 'ucs2':case 'ucs-2':case 'utf16le':case 'utf-16le':case 'raw':
+      return true;
+    default:
+      return false;
+  }
+};
+
+function _normalizeEncoding(enc) {
+  if (!enc) return 'utf8';
+  var retried;
+  while (true) {
+    switch (enc) {
+      case 'utf8':
+      case 'utf-8':
+        return 'utf8';
+      case 'ucs2':
+      case 'ucs-2':
+      case 'utf16le':
+      case 'utf-16le':
+        return 'utf16le';
+      case 'latin1':
+      case 'binary':
+        return 'latin1';
+      case 'base64':
+      case 'ascii':
+      case 'hex':
+        return enc;
+      default:
+        if (retried) return; // undefined
+        enc = ('' + enc).toLowerCase();
+        retried = true;
+    }
+  }
+};
+
+// Do not cache `Buffer.isEncoding` when checking encoding names as some
+// modules monkey-patch it to support additional encodings
+function normalizeEncoding(enc) {
+  var nenc = _normalizeEncoding(enc);
+  if (typeof nenc !== 'string' && (Buffer.isEncoding === isEncoding || !isEncoding(enc))) throw new Error('Unknown encoding: ' + enc);
+  return nenc || enc;
+}
+
+// StringDecoder provides an interface for efficiently splitting a series of
+// buffers into a series of JS strings without breaking apart multi-byte
+// characters.
+exports.StringDecoder = StringDecoder;
+function StringDecoder(encoding) {
+  this.encoding = normalizeEncoding(encoding);
+  var nb;
+  switch (this.encoding) {
+    case 'utf16le':
+      this.text = utf16Text;
+      this.end = utf16End;
+      nb = 4;
+      break;
+    case 'utf8':
+      this.fillLast = utf8FillLast;
+      nb = 4;
+      break;
+    case 'base64':
+      this.text = base64Text;
+      this.end = base64End;
+      nb = 3;
+      break;
+    default:
+      this.write = simpleWrite;
+      this.end = simpleEnd;
+      return;
+  }
+  this.lastNeed = 0;
+  this.lastTotal = 0;
+  this.lastChar = Buffer.allocUnsafe(nb);
+}
+
+StringDecoder.prototype.write = function (buf) {
+  if (buf.length === 0) return '';
+  var r;
+  var i;
+  if (this.lastNeed) {
+    r = this.fillLast(buf);
+    if (r === undefined) return '';
+    i = this.lastNeed;
+    this.lastNeed = 0;
+  } else {
+    i = 0;
+  }
+  if (i < buf.length) return r ? r + this.text(buf, i) : this.text(buf, i);
+  return r || '';
+};
+
+StringDecoder.prototype.end = utf8End;
+
+// Returns only complete characters in a Buffer
+StringDecoder.prototype.text = utf8Text;
+
+// Attempts to complete a partial non-UTF-8 character using bytes from a Buffer
+StringDecoder.prototype.fillLast = function (buf) {
+  if (this.lastNeed <= buf.length) {
+    buf.copy(this.lastChar, this.lastTotal - this.lastNeed, 0, this.lastNeed);
+    return this.lastChar.toString(this.encoding, 0, this.lastTotal);
+  }
+  buf.copy(this.lastChar, this.lastTotal - this.lastNeed, 0, buf.length);
+  this.lastNeed -= buf.length;
+};
+
+// Checks the type of a UTF-8 byte, whether it's ASCII, a leading byte, or a
+// continuation byte. If an invalid byte is detected, -2 is returned.
+function utf8CheckByte(byte) {
+  if (byte <= 0x7F) return 0;else if (byte >> 5 === 0x06) return 2;else if (byte >> 4 === 0x0E) return 3;else if (byte >> 3 === 0x1E) return 4;
+  return byte >> 6 === 0x02 ? -1 : -2;
+}
+
+// Checks at most 3 bytes at the end of a Buffer in order to detect an
+// incomplete multi-byte UTF-8 character. The total number of bytes (2, 3, or 4)
+// needed to complete the UTF-8 character (if applicable) are returned.
+function utf8CheckIncomplete(self, buf, i) {
+  var j = buf.length - 1;
+  if (j < i) return 0;
+  var nb = utf8CheckByte(buf[j]);
+  if (nb >= 0) {
+    if (nb > 0) self.lastNeed = nb - 1;
+    return nb;
+  }
+  if (--j < i || nb === -2) return 0;
+  nb = utf8CheckByte(buf[j]);
+  if (nb >= 0) {
+    if (nb > 0) self.lastNeed = nb - 2;
+    return nb;
+  }
+  if (--j < i || nb === -2) return 0;
+  nb = utf8CheckByte(buf[j]);
+  if (nb >= 0) {
+    if (nb > 0) {
+      if (nb === 2) nb = 0;else self.lastNeed = nb - 3;
+    }
+    return nb;
+  }
+  return 0;
+}
+
+// Validates as many continuation bytes for a multi-byte UTF-8 character as
+// needed or are available. If we see a non-continuation byte where we expect
+// one, we "replace" the validated continuation bytes we've seen so far with
+// a single UTF-8 replacement character ('\ufffd'), to match v8's UTF-8 decoding
+// behavior. The continuation byte check is included three times in the case
+// where all of the continuation bytes for a character exist in the same buffer.
+// It is also done this way as a slight performance increase instead of using a
+// loop.
+function utf8CheckExtraBytes(self, buf, p) {
+  if ((buf[0] & 0xC0) !== 0x80) {
+    self.lastNeed = 0;
+    return '\ufffd';
+  }
+  if (self.lastNeed > 1 && buf.length > 1) {
+    if ((buf[1] & 0xC0) !== 0x80) {
+      self.lastNeed = 1;
+      return '\ufffd';
+    }
+    if (self.lastNeed > 2 && buf.length > 2) {
+      if ((buf[2] & 0xC0) !== 0x80) {
+        self.lastNeed = 2;
+        return '\ufffd';
+      }
+    }
+  }
+}
+
+// Attempts to complete a multi-byte UTF-8 character using bytes from a Buffer.
+function utf8FillLast(buf) {
+  var p = this.lastTotal - this.lastNeed;
+  var r = utf8CheckExtraBytes(this, buf, p);
+  if (r !== undefined) return r;
+  if (this.lastNeed <= buf.length) {
+    buf.copy(this.lastChar, p, 0, this.lastNeed);
+    return this.lastChar.toString(this.encoding, 0, this.lastTotal);
+  }
+  buf.copy(this.lastChar, p, 0, buf.length);
+  this.lastNeed -= buf.length;
+}
+
+// Returns all complete UTF-8 characters in a Buffer. If the Buffer ended on a
+// partial character, the character's bytes are buffered until the required
+// number of bytes are available.
+function utf8Text(buf, i) {
+  var total = utf8CheckIncomplete(this, buf, i);
+  if (!this.lastNeed) return buf.toString('utf8', i);
+  this.lastTotal = total;
+  var end = buf.length - (total - this.lastNeed);
+  buf.copy(this.lastChar, 0, end);
+  return buf.toString('utf8', i, end);
+}
+
+// For UTF-8, a replacement character is added when ending on a partial
+// character.
+function utf8End(buf) {
+  var r = buf && buf.length ? this.write(buf) : '';
+  if (this.lastNeed) return r + '\ufffd';
+  return r;
+}
+
+// UTF-16LE typically needs two bytes per character, but even if we have an even
+// number of bytes available, we need to check if we end on a leading/high
+// surrogate. In that case, we need to wait for the next two bytes in order to
+// decode the last character properly.
+function utf16Text(buf, i) {
+  if ((buf.length - i) % 2 === 0) {
+    var r = buf.toString('utf16le', i);
+    if (r) {
+      var c = r.charCodeAt(r.length - 1);
+      if (c >= 0xD800 && c <= 0xDBFF) {
+        this.lastNeed = 2;
+        this.lastTotal = 4;
+        this.lastChar[0] = buf[buf.length - 2];
+        this.lastChar[1] = buf[buf.length - 1];
+        return r.slice(0, -1);
+      }
+    }
+    return r;
+  }
+  this.lastNeed = 1;
+  this.lastTotal = 2;
+  this.lastChar[0] = buf[buf.length - 1];
+  return buf.toString('utf16le', i, buf.length - 1);
+}
+
+// For UTF-16LE we do not explicitly append special replacement characters if we
+// end on a partial character, we simply let v8 handle that.
+function utf16End(buf) {
+  var r = buf && buf.length ? this.write(buf) : '';
+  if (this.lastNeed) {
+    var end = this.lastTotal - this.lastNeed;
+    return r + this.lastChar.toString('utf16le', 0, end);
+  }
+  return r;
+}
+
+function base64Text(buf, i) {
+  var n = (buf.length - i) % 3;
+  if (n === 0) return buf.toString('base64', i);
+  this.lastNeed = 3 - n;
+  this.lastTotal = 3;
+  if (n === 1) {
+    this.lastChar[0] = buf[buf.length - 1];
+  } else {
+    this.lastChar[0] = buf[buf.length - 2];
+    this.lastChar[1] = buf[buf.length - 1];
+  }
+  return buf.toString('base64', i, buf.length - n);
+}
+
+function base64End(buf) {
+  var r = buf && buf.length ? this.write(buf) : '';
+  if (this.lastNeed) return r + this.lastChar.toString('base64', 0, 3 - this.lastNeed);
+  return r;
+}
+
+// Pass bytes on through for single-byte encodings (e.g. ascii, latin1, hex)
+function simpleWrite(buf) {
+  return buf.toString(this.encoding);
+}
+
+function simpleEnd(buf) {
+  return buf && buf.length ? this.write(buf) : '';
+}
+},{"safe-buffer":155}],27:[function(require,module,exports){
 /*!
  * The buffer module from node.js, for the browser.
  *
@@ -5894,30 +8385,30 @@ function numberIsNaN (obj) {
   return obj !== obj // eslint-disable-line no-self-compare
 }
 
-},{"base64-js":15,"ieee754":50}],20:[function(require,module,exports){
+},{"base64-js":16,"ieee754":58}],28:[function(require,module,exports){
 require('../modules/web.immediate');
 module.exports = require('../modules/_core').setImmediate;
-},{"../modules/_core":24,"../modules/web.immediate":40}],21:[function(require,module,exports){
+},{"../modules/_core":32,"../modules/web.immediate":48}],29:[function(require,module,exports){
 module.exports = function(it){
   if(typeof it != 'function')throw TypeError(it + ' is not a function!');
   return it;
 };
-},{}],22:[function(require,module,exports){
+},{}],30:[function(require,module,exports){
 var isObject = require('./_is-object');
 module.exports = function(it){
   if(!isObject(it))throw TypeError(it + ' is not an object!');
   return it;
 };
-},{"./_is-object":35}],23:[function(require,module,exports){
+},{"./_is-object":43}],31:[function(require,module,exports){
 var toString = {}.toString;
 
 module.exports = function(it){
   return toString.call(it).slice(8, -1);
 };
-},{}],24:[function(require,module,exports){
+},{}],32:[function(require,module,exports){
 var core = module.exports = {version: '2.3.0'};
 if(typeof __e == 'number')__e = core; // eslint-disable-line no-undef
-},{}],25:[function(require,module,exports){
+},{}],33:[function(require,module,exports){
 // optional / simple context binding
 var aFunction = require('./_a-function');
 module.exports = function(fn, that, length){
@@ -5938,12 +8429,12 @@ module.exports = function(fn, that, length){
     return fn.apply(that, arguments);
   };
 };
-},{"./_a-function":21}],26:[function(require,module,exports){
+},{"./_a-function":29}],34:[function(require,module,exports){
 // Thank's IE8 for his funny defineProperty
 module.exports = !require('./_fails')(function(){
   return Object.defineProperty({}, 'a', {get: function(){ return 7; }}).a != 7;
 });
-},{"./_fails":29}],27:[function(require,module,exports){
+},{"./_fails":37}],35:[function(require,module,exports){
 var isObject = require('./_is-object')
   , document = require('./_global').document
   // in old IE typeof document.createElement is 'object'
@@ -5951,7 +8442,7 @@ var isObject = require('./_is-object')
 module.exports = function(it){
   return is ? document.createElement(it) : {};
 };
-},{"./_global":30,"./_is-object":35}],28:[function(require,module,exports){
+},{"./_global":38,"./_is-object":43}],36:[function(require,module,exports){
 var global    = require('./_global')
   , core      = require('./_core')
   , ctx       = require('./_ctx')
@@ -6013,7 +8504,7 @@ $export.W = 32;  // wrap
 $export.U = 64;  // safe
 $export.R = 128; // real proto method for `library` 
 module.exports = $export;
-},{"./_core":24,"./_ctx":25,"./_global":30,"./_hide":31}],29:[function(require,module,exports){
+},{"./_core":32,"./_ctx":33,"./_global":38,"./_hide":39}],37:[function(require,module,exports){
 module.exports = function(exec){
   try {
     return !!exec();
@@ -6021,12 +8512,12 @@ module.exports = function(exec){
     return true;
   }
 };
-},{}],30:[function(require,module,exports){
+},{}],38:[function(require,module,exports){
 // https://github.com/zloirock/core-js/issues/86#issuecomment-115759028
 var global = module.exports = typeof window != 'undefined' && window.Math == Math
   ? window : typeof self != 'undefined' && self.Math == Math ? self : Function('return this')();
 if(typeof __g == 'number')__g = global; // eslint-disable-line no-undef
-},{}],31:[function(require,module,exports){
+},{}],39:[function(require,module,exports){
 var dP         = require('./_object-dp')
   , createDesc = require('./_property-desc');
 module.exports = require('./_descriptors') ? function(object, key, value){
@@ -6035,13 +8526,13 @@ module.exports = require('./_descriptors') ? function(object, key, value){
   object[key] = value;
   return object;
 };
-},{"./_descriptors":26,"./_object-dp":36,"./_property-desc":37}],32:[function(require,module,exports){
+},{"./_descriptors":34,"./_object-dp":44,"./_property-desc":45}],40:[function(require,module,exports){
 module.exports = require('./_global').document && document.documentElement;
-},{"./_global":30}],33:[function(require,module,exports){
+},{"./_global":38}],41:[function(require,module,exports){
 module.exports = !require('./_descriptors') && !require('./_fails')(function(){
   return Object.defineProperty(require('./_dom-create')('div'), 'a', {get: function(){ return 7; }}).a != 7;
 });
-},{"./_descriptors":26,"./_dom-create":27,"./_fails":29}],34:[function(require,module,exports){
+},{"./_descriptors":34,"./_dom-create":35,"./_fails":37}],42:[function(require,module,exports){
 // fast apply, http://jsperf.lnkit.com/fast-apply/5
 module.exports = function(fn, args, that){
   var un = that === undefined;
@@ -6058,11 +8549,11 @@ module.exports = function(fn, args, that){
                       : fn.call(that, args[0], args[1], args[2], args[3]);
   } return              fn.apply(that, args);
 };
-},{}],35:[function(require,module,exports){
+},{}],43:[function(require,module,exports){
 module.exports = function(it){
   return typeof it === 'object' ? it !== null : typeof it === 'function';
 };
-},{}],36:[function(require,module,exports){
+},{}],44:[function(require,module,exports){
 var anObject       = require('./_an-object')
   , IE8_DOM_DEFINE = require('./_ie8-dom-define')
   , toPrimitive    = require('./_to-primitive')
@@ -6079,7 +8570,7 @@ exports.f = require('./_descriptors') ? Object.defineProperty : function defineP
   if('value' in Attributes)O[P] = Attributes.value;
   return O;
 };
-},{"./_an-object":22,"./_descriptors":26,"./_ie8-dom-define":33,"./_to-primitive":39}],37:[function(require,module,exports){
+},{"./_an-object":30,"./_descriptors":34,"./_ie8-dom-define":41,"./_to-primitive":47}],45:[function(require,module,exports){
 module.exports = function(bitmap, value){
   return {
     enumerable  : !(bitmap & 1),
@@ -6088,7 +8579,7 @@ module.exports = function(bitmap, value){
     value       : value
   };
 };
-},{}],38:[function(require,module,exports){
+},{}],46:[function(require,module,exports){
 var ctx                = require('./_ctx')
   , invoke             = require('./_invoke')
   , html               = require('./_html')
@@ -6164,7 +8655,7 @@ module.exports = {
   set:   setTask,
   clear: clearTask
 };
-},{"./_cof":23,"./_ctx":25,"./_dom-create":27,"./_global":30,"./_html":32,"./_invoke":34}],39:[function(require,module,exports){
+},{"./_cof":31,"./_ctx":33,"./_dom-create":35,"./_global":38,"./_html":40,"./_invoke":42}],47:[function(require,module,exports){
 // 7.1.1 ToPrimitive(input [, PreferredType])
 var isObject = require('./_is-object');
 // instead of the ES6 spec version, we didn't implement @@toPrimitive case
@@ -6177,14 +8668,14 @@ module.exports = function(it, S){
   if(!S && typeof (fn = it.toString) == 'function' && !isObject(val = fn.call(it)))return val;
   throw TypeError("Can't convert object to primitive value");
 };
-},{"./_is-object":35}],40:[function(require,module,exports){
+},{"./_is-object":43}],48:[function(require,module,exports){
 var $export = require('./_export')
   , $task   = require('./_task');
 $export($export.G + $export.B, {
   setImmediate:   $task.set,
   clearImmediate: $task.clear
 });
-},{"./_export":28,"./_task":38}],41:[function(require,module,exports){
+},{"./_export":36,"./_task":46}],49:[function(require,module,exports){
 (function (Buffer){
 // Copyright Joyent, Inc. and other Node contributors.
 //
@@ -6295,10 +8786,10 @@ function objectToString(o) {
 }
 
 }).call(this,{"isBuffer":require("../../is-buffer/index.js")})
-},{"../../is-buffer/index.js":53}],42:[function(require,module,exports){
+},{"../../is-buffer/index.js":61}],50:[function(require,module,exports){
 module.exports.structure = require('./src/structure');
 
-},{"./src/structure":46}],43:[function(require,module,exports){
+},{"./src/structure":54}],51:[function(require,module,exports){
 var fieldSize = require('./fieldsize');
 
 var types = {
@@ -6360,7 +8851,7 @@ function bytesPer(fields) {
     return fields.reduce(function(memo, f) { return memo + f.size; }, 1);
 }
 
-},{"./fieldsize":44}],44:[function(require,module,exports){
+},{"./fieldsize":52}],52:[function(require,module,exports){
 module.exports = {
     // string
     C: 254,
@@ -6378,7 +8869,7 @@ module.exports = {
     B: 8,
 };
 
-},{}],45:[function(require,module,exports){
+},{}],53:[function(require,module,exports){
 /**
  * @param {string} str
  * @param {number} len
@@ -6413,7 +8904,7 @@ module.exports.writeField = function writeField(view, fieldLength, str, offset) 
     return offset;
 };
 
-},{}],46:[function(require,module,exports){
+},{}],54:[function(require,module,exports){
 var fieldSize = require('./fieldsize'),
     lib = require('./lib'),
     fields = require('./fields');
@@ -6519,7 +9010,7 @@ module.exports = function structure(data, meta) {
     return view;
 };
 
-},{"./fields":43,"./fieldsize":44,"./lib":45}],47:[function(require,module,exports){
+},{"./fields":51,"./fieldsize":52,"./lib":53}],55:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -7044,13 +9535,13 @@ function functionBindPolyfill(context) {
   };
 }
 
-},{}],48:[function(require,module,exports){
+},{}],56:[function(require,module,exports){
 (function (global){
 (function(a,b){if("function"==typeof define&&define.amd)define([],b);else if("undefined"!=typeof exports)b();else{b(),a.FileSaver={exports:{}}.exports}})(this,function(){"use strict";function b(a,b){return"undefined"==typeof b?b={autoBom:!1}:"object"!=typeof b&&(console.warn("Depricated: Expected third argument to be a object"),b={autoBom:!b}),b.autoBom&&/^\s*(?:text\/\S*|application\/xml|\S*\/\S*\+xml)\s*;.*charset\s*=\s*utf-8/i.test(a.type)?new Blob(["\uFEFF",a],{type:a.type}):a}function c(b,c,d){var e=new XMLHttpRequest;e.open("GET",b),e.responseType="blob",e.onload=function(){a(e.response,c,d)},e.onerror=function(){console.error("could not download file")},e.send()}function d(a){var b=new XMLHttpRequest;return b.open("HEAD",a,!1),b.send(),200<=b.status&&299>=b.status}function e(a){try{a.dispatchEvent(new MouseEvent("click"))}catch(c){var b=document.createEvent("MouseEvents");b.initMouseEvent("click",!0,!0,window,0,0,0,80,20,!1,!1,!1,!1,0,null),a.dispatchEvent(b)}}var f=function(){try{return Function("return this")()||(42,eval)("this")}catch(a){return"object"==typeof window&&window.window===window?window:"object"==typeof self&&self.self===self?self:"object"==typeof global&&global.global===global?global:this}}(),a=f.saveAs||"object"!=typeof window||window!==f?function(){}:"download"in HTMLAnchorElement.prototype?function(b,g,h){var i=f.URL||f.webkitURL,j=document.createElement("a");g=g||b.name||"download",j.download=g,j.rel="noopener","string"==typeof b?(j.href=b,j.origin===location.origin?e(j):d(j.href)?c(b,g,h):e(j,j.target="_blank")):(j.href=i.createObjectURL(b),setTimeout(function(){i.revokeObjectURL(j.href)},4E4),setTimeout(function(){e(j)},0))}:"msSaveOrOpenBlob"in navigator?function(f,g,h){if(g=g||f.name||"download","string"!=typeof f)navigator.msSaveOrOpenBlob(b(f,h),g);else if(d(f))c(f,g,h);else{var i=document.createElement("a");i.href=f,i.target="_blank",setTimeout(function(){e(i)})}}:function(a,b,d,e){if(e=e||open("","_blank"),e&&(e.document.title=e.document.body.innerText="downloading..."),"string"==typeof a)return c(a,b,d);var g="application/octet-stream"===a.type,h=/constructor/i.test(f.HTMLElement)||f.safari,i=/CriOS\/[\d]+/.test(navigator.userAgent);if((i||g&&h)&&"object"==typeof FileReader){var j=new FileReader;j.onloadend=function(){var a=j.result;a=i?a:a.replace(/^data:[^;]*;/,"data:attachment/file;"),e?e.location.href=a:location=a,e=null},j.readAsDataURL(a)}else{var k=f.URL||f.webkitURL,l=k.createObjectURL(a);e?e.location=l:location.href=l,e=null,setTimeout(function(){k.revokeObjectURL(l)},4E4)}};f.saveAs=a.saveAs=a,"undefined"!=typeof module&&(module.exports=a)});
 
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],49:[function(require,module,exports){
+},{}],57:[function(require,module,exports){
 (function (global, factory) {
 typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory() :
 typeof define === 'function' && define.amd ? define(factory) :
@@ -7946,7 +10437,7 @@ return geojsonvt;
 
 })));
 
-},{}],50:[function(require,module,exports){
+},{}],58:[function(require,module,exports){
 exports.read = function (buffer, offset, isLE, mLen, nBytes) {
   var e, m
   var eLen = (nBytes * 8) - mLen - 1
@@ -8032,7 +10523,7 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
   buffer[offset + i - d] |= s * 128
 }
 
-},{}],51:[function(require,module,exports){
+},{}],59:[function(require,module,exports){
 (function (global){
 'use strict';
 var Mutation = global.MutationObserver || global.WebKitMutationObserver;
@@ -8105,9 +10596,9 @@ function immediate(task) {
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],52:[function(require,module,exports){
-arguments[4][11][0].apply(exports,arguments)
-},{"dup":11}],53:[function(require,module,exports){
+},{}],60:[function(require,module,exports){
+arguments[4][12][0].apply(exports,arguments)
+},{"dup":12}],61:[function(require,module,exports){
 /*!
  * Determine if an object is a Buffer
  *
@@ -8130,14 +10621,14 @@ function isSlowBuffer (obj) {
   return typeof obj.readFloatLE === 'function' && typeof obj.slice === 'function' && isBuffer(obj.slice(0, 0))
 }
 
-},{}],54:[function(require,module,exports){
+},{}],62:[function(require,module,exports){
 var toString = {}.toString;
 
 module.exports = Array.isArray || function (arr) {
   return toString.call(arr) == '[object Array]';
 };
 
-},{}],55:[function(require,module,exports){
+},{}],63:[function(require,module,exports){
 'use strict';
 var utils = require('./utils');
 var support = require('./support');
@@ -8245,7 +10736,7 @@ exports.decode = function(input) {
     return output;
 };
 
-},{"./support":84,"./utils":86}],56:[function(require,module,exports){
+},{"./support":92,"./utils":94}],64:[function(require,module,exports){
 'use strict';
 
 var external = require("./external");
@@ -8322,7 +10813,7 @@ CompressedObject.createWorkerFrom = function (uncompressedWorker, compression, c
 
 module.exports = CompressedObject;
 
-},{"./external":60,"./stream/Crc32Probe":79,"./stream/DataLengthProbe":80,"./stream/DataWorker":81}],57:[function(require,module,exports){
+},{"./external":68,"./stream/Crc32Probe":87,"./stream/DataLengthProbe":88,"./stream/DataWorker":89}],65:[function(require,module,exports){
 'use strict';
 
 var GenericWorker = require("./stream/GenericWorker");
@@ -8338,7 +10829,7 @@ exports.STORE = {
 };
 exports.DEFLATE = require('./flate');
 
-},{"./flate":61,"./stream/GenericWorker":82}],58:[function(require,module,exports){
+},{"./flate":69,"./stream/GenericWorker":90}],66:[function(require,module,exports){
 'use strict';
 
 var utils = require('./utils');
@@ -8417,7 +10908,7 @@ module.exports = function crc32wrapper(input, crc) {
     }
 };
 
-},{"./utils":86}],59:[function(require,module,exports){
+},{"./utils":94}],67:[function(require,module,exports){
 'use strict';
 exports.base64 = false;
 exports.binary = false;
@@ -8430,7 +10921,7 @@ exports.comment = null;
 exports.unixPermissions = null;
 exports.dosPermissions = null;
 
-},{}],60:[function(require,module,exports){
+},{}],68:[function(require,module,exports){
 /* global Promise */
 'use strict';
 
@@ -8451,7 +10942,7 @@ module.exports = {
     Promise: ES6Promise
 };
 
-},{"lie":90}],61:[function(require,module,exports){
+},{"lie":98}],69:[function(require,module,exports){
 'use strict';
 var USE_TYPEDARRAY = (typeof Uint8Array !== 'undefined') && (typeof Uint16Array !== 'undefined') && (typeof Uint32Array !== 'undefined');
 
@@ -8538,7 +11029,7 @@ exports.uncompressWorker = function () {
     return new FlateWorker("Inflate", {});
 };
 
-},{"./stream/GenericWorker":82,"./utils":86,"pako":113}],62:[function(require,module,exports){
+},{"./stream/GenericWorker":90,"./utils":94,"pako":124}],70:[function(require,module,exports){
 'use strict';
 
 var utils = require('../utils');
@@ -9080,7 +11571,7 @@ ZipFileWorker.prototype.lock = function () {
 
 module.exports = ZipFileWorker;
 
-},{"../crc32":58,"../signature":77,"../stream/GenericWorker":82,"../utf8":85,"../utils":86}],63:[function(require,module,exports){
+},{"../crc32":66,"../signature":85,"../stream/GenericWorker":90,"../utf8":93,"../utils":94}],71:[function(require,module,exports){
 'use strict';
 
 var compressions = require('../compressions');
@@ -9139,7 +11630,7 @@ exports.generateWorker = function (zip, options, comment) {
     return zipFileWorker;
 };
 
-},{"../compressions":57,"./ZipFileWorker":62}],64:[function(require,module,exports){
+},{"../compressions":65,"./ZipFileWorker":70}],72:[function(require,module,exports){
 'use strict';
 
 /**
@@ -9193,7 +11684,7 @@ JSZip.loadAsync = function (content, options) {
 JSZip.external = require("./external");
 module.exports = JSZip;
 
-},{"./defaults":59,"./external":60,"./load":65,"./object":69,"./support":84}],65:[function(require,module,exports){
+},{"./defaults":67,"./external":68,"./load":73,"./object":77,"./support":92}],73:[function(require,module,exports){
 'use strict';
 var utils = require('./utils');
 var external = require("./external");
@@ -9277,7 +11768,7 @@ module.exports = function(data, options) {
     });
 };
 
-},{"./external":60,"./nodejsUtils":68,"./stream/Crc32Probe":79,"./utf8":85,"./utils":86,"./zipEntries":87}],66:[function(require,module,exports){
+},{"./external":68,"./nodejsUtils":76,"./stream/Crc32Probe":87,"./utf8":93,"./utils":94,"./zipEntries":95}],74:[function(require,module,exports){
 "use strict";
 
 var utils = require('../utils');
@@ -9353,7 +11844,7 @@ NodejsStreamInputAdapter.prototype.resume = function () {
 
 module.exports = NodejsStreamInputAdapter;
 
-},{"../stream/GenericWorker":82,"../utils":86}],67:[function(require,module,exports){
+},{"../stream/GenericWorker":90,"../utils":94}],75:[function(require,module,exports){
 'use strict';
 
 var Readable = require('readable-stream').Readable;
@@ -9397,7 +11888,7 @@ NodejsStreamOutputAdapter.prototype._read = function() {
 
 module.exports = NodejsStreamOutputAdapter;
 
-},{"../utils":86,"readable-stream":70}],68:[function(require,module,exports){
+},{"../utils":94,"readable-stream":78}],76:[function(require,module,exports){
 (function (Buffer){
 'use strict';
 
@@ -9453,7 +11944,7 @@ module.exports = {
 };
 
 }).call(this,require("buffer").Buffer)
-},{"buffer":19}],69:[function(require,module,exports){
+},{"buffer":27}],77:[function(require,module,exports){
 'use strict';
 var utf8 = require('./utf8');
 var utils = require('./utils');
@@ -9844,7 +12335,7 @@ var out = {
 };
 module.exports = out;
 
-},{"./compressedObject":56,"./defaults":59,"./generate":63,"./nodejs/NodejsStreamInputAdapter":66,"./nodejsUtils":68,"./stream/GenericWorker":82,"./stream/StreamHelper":83,"./utf8":85,"./utils":86,"./zipObject":89}],70:[function(require,module,exports){
+},{"./compressedObject":64,"./defaults":67,"./generate":71,"./nodejs/NodejsStreamInputAdapter":74,"./nodejsUtils":76,"./stream/GenericWorker":90,"./stream/StreamHelper":91,"./utf8":93,"./utils":94,"./zipObject":97}],78:[function(require,module,exports){
 /*
  * This file is used by module bundlers (browserify/webpack/etc) when
  * including a stream implementation. We use "readable-stream" to get a
@@ -9855,7 +12346,7 @@ module.exports = out;
  */
 module.exports = require("stream");
 
-},{"stream":194}],71:[function(require,module,exports){
+},{"stream":206}],79:[function(require,module,exports){
 'use strict';
 var DataReader = require('./DataReader');
 var utils = require('../utils');
@@ -9914,7 +12405,7 @@ ArrayReader.prototype.readData = function(size) {
 };
 module.exports = ArrayReader;
 
-},{"../utils":86,"./DataReader":72}],72:[function(require,module,exports){
+},{"../utils":94,"./DataReader":80}],80:[function(require,module,exports){
 'use strict';
 var utils = require('../utils');
 
@@ -10032,7 +12523,7 @@ DataReader.prototype = {
 };
 module.exports = DataReader;
 
-},{"../utils":86}],73:[function(require,module,exports){
+},{"../utils":94}],81:[function(require,module,exports){
 'use strict';
 var Uint8ArrayReader = require('./Uint8ArrayReader');
 var utils = require('../utils');
@@ -10053,7 +12544,7 @@ NodeBufferReader.prototype.readData = function(size) {
 };
 module.exports = NodeBufferReader;
 
-},{"../utils":86,"./Uint8ArrayReader":75}],74:[function(require,module,exports){
+},{"../utils":94,"./Uint8ArrayReader":83}],82:[function(require,module,exports){
 'use strict';
 var DataReader = require('./DataReader');
 var utils = require('../utils');
@@ -10093,7 +12584,7 @@ StringReader.prototype.readData = function(size) {
 };
 module.exports = StringReader;
 
-},{"../utils":86,"./DataReader":72}],75:[function(require,module,exports){
+},{"../utils":94,"./DataReader":80}],83:[function(require,module,exports){
 'use strict';
 var ArrayReader = require('./ArrayReader');
 var utils = require('../utils');
@@ -10117,7 +12608,7 @@ Uint8ArrayReader.prototype.readData = function(size) {
 };
 module.exports = Uint8ArrayReader;
 
-},{"../utils":86,"./ArrayReader":71}],76:[function(require,module,exports){
+},{"../utils":94,"./ArrayReader":79}],84:[function(require,module,exports){
 'use strict';
 
 var utils = require('../utils');
@@ -10147,7 +12638,7 @@ module.exports = function (data) {
     return new ArrayReader(utils.transformTo("array", data));
 };
 
-},{"../support":84,"../utils":86,"./ArrayReader":71,"./NodeBufferReader":73,"./StringReader":74,"./Uint8ArrayReader":75}],77:[function(require,module,exports){
+},{"../support":92,"../utils":94,"./ArrayReader":79,"./NodeBufferReader":81,"./StringReader":82,"./Uint8ArrayReader":83}],85:[function(require,module,exports){
 'use strict';
 exports.LOCAL_FILE_HEADER = "PK\x03\x04";
 exports.CENTRAL_FILE_HEADER = "PK\x01\x02";
@@ -10156,7 +12647,7 @@ exports.ZIP64_CENTRAL_DIRECTORY_LOCATOR = "PK\x06\x07";
 exports.ZIP64_CENTRAL_DIRECTORY_END = "PK\x06\x06";
 exports.DATA_DESCRIPTOR = "PK\x07\x08";
 
-},{}],78:[function(require,module,exports){
+},{}],86:[function(require,module,exports){
 'use strict';
 
 var GenericWorker = require('./GenericWorker');
@@ -10184,7 +12675,7 @@ ConvertWorker.prototype.processChunk = function (chunk) {
 };
 module.exports = ConvertWorker;
 
-},{"../utils":86,"./GenericWorker":82}],79:[function(require,module,exports){
+},{"../utils":94,"./GenericWorker":90}],87:[function(require,module,exports){
 'use strict';
 
 var GenericWorker = require('./GenericWorker');
@@ -10210,7 +12701,7 @@ Crc32Probe.prototype.processChunk = function (chunk) {
 };
 module.exports = Crc32Probe;
 
-},{"../crc32":58,"../utils":86,"./GenericWorker":82}],80:[function(require,module,exports){
+},{"../crc32":66,"../utils":94,"./GenericWorker":90}],88:[function(require,module,exports){
 'use strict';
 
 var utils = require('../utils');
@@ -10241,7 +12732,7 @@ DataLengthProbe.prototype.processChunk = function (chunk) {
 module.exports = DataLengthProbe;
 
 
-},{"../utils":86,"./GenericWorker":82}],81:[function(require,module,exports){
+},{"../utils":94,"./GenericWorker":90}],89:[function(require,module,exports){
 'use strict';
 
 var utils = require('../utils');
@@ -10359,7 +12850,7 @@ DataWorker.prototype._tick = function() {
 
 module.exports = DataWorker;
 
-},{"../utils":86,"./GenericWorker":82}],82:[function(require,module,exports){
+},{"../utils":94,"./GenericWorker":90}],90:[function(require,module,exports){
 'use strict';
 
 /**
@@ -10624,7 +13115,7 @@ GenericWorker.prototype = {
 
 module.exports = GenericWorker;
 
-},{}],83:[function(require,module,exports){
+},{}],91:[function(require,module,exports){
 (function (Buffer){
 'use strict';
 
@@ -10840,7 +13331,7 @@ StreamHelper.prototype = {
 module.exports = StreamHelper;
 
 }).call(this,require("buffer").Buffer)
-},{"../base64":55,"../external":60,"../nodejs/NodejsStreamOutputAdapter":67,"../support":84,"../utils":86,"./ConvertWorker":78,"./GenericWorker":82,"buffer":19}],84:[function(require,module,exports){
+},{"../base64":63,"../external":68,"../nodejs/NodejsStreamOutputAdapter":75,"../support":92,"../utils":94,"./ConvertWorker":86,"./GenericWorker":90,"buffer":27}],92:[function(require,module,exports){
 (function (Buffer){
 'use strict';
 
@@ -10882,7 +13373,7 @@ try {
 }
 
 }).call(this,require("buffer").Buffer)
-},{"buffer":19,"readable-stream":70}],85:[function(require,module,exports){
+},{"buffer":27,"readable-stream":78}],93:[function(require,module,exports){
 'use strict';
 
 var utils = require('./utils');
@@ -11159,7 +13650,7 @@ Utf8EncodeWorker.prototype.processChunk = function (chunk) {
 };
 exports.Utf8EncodeWorker = Utf8EncodeWorker;
 
-},{"./nodejsUtils":68,"./stream/GenericWorker":82,"./support":84,"./utils":86}],86:[function(require,module,exports){
+},{"./nodejsUtils":76,"./stream/GenericWorker":90,"./support":92,"./utils":94}],94:[function(require,module,exports){
 'use strict';
 
 var support = require('./support');
@@ -11637,7 +14128,7 @@ exports.prepareContent = function(name, inputData, isBinary, isOptimizedBinarySt
     });
 };
 
-},{"./base64":55,"./external":60,"./nodejsUtils":68,"./support":84,"core-js/library/fn/set-immediate":20}],87:[function(require,module,exports){
+},{"./base64":63,"./external":68,"./nodejsUtils":76,"./support":92,"core-js/library/fn/set-immediate":28}],95:[function(require,module,exports){
 'use strict';
 var readerFor = require('./reader/readerFor');
 var utils = require('./utils');
@@ -11901,7 +14392,7 @@ ZipEntries.prototype = {
 // }}} end of ZipEntries
 module.exports = ZipEntries;
 
-},{"./reader/readerFor":76,"./signature":77,"./support":84,"./utf8":85,"./utils":86,"./zipEntry":88}],88:[function(require,module,exports){
+},{"./reader/readerFor":84,"./signature":85,"./support":92,"./utf8":93,"./utils":94,"./zipEntry":96}],96:[function(require,module,exports){
 'use strict';
 var readerFor = require('./reader/readerFor');
 var utils = require('./utils');
@@ -12195,7 +14686,7 @@ ZipEntry.prototype = {
 };
 module.exports = ZipEntry;
 
-},{"./compressedObject":56,"./compressions":57,"./crc32":58,"./reader/readerFor":76,"./support":84,"./utf8":85,"./utils":86}],89:[function(require,module,exports){
+},{"./compressedObject":64,"./compressions":65,"./crc32":66,"./reader/readerFor":84,"./support":92,"./utf8":93,"./utils":94}],97:[function(require,module,exports){
 'use strict';
 
 var StreamHelper = require('./stream/StreamHelper');
@@ -12330,7 +14821,7 @@ for(var i = 0; i < removedMethods.length; i++) {
 }
 module.exports = ZipObject;
 
-},{"./compressedObject":56,"./stream/DataWorker":81,"./stream/GenericWorker":82,"./stream/StreamHelper":83,"./utf8":85}],90:[function(require,module,exports){
+},{"./compressedObject":64,"./stream/DataWorker":89,"./stream/GenericWorker":90,"./stream/StreamHelper":91,"./utf8":93}],98:[function(require,module,exports){
 'use strict';
 var immediate = require('immediate');
 
@@ -12585,7 +15076,7 @@ function race(iterable) {
   }
 }
 
-},{"immediate":51}],91:[function(require,module,exports){
+},{"immediate":59}],99:[function(require,module,exports){
 /*  Adapted from pdf.js's colorspace module
     (https://github.com/mozilla/pdf.js/blob/a18290759227c894f8f97f58c8da8ce942f5a38f/src/core/colorspace.js)
 
@@ -12630,21 +15121,23 @@ module.exports = function convertToRgb (src) {
          -193.58209356861505) +
     k * (-22.33816807309886 * k - 180.12613974708367)
 
-  return `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`
+  return rgb
 }
 
-},{}],92:[function(require,module,exports){
+},{}],100:[function(require,module,exports){
 const readOcad = require('./ocad-reader')
 const ocadToGeoJson = require('./ocad-to-geojson')
+const { ocadToSvg } = require('./ocad-to-svg')
 const ocadToMapboxGlStyle = require('./ocad-to-mapbox-gl-style')
 
 module.exports = {
   readOcad,
   ocadToGeoJson,
+  ocadToSvg,
   ocadToMapboxGlStyle
 }
 
-},{"./ocad-reader":96,"./ocad-to-geojson":111,"./ocad-to-mapbox-gl-style":112}],93:[function(require,module,exports){
+},{"./ocad-reader":104,"./ocad-to-geojson":120,"./ocad-to-mapbox-gl-style":121,"./ocad-to-svg":122}],101:[function(require,module,exports){
 const { Symbol10, Symbol11 } = require('./symbol')
 
 class AreaSymbol10 extends Symbol10 {
@@ -12661,6 +15154,15 @@ class AreaSymbol10 extends Symbol10 {
     this.hatchAngle2 = this.readSmallInt()
     this.fillOn = !!this.readByte()
     this.borderOn = !!this.readByte()
+    this.structMode = this.readByte()
+    this.structDraw = this.readByte()
+    this.structWidth = this.readSmallInt()
+    this.structHeight = this.readSmallInt()
+    this.structAngle = this.readSmallInt()
+    this.structRes = this.readSmallInt()
+    this.dataSize = this.readWord()
+
+    this.elements = this.readElements(this.dataSize)
   }
 }
 
@@ -12681,16 +15183,29 @@ class AreaSymbol11 extends Symbol11 {
     this.hatchAngle2 = this.readSmallInt()
     this.fillOn = !!this.readByte()
     this.borderOn = !!this.readByte()
+    this.structMode = this.readByte()
+    this.structDraw = this.readByte()
+    this.structWidth = this.readSmallInt()
+    this.structHeight = this.readSmallInt()
+    this.structAngle = this.readSmallInt()
+    this.structIrregularVarX = this.readByte()
+    this.structIrregularVarY = this.readByte()
+    this.structIrregularMinDist = this.readSmallInt()
+    this.structRes = this.readSmallInt()
+    this.dataSize = this.readWord()
+
+    this.elements = this.readElements(this.dataSize)
   }
 }
 
 module.exports = {
   10: AreaSymbol10,
   11: AreaSymbol11,
-  12: AreaSymbol11
+  12: AreaSymbol11,
+  2018: AreaSymbol11
 }
 
-},{"./symbol":108}],94:[function(require,module,exports){
+},{"./symbol":116}],102:[function(require,module,exports){
 module.exports = class Block {
   constructor (buffer, offset) {
     this.buffer = buffer
@@ -12742,7 +15257,7 @@ module.exports = class Block {
   }
 }
 
-},{}],95:[function(require,module,exports){
+},{}],103:[function(require,module,exports){
 const Block = require('./block')
 
 module.exports = class FileHeader extends Block {
@@ -12779,7 +15294,7 @@ module.exports = class FileHeader extends Block {
   }
 }
 
-},{"./block":94}],96:[function(require,module,exports){
+},{"./block":102}],104:[function(require,module,exports){
 const fs = require('fs')
 const { Buffer } = require('buffer')
 const getRgb = require('../cmyk-to-rgb')
@@ -12806,6 +15321,8 @@ module.exports = async (path, options) => {
 }
 
 const parseOcadBuffer = async (buffer, options) => new Promise((resolve, reject) => {
+  let warnings = []
+
   const header = new FileHeader(buffer, 0)
   if (!header.isValid()) {
     throw new Error(`Not an OCAD file (invalid header ${header.ocadMark} !== ${0x0cad})`)
@@ -12818,8 +15335,9 @@ const parseOcadBuffer = async (buffer, options) => new Promise((resolve, reject)
   let symbols = []
   let symbolIndexOffset = header.symbolIndexBlock
   while (symbolIndexOffset) {
-    let symbolIndex = new SymbolIndex(buffer, symbolIndexOffset, header.version)
+    let symbolIndex = new SymbolIndex(buffer, symbolIndexOffset, header.version, options)
     Array.prototype.push.apply(symbols, symbolIndex.parseSymbols())
+    warnings = warnings.concat(symbolIndex.warnings)
 
     symbolIndexOffset = symbolIndex.nextObjectIndexBlock
   }
@@ -12849,31 +15367,40 @@ const parseOcadBuffer = async (buffer, options) => new Promise((resolve, reject)
     stringIndexOffset = stringIndex.nextStringIndexBlock
   }
 
+  if (!options.quietWarnings) {
+    warnings.forEach(console.warn)
+  }
+
   resolve(new OcadFile(
     header,
     parameterStrings,
     objects,
-    symbols
+    symbols,
+    warnings
   ))
 })
 
 class OcadFile {
-  constructor (header, parameterStrings, objects, symbols) {
+  constructor (header, parameterStrings, objects, symbols, warnings) {
     this.header = header
     this.parameterStrings = parameterStrings
     this.objects = objects
     this.symbols = symbols
+    this.warnings = warnings
 
-    this.colors = parameterStrings[9].map((colorDef, i) => {
-      const cmyk = [colorDef.c, colorDef.m, colorDef.y, colorDef.k].map(Number)
-      return {
-        number: colorDef.n,
-        cmyk: cmyk,
-        name: colorDef._first,
-        rgb: getRgb(cmyk),
-        renderOrder: i
-      }
-    })
+    this.colors = parameterStrings[9]
+      .map((colorDef, i) => {
+        const cmyk = [colorDef.c || 0, colorDef.m || 0, colorDef.y || 0, colorDef.k || 0].map(Number)
+        const rgb = getRgb(cmyk)
+        return {
+          number: colorDef.n,
+          cmyk: cmyk,
+          name: colorDef._first,
+          rgb: `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`,
+          renderOrder: i,
+          rgbArray: rgb
+        }
+      })
       .reduce((a, c) => {
         a[c.number] = c
         return a
@@ -12898,7 +15425,7 @@ class OcadFile {
   }
 }
 
-},{"../cmyk-to-rgb":91,"./file-header":95,"./object-index":99,"./string-index":103,"./symbol-index":106,"buffer":19,"fs":18}],97:[function(require,module,exports){
+},{"../cmyk-to-rgb":99,"./file-header":103,"./object-index":107,"./string-index":111,"./symbol-index":114,"buffer":27,"fs":25}],105:[function(require,module,exports){
 const Block = require('./block')
 const { Symbol10, Symbol11 } = require('./symbol')
 
@@ -13024,10 +15551,11 @@ const readLineSymbol = (block, DoubleLine, Decrease) => {
 module.exports = {
   10: LineSymbol10,
   11: LineSymbol11,
-  12: LineSymbol11
+  12: LineSymbol11,
+  2018: LineSymbol11
 }
 
-},{"./block":94,"./symbol":108}],98:[function(require,module,exports){
+},{"./block":102,"./symbol":116}],106:[function(require,module,exports){
 const Block = require('./block')
 
 module.exports = class LRect extends Block {
@@ -13048,7 +15576,7 @@ module.exports = class LRect extends Block {
   }
 }
 
-},{"./block":94}],99:[function(require,module,exports){
+},{"./block":102}],107:[function(require,module,exports){
 const Block = require('./block')
 const LRect = require('./lrect')
 const TObject = require('./tobject')
@@ -13096,15 +15624,22 @@ module.exports = class ObjectIndex extends Block {
   }
 }
 
-},{"./block":94,"./lrect":98,"./tobject":110}],100:[function(require,module,exports){
+},{"./block":102,"./lrect":106,"./tobject":119}],108:[function(require,module,exports){
 module.exports = {
   PointObjectType: 1,
   LineObjectType: 2,
-  AreaObjectType: 3
+  AreaObjectType: 3,
+  UnformattedTextObjectType: 4,
+  FormattedTextObjectType: 5,
+  LineTextObjectType: 6,
+  RectangleObjectType: 7
 }
 
-},{}],101:[function(require,module,exports){
+},{}],109:[function(require,module,exports){
 const Block = require('./block')
+const { StringDecoder } = require('string_decoder');
+
+const decoder = new StringDecoder('utf8')
 
 module.exports = class ParameterString extends Block {
   constructor (buffer, offset, indexRecord) {
@@ -13112,21 +15647,31 @@ module.exports = class ParameterString extends Block {
 
     this.recType = indexRecord.recType
 
-    let val = ''
-    let nextByte = 0
-    for (let i = 0; i < indexRecord.len && (nextByte = this.readByte()); i++) {
-      val += String.fromCharCode(nextByte)
-    }
+    let strLen = 0
+    while (this.readByte()) strLen++
+    const val = decoder.end(buffer.slice(offset, offset + strLen))
 
     const vals = val.split('\t')
-    this.values = { _first: vals[0] }
+    this.values = { _first: vals[0], _pairs: [] }
     for (let i = 1; i < vals.length; i++) {
-      this.values[vals[i][0]] = vals[i].substring(1)
+      const code = vals[i][0]
+      const value = vals[i].substring(1)
+      let codeValues = this.values[code]
+      if (!codeValues) {
+        this.values[code] = value
+      } else {
+        if (!Array.isArray(codeValues)) {
+          codeValues = this.values[code] = [codeValues]
+        }
+        codeValues.push(value)
+      }
+
+      this.values._pairs.push({ code, value })
     }
   }
 }
 
-},{"./block":94}],102:[function(require,module,exports){
+},{"./block":102,"string_decoder":26}],110:[function(require,module,exports){
 const { Symbol10, Symbol11 } = require('./symbol')
 
 class PointSymbol10 extends Symbol10 {
@@ -13160,10 +15705,11 @@ class PointSymbol11 extends Symbol11 {
 module.exports = {
   10: PointSymbol10,
   11: PointSymbol11,
-  12: PointSymbol11
+  12: PointSymbol11,
+  2018: PointSymbol11
 }
 
-},{"./symbol":108}],103:[function(require,module,exports){
+},{"./symbol":116}],111:[function(require,module,exports){
 const Block = require('./block')
 const ParameterString = require('./parameter-string')
 
@@ -13200,7 +15746,7 @@ module.exports = class StringIndex extends Block {
   }
 }
 
-},{"./block":94,"./parameter-string":101}],104:[function(require,module,exports){
+},{"./block":102,"./parameter-string":109}],112:[function(require,module,exports){
 module.exports = {
   LineElementType: 1,
   AreaElementType: 2,
@@ -13208,7 +15754,7 @@ module.exports = {
   DotElementType: 4
 }
 
-},{}],105:[function(require,module,exports){
+},{}],113:[function(require,module,exports){
 const Block = require('./block')
 const TdPoly = require('./td-poly')
 
@@ -13231,20 +15777,23 @@ module.exports = class SymbolElement extends Block {
   }
 }
 
-},{"./block":94,"./td-poly":109}],106:[function(require,module,exports){
+},{"./block":102,"./td-poly":117}],114:[function(require,module,exports){
 const Block = require('./block')
 const PointSymbol = require('./point-symbol')
 const LineSymbol = require('./line-symbol')
 const AreaSymbol = require('./area-symbol')
-const { PointSymbolType, LineSymbolType, AreaSymbolType } = require('./symbol-types')
+const TextSymbol = require('./text-symbol')
+const { PointSymbolType, LineSymbolType, AreaSymbolType, TextSymbolType } = require('./symbol-types')
 
 module.exports = class SymbolIndex extends Block {
-  constructor (buffer, offset, version) {
+  constructor (buffer, offset, version, options) {
     super(buffer, offset)
 
     this.version = version
     this.nextSymbolIndexBlock = this.readInteger()
     this.symbolPosition = new Array(256)
+    this.warnings = []
+    this.options = options || {}
     for (let i = 0; i < this.symbolPosition.length; i++) {
       this.symbolPosition[i] = this.readInteger()
     }
@@ -13261,27 +15810,38 @@ module.exports = class SymbolIndex extends Block {
     if (!offset) return
 
     const type = this.buffer.readInt8(offset + 8)
-    switch (type) {
-      case PointSymbolType:
-        return new PointSymbol[this.version](this.buffer, offset)
-      case LineSymbolType:
-        return new LineSymbol[this.version](this.buffer, offset)
-      case AreaSymbolType:
-        return new AreaSymbol[this.version](this.buffer, offset)
+    try {
+      switch (type) {
+        case PointSymbolType:
+          return new PointSymbol[this.version](this.buffer, offset)
+        case LineSymbolType:
+          return new LineSymbol[this.version](this.buffer, offset)
+        case AreaSymbolType:
+          return new AreaSymbol[this.version](this.buffer, offset)
+        case TextSymbolType:
+          return new TextSymbol[this.version](this.buffer, offset)
+      }
+    } catch (e) {
+      if (!this.options.failOnWarning) {
+        this.warnings.push(e)
+      } else {
+        throw e
+      }
     }
 
     // Ignore other symbols for now
   }
 }
 
-},{"./area-symbol":93,"./block":94,"./line-symbol":97,"./point-symbol":102,"./symbol-types":107}],107:[function(require,module,exports){
+},{"./area-symbol":101,"./block":102,"./line-symbol":105,"./point-symbol":110,"./symbol-types":115,"./text-symbol":118}],115:[function(require,module,exports){
 module.exports = {
   PointSymbolType: 1,
   LineSymbolType: 2,
-  AreaSymbolType: 3
+  AreaSymbolType: 3,
+  TextSymbolType: 4
 }
 
-},{}],108:[function(require,module,exports){
+},{}],116:[function(require,module,exports){
 const Block = require('./block')
 const SymbolElement = require('./symbol-element')
 
@@ -13309,6 +15869,7 @@ class BaseSymbol extends Block {
 
     for (let i = 0; i < dataSize; i += 2) {
       const element = new SymbolElement(this.buffer, this.offset)
+      this.offset += element.getSize()
       elements.push(element)
 
       i += element.numberCoords
@@ -13383,8 +15944,8 @@ module.exports = {
   Symbol11
 }
 
-},{"./block":94,"./symbol-element":105}],109:[function(require,module,exports){
-module.exports = class TdPoly extends Array {
+},{"./block":102,"./symbol-element":113}],117:[function(require,module,exports){
+class TdPoly extends Array {
   constructor (ocadX, ocadY, xFlags, yFlags) {
     super(xFlags === undefined ? ocadX >> 8 : ocadX, yFlags === undefined ? ocadY >> 8 : ocadY)
     this.xFlags = xFlags === undefined ? ocadX & 0xff : xFlags
@@ -13453,7 +16014,106 @@ module.exports = class TdPoly extends Array {
   }
 }
 
-},{}],110:[function(require,module,exports){
+TdPoly.fromCoords = (x, y) => new TdPoly(x << 8, y << 8)
+
+module.exports = TdPoly
+
+},{}],118:[function(require,module,exports){
+const { TextSymbolType } = require('./symbol-types')
+const { Symbol10, Symbol11 } = require('./symbol')
+
+class TextSymbol10 extends Symbol10 {
+  constructor (buffer, offset) {
+    super(buffer, offset, TextSymbolType)
+
+    readTextSymbol(this)
+  }
+
+  getVerticalAlignment () {
+    return verticalAlignment(this.alignment)
+  }
+
+  getHorizontalAlignment () {
+    return horizontalAlignment(this.alignment)
+  }
+}
+
+class TextSymbol11 extends Symbol11 {
+  constructor (buffer, offset) {
+    super(buffer, offset, TextSymbolType)
+
+    // TODO: why?
+    this.offset += 64
+
+    readTextSymbol(this)
+  }
+
+  getVerticalAlignment () {
+    return verticalAlignment(this.alignment)
+  }
+
+  getHorizontalAlignment () {
+    return horizontalAlignment(this.alignment)
+  }
+}
+
+const readTextSymbol = block => {
+  // ASCII string, 32 bytes
+  block.fontName = ''
+  for (let i = 0; i < 32; i++) {
+    const c = block.readByte()
+    if (c) {
+      block.fontName += String.fromCharCode(c)
+    }
+  }
+
+  block.fontColor = block.readSmallInt()
+  block.fontSize = block.readSmallInt()
+  block.weight = block.readSmallInt()
+  block.italic = !!block.readByte()
+  block.res1 = block.readByte()
+  block.charSpace = block.readSmallInt()
+  block.wordSpace = block.readSmallInt()
+  block.alignment = block.readSmallInt()
+  block.lineSpace = block.readSmallInt()
+  block.paraSpace = block.readSmallInt()
+  block.indentFirst = block.readSmallInt()
+  block.indentOther = block.readSmallInt()
+  block.nTabs = block.readSmallInt()
+  block.tabs = []
+  for (let i = 0; i < 32; i++) {
+    block.tabs.push(block.readCardinal)
+  }
+  block.lbOn = block.readWordBool()
+  block.lbColor = block.readSmallInt()
+  block.lbWidth = block.readSmallInt()
+  block.lbDist = block.readSmallInt()
+  block.res2 = block.readSmallInt()
+  block.frMode = block.readByte()
+  block.frStyle = block.readByte()
+  block.pointSymOn = !!block.readByte()
+  block.pointSymNumber = block.readByte()
+  // TODO: Some frame parameters ignored here
+}
+
+const verticalAlignment = a => a & 0xfc
+const horizontalAlignment = a => a & 0x03
+
+module.exports = {
+  10: TextSymbol10,
+  11: TextSymbol11,
+  12: TextSymbol11,
+  2018: TextSymbol11,
+  VerticalAlignBottom: 0,
+  VerticalAlignMiddle: 4,
+  VerticalAlignTop: 8,
+  HorizontalAlignLeft: 0,
+  HorizontalAlignCenter: 1,
+  HorizontalAlignRight: 2,
+  HorizontalAlignAllLine: 3
+}
+
+},{"./symbol":116,"./symbol-types":115}],119:[function(require,module,exports){
 const Block = require('./block')
 const TdPoly = require('./td-poly')
 
@@ -13467,7 +16127,7 @@ class BaseTObject extends Block {
     return {
       sym: this.sym,
       otp: this.otp,
-      _customer: this._customer,
+      unicode: this.unicode,
       ang: this.ang,
       col: this.col,
       lineWidth: this.lineWidth,
@@ -13482,8 +16142,42 @@ class BaseTObject extends Block {
       nObjectString: this.nObjectString,
       nDatabaseString: this.nDatabaseString,
       objectStringType: this.objectStringType,
-      res1: this.res1
+      res1: this.res1,
+      text: this.text,
+      objectString: this.objectString,
+      databaseString: this.databaseString
     }
+  }
+}
+
+class TObject10 extends BaseTObject {
+  constructor (buffer, offset, objType) {
+    super(buffer, offset, objType)
+
+    this.sym = this.readInteger()
+    this.otp = this.readByte()
+    this.unicode = this.readByte()
+    this.ang = this.readSmallInt()
+    this.nItem = this.readCardinal()
+    this.nText = this.readWord()
+    this.readSmallInt() // Reserved
+    this.col = this.readInteger()
+    this.lineWidth = this.readSmallInt()
+    this.diamFlags = this.readSmallInt()
+    this.readInteger() // Reserved
+    this.readByte() // Reserved
+    this.readByte() // Reserved
+    this.readSmallInt() // Reserved
+    this.height = this.readInteger()
+    this.coordinates = new Array(this.nItem)
+
+    this.offset += 4
+
+    for (let i = 0; i < this.nItem; i++) {
+      this.coordinates[i] = new TdPoly(this.readInteger(), this.readInteger())
+    }
+
+    this.text = readWideString(this, this.nText)
   }
 }
 
@@ -13493,7 +16187,7 @@ class TObject11 extends BaseTObject {
 
     this.sym = this.readInteger()
     this.otp = this.readByte()
-    this._customer = this.readByte()
+    this.unicode = this.readByte()
     this.ang = this.readSmallInt()
     this.nItem = this.readCardinal()
     this.nText = this.readWord()
@@ -13510,6 +16204,8 @@ class TObject11 extends BaseTObject {
     for (let i = 0; i < this.nItem; i++) {
       this.coordinates[i] = new TdPoly(this.readInteger(), this.readInteger())
     }
+
+    this.text = readWideString(this, this.nText)
   }
 }
 
@@ -13519,7 +16215,7 @@ class TObject12 extends BaseTObject {
 
     this.sym = this.readInteger()
     this.otp = this.readByte()
-    this._customer = this.readByte()
+    this.unicode = this.readByte()
     this.ang = this.readSmallInt()
     this.col = this.readInteger()
     this.lineWidth = this.readSmallInt()
@@ -13540,47 +16236,41 @@ class TObject12 extends BaseTObject {
     for (let i = 0; i < this.nItem; i++) {
       this.coordinates[i] = new TdPoly(this.readInteger(), this.readInteger())
     }
+
+    this.text = readWideString(this, this.nText)
+    this.objectString = readWideString(this, this.nObjectString)
+    this.databaseString = readWideString(this, this.nDatabaseString)
   }
 }
 
-module.exports = {
-  10: class TObject10 extends BaseTObject {
-    constructor (buffer, offset, objType) {
-      super(buffer, offset, objType)
-
-      this.sym = this.readInteger()
-      this.otp = this.readByte()
-      this._customer = this.readByte()
-      this.ang = this.readSmallInt()
-      this.nItem = this.readCardinal()
-      this.nText = this.readWord()
-      this.readSmallInt() // Reserved
-      this.col = this.readInteger()
-      this.lineWidth = this.readSmallInt()
-      this.diamFlags = this.readSmallInt()
-      this.readInteger() // Reserved
-      this.readByte() // Reserved
-      this.readByte() // Reserved
-      this.readSmallInt() // Reserved
-      this.height = this.readInteger()
-      this.coordinates = new Array(this.nItem)
-
-      this.offset += 4
-
-      for (let i = 0; i < this.nItem; i++) {
-        this.coordinates[i] = new TdPoly(this.readInteger(), this.readInteger())
-      }
+const readWideString = (object, len) => {
+  const textChars = []
+  for (let i = 0; i < len * (object.unicode ? 2 : 4); i++) {
+    const c = object.unicode ? object.readByte() : object.readWord()
+    if (!c) break
+    if (c !== 13) {
+      textChars.push(String.fromCharCode(c))
     }
-  },
-  11: TObject11,
-  12: TObject12
+  }
+
+  return textChars.join('').trim()
 }
 
-},{"./block":94,"./td-poly":109}],111:[function(require,module,exports){
+module.exports = {
+  10: TObject10,
+  11: TObject11,
+  12: TObject12,
+  2018: TObject12
+}
+
+},{"./block":102,"./td-poly":117}],120:[function(require,module,exports){
 const { coordEach } = require('@turf/meta')
-const { PointSymbolType, LineSymbolType } = require('./ocad-reader/symbol-types')
-const { PointObjectType, LineObjectType, AreaObjectType } = require('./ocad-reader/object-types')
+const Bezier = require('bezier-js')
+const flatten = require('arr-flatten')
+const { PointObjectType, LineObjectType, AreaObjectType, UnformattedTextObjectType, FormattedTextObjectType } = require('./ocad-reader/object-types')
 const { LineElementType, AreaElementType, CircleElementType, DotElementType } = require('./ocad-reader/symbol-element-types')
+const transformFeatures = require('./transform-features')
+const TdPoly = require('./ocad-reader/td-poly')
 
 const defaultOptions = {
   assignIds: true,
@@ -13593,34 +16283,13 @@ const defaultOptions = {
 module.exports = function (ocadFile, options) {
   options = { ...defaultOptions, ...options }
 
-  let id = 1
-  const symbols = ocadFile.symbols.reduce((ss, s) => {
-    ss[s.symNum] = s
-    return ss
-  }, {})
-
-  let features = ocadFile.objects
-    .map(tObjectToGeoJson.bind(null, options, symbols))
-    .filter(f => f)
+  let features = transformFeatures(ocadFile, tObjectToGeoJson, createElement, options)
 
   if (options.assignIds) {
+    let id = 1
     features.forEach(o => {
       o.id = id++
     })
-  }
-
-  if (options.generateSymbolElements) {
-    const elementFeatures = features
-      .map(generateSymbolElements.bind(null, options, symbols))
-      .filter(f => f)
-
-    if (options.assignIds) {
-      elementFeatures.forEach(o => {
-        o.id = id++
-      })
-    }
-
-    features = features.concat(Array.prototype.concat.apply([], elementFeatures))
   }
 
   const featureCollection = {
@@ -13649,19 +16318,29 @@ const tObjectToGeoJson = (options, symbols, object) => {
     case PointObjectType:
       geometry = {
         type: 'Point',
-        coordinates: object.coordinates[0]
+        coordinates: object.coordinates[0].slice()
       }
       break
     case LineObjectType:
       geometry = {
         type: 'LineString',
-        coordinates: object.coordinates
+        coordinates: extractCoords(object.coordinates).map(c => c.slice())
       }
       break
     case AreaObjectType:
       geometry = {
         type: 'Polygon',
         coordinates: coordinatesToRings(object.coordinates)
+      }
+      break
+    case UnformattedTextObjectType:
+    case FormattedTextObjectType:
+      const lineHeight = symbol.fontSize / 10 * 0.352778 * 100
+      const anchorCoord = [object.coordinates[0][0], object.coordinates[0][1] + lineHeight]
+
+      geometry = {
+        type: 'Point',
+        coordinates: anchorCoord
       }
       break
     default:
@@ -13675,59 +16354,39 @@ const tObjectToGeoJson = (options, symbols, object) => {
   }
 }
 
-const generateSymbolElements = (options, symbols, feature) => {
-  const symbol = symbols[feature.properties.sym]
-  let elements = []
+const extractCoords = coords => {
+  const cs = []
+  let lastC
+  let cp1
+  let cp2
 
-  if (!options.exportHidden && (!symbol || symbol.isHidden())) return elements
+  for (let i = 0; i < coords.length; i++) {
+    const c = coords[i]
 
-  switch (symbol.type) {
-    case PointSymbolType:
-      const angle = feature.properties.ang ? feature.properties.ang / 10 / 180 * Math.PI : 0
-      elements = symbol.elements
-        .map((e, i) => createElement(symbol, 'element', i, feature, e, feature.geometry.coordinates, angle))
-      break
-    case LineSymbolType:
-      if (symbol.primSymElements.length > 0) {
-        const coords = feature.geometry.coordinates
-        const endLength = symbol.endLength
-        const mainLength = symbol.mainLength
-        const spotDist = symbol.primSymDist
-
-        let d = endLength
-
-        for (let i = 1; i < coords.length; i++) {
-          const c0 = coords[i - 1]
-          const c1 = coords[i]
-          const v = c1.sub(c0)
-          const angle = Math.atan2(v[1], v[0])
-          const u = v.unit()
-          const segmentLength = v.vLength()
-
-          let c = c0.add(u.mul(d))
-          let j = 0
-          while (d < segmentLength) {
-            elements = elements.concat(symbol.primSymElements
-              .map((e, i) => createElement(symbol, 'prim', i, feature, e, c, angle)))
-
-            j++
-            const step = (spotDist && j % symbol.nPrimSym) ? spotDist : mainLength
-
-            c = c.add(u.mul(step))
-            d += step
-          }
-
-          d -= segmentLength
-        }
-      }
+    if (c.isFirstBezier()) {
+      cp1 = c
+    } else if (c.isSecondBezier()) {
+      cp2 = c
+    } else if (cp1 && cp2) {
+      const l = cp2.sub(cp1).vLength()
+      const bezier = new Bezier(flatten([lastC, cp1, cp2, c]))
+      const bezierCoords = bezier.getLUT(Math.round(l / 2)).map(bc => TdPoly.fromCoords(bc.x, bc.y))
+      cs.push.apply(cs, bezierCoords.slice(1))
+      cp1 = cp2 = undefined
+      lastC = c
+    } else {
+      cs.push(c)
+      lastC = c
+    }
   }
 
-  return elements
+  return cs
 }
 
-const createElement = (symbol, name, index, parentFeature, element, c, angle) => {
+const createElement = (symbol, name, index, element, c, angle) => {
   var geometry
-  const rotatedCoords = angle ? element.coords.map(lc => lc.rotate(angle)) : element.coords
+  const coords = extractCoords(element.coords)
+  const rotatedCoords = angle ? coords.map(lc => lc.rotate(angle)) : coords
   const translatedCoords = rotatedCoords.map(lc => lc.add(c))
 
   switch (element.type) {
@@ -13755,8 +16414,7 @@ const createElement = (symbol, name, index, parentFeature, element, c, angle) =>
   return {
     type: 'Feature',
     properties: {
-      element: `${symbol.symNum}-${name}-${index}`,
-      parentId: parentFeature.id
+      element: `${symbol.symNum}-${name}-${index}`
     },
     geometry
   }
@@ -13773,9 +16431,9 @@ const applyCrs = (featureCollection, crs) => {
   })
 }
 
-function formatNum(num, digits) {
-	var pow = Math.pow(10, (digits === undefined ? 6 : digits));
-	return Math.round(num * pow) / pow;
+function formatNum (num, digits) {
+  var pow = Math.pow(10, (digits === undefined ? 6 : digits))
+  return Math.round(num * pow) / pow
 }
 
 const coordinatesToRings = coordinates => {
@@ -13791,7 +16449,7 @@ const coordinatesToRings = coordinates => {
       rings.push(currentRing)
     }
 
-    currentRing.push(c)
+    currentRing.push(c.slice())
   }
 
   // Copy first coordinate
@@ -13800,11 +16458,13 @@ const coordinatesToRings = coordinates => {
   return rings
 }
 
-},{"./ocad-reader/object-types":100,"./ocad-reader/symbol-element-types":104,"./ocad-reader/symbol-types":107,"@turf/meta":9}],112:[function(require,module,exports){
-const { PointSymbolType, LineSymbolType, AreaSymbolType } = require('./ocad-reader/symbol-types')
+},{"./ocad-reader/object-types":108,"./ocad-reader/symbol-element-types":112,"./ocad-reader/td-poly":117,"./transform-features":123,"@turf/meta":9,"arr-flatten":10,"bezier-js":17}],121:[function(require,module,exports){
+const { PointSymbolType, LineSymbolType, AreaSymbolType, TextSymbolType } = require('./ocad-reader/symbol-types')
 const { LineElementType, AreaElementType, CircleElementType, DotElementType } = require('./ocad-reader/symbol-element-types')
+const { HorizontalAlignCenter, HorizontalAlignRight, VerticalAlignBottom, VerticalAlignMiddle, VerticalAlignTop } = require('./ocad-reader/text-symbol')
 
 module.exports = function ocadToMapboxGlStyle (ocadFile, options) {
+  options = { scaleFactor: ocadFile.getCrs().scale / 15000, ...options }
   const usedSymbols = usedSymbolNumbers(ocadFile)
     .map(symNum => ocadFile.symbols.find(s => symNum === s.symNum))
     .filter(s => s)
@@ -13834,24 +16494,21 @@ const usedSymbolNumbers = ocadFile => ocadFile.objects.reduce((a, f) => {
 const symbolToMapboxLayer = (symbol, colors, options) => {
   const id = `symbol-${symbol.symNum}`
   const filter = ['==', ['get', 'sym'], symbol.symNum]
+  let layerFactory
 
   switch (symbol.type) {
-    // case 1:
-    //   const element = symbol.elements[0]
-
-    //   switch (element.type) {
-    //     case 3:
-    //     case 4:
-    //       return circleLayer(`symbol-${symbol.symNum}`, options.source, options.sourceLayer, filter, element, colors)
-    //   }
-
-    //   break
     case LineSymbolType:
-      if (!symbol.lineWidth) return
-      return lineLayer(id, options.source, options.sourceLayer, filter, symbol, colors)
+      layerFactory = symbol.lineWidth && lineLayer
+      break
     case AreaSymbolType:
-      return areaLayer(id, options.source, options.sourceLayer, filter, symbol, colors)
+      layerFactory = areaLayer
+      break
+    case TextSymbolType:
+      layerFactory = textLayer
+      break
   }
+
+  return layerFactory && layerFactory(id, options.source, options.sourceLayer, options.scaleFactor, filter, symbol, colors)
 }
 
 const symbolElementsToMapboxLayer = (symbol, colors, options) => {
@@ -13883,6 +16540,7 @@ const createElementLayer = (element, name, index, symbol, colors, options) => {
         id,
         options.source,
         options.sourceLayer,
+        options.scaleFactor,
         filter,
         element, colors)
     case AreaElementType:
@@ -13890,6 +16548,7 @@ const createElementLayer = (element, name, index, symbol, colors, options) => {
         id,
         options.source,
         options.sourceLayer,
+        options.scaleFactor,
         filter,
         element, colors)
     case CircleElementType:
@@ -13898,16 +16557,19 @@ const createElementLayer = (element, name, index, symbol, colors, options) => {
         id,
         options.source,
         options.sourceLayer,
+        options.scaleFactor,
         filter,
         element, colors)
   }
 }
 
-const lineLayer = (id, source, sourceLayer, filter, lineDef, colors) => {
-  const baseWidth = (lineDef.lineWidth / 10)
+const lineLayer = (id, source, sourceLayer, scaleFactor, filter, lineDef, colors) => {
+  const baseWidth = (lineDef.lineWidth / 10) * scaleFactor
   const baseMainLength = lineDef.mainLength / (10 * baseWidth)
   const baseMainGap = lineDef.mainGap / (10 * baseWidth)
   const colorIndex = lineDef.lineColor !== undefined ? lineDef.lineColor : lineDef.color
+
+  if (baseWidth <= 0 || colorIndex >= colors.length) return
 
   const layer = {
     id,
@@ -13931,7 +16593,7 @@ const lineLayer = (id, source, sourceLayer, filter, lineDef, colors) => {
   return layer
 }
 
-const areaLayer = (id, source, sourceLayer, filter, areaDef, colors) => {
+const areaLayer = (id, source, sourceLayer, scaleFactor, filter, areaDef, colors) => {
   const fillColorIndex = areaDef.fillOn !== undefined
     ? areaDef.fillOn ? areaDef.fillColor : areaDef.colors[0]
     : areaDef.color
@@ -13953,7 +16615,7 @@ const areaLayer = (id, source, sourceLayer, filter, areaDef, colors) => {
   }
 }
 
-const circleLayer = (id, source, sourceLayer, filter, element, colors) => {
+const circleLayer = (id, source, sourceLayer, scaleFactor, filter, element, colors) => {
   const baseRadius = (element.diameter / 2 / 10) || 1
   const layer = {
     id,
@@ -13962,7 +16624,7 @@ const circleLayer = (id, source, sourceLayer, filter, element, colors) => {
     type: 'circle',
     filter,
     paint: {
-      'circle-radius': expFunc(baseRadius)
+      'circle-radius': expFunc(baseRadius * scaleFactor)
     },
     metadata: {
       sort: colors[element.color].renderOrder
@@ -13983,6 +16645,49 @@ const circleLayer = (id, source, sourceLayer, filter, element, colors) => {
   return layer
 }
 
+const textLayer = (id, source, sourceLayer, scaleFactor, filter, element, colors) => {
+  const horizontalAlign = element.getHorizontalAlignment()
+  const verticalAlign = element.getVerticalAlignment()
+  const justify = horizontalAlign === HorizontalAlignCenter
+    ? 'center'
+    : horizontalAlign === HorizontalAlignRight
+      ? 'right'
+      : 'left'
+  const anchor = verticalAlign === VerticalAlignMiddle
+    ? 'center'
+    : 'top'
+
+  const weightModifier = element.weight > 400 ? ' Bold' : ''
+  const fontVariant = `${weightModifier}${element.italic ? ' Italic' : !weightModifier ? ' Regular' : ''}`
+
+  const layer = {
+    id,
+    source,
+    'source-layer': sourceLayer,
+    type: 'symbol',
+    filter,
+    layout: {
+      'symbol-placement': 'point',
+      'text-font': [`Open Sans${fontVariant}`], // , `Arial Unicode MS${fontVariant}`
+      'text-field': ['get', 'text'],
+      'text-size': expFunc(element.fontSize / 2.3 * scaleFactor),
+      'text-allow-overlap': true,
+      'text-ignore-placement': true,
+      'text-max-width': Infinity,
+      'text-justify': justify,
+      'text-anchor': `${anchor}${anchor !== 'center' ? `-${justify}` : ''}`
+    },
+    paint: {
+      'text-color': colors[element.fontColor].rgb
+    },
+    metadata: {
+      sort: colors[element.fontColor].renderOrder
+    }
+  }
+
+  return layer
+}
+
 const expFunc = base => ({
   'type': 'exponential',
   'base': 2,
@@ -13992,7 +16697,317 @@ const expFunc = base => ({
   ]
 })
 
-},{"./ocad-reader/symbol-element-types":104,"./ocad-reader/symbol-types":107}],113:[function(require,module,exports){
+},{"./ocad-reader/symbol-element-types":112,"./ocad-reader/symbol-types":115,"./ocad-reader/text-symbol":118}],122:[function(require,module,exports){
+const { AreaSymbolType } = require('./ocad-reader/symbol-types')
+const { PointObjectType, LineObjectType, AreaObjectType, UnformattedTextObjectType, FormattedTextObjectType } = require('./ocad-reader/object-types')
+const { LineElementType, AreaElementType, CircleElementType, DotElementType } = require('./ocad-reader/symbol-element-types')
+const transformFeatures = require('./transform-features')
+const flatten = require('arr-flatten')
+
+const defaultOptions = {
+  generateSymbolElements: true,
+  exportHidden: false
+}
+
+const patternToSvg = (colors, s) => {
+  const patterns = []
+
+  if (s.hatchMode) {
+    const height = s.hatchLineWidth + s.hatchDist
+    const width = 10
+    const a1 = s.hatchAngle1
+    const a2 = s.hatchAngle2
+
+    patterns.push({
+      id: `hatch-fill-${s.symNum}-1`,
+      'data-symbol-name': s.name,
+      type: 'pattern',
+      attrs: { patternUnits: 'userSpaceOnUse', patternTransform: `rotate(${a1 / 10})`, width, height },
+      children: [
+        { type: 'rect', attrs: { x: 0, y: 0, width, height: s.hatchLineWidth, fill: colors[s.hatchColor].rgb } }
+      ]
+    })
+
+    if (s.hatchMode === 2) {
+      patterns.push({
+        id: `hatch-fill-${s.symNum}-2`,
+        'data-symbol-name': s.name,
+        type: 'pattern',
+        attrs: { patternUnits: 'userSpaceOnUse', patternTransform: `rotate(${a2 / 10})`, width, height },
+        children: [
+          { type: 'rect', attrs: { x: 0, y: 0, width, height: s.hatchLineWidth, fill: colors[s.hatchColor].rgb } }
+        ]
+      })
+    }
+  }
+
+  if (s.structMode) {
+    const width = s.structWidth
+    const height = s.structHeight
+
+    patterns.push({
+      id: `struct-fill-${s.symNum}`,
+      'data-symbol-name': s.name,
+      type: 'pattern',
+      // , viewbox: `${-width / 2} ${-height / 2} ${width * 1.5} ${height * 1.5}`
+      attrs: { patternUnits: 'userSpaceOnUse', width, height },
+      children: s.elements.map((e, i) => elementToSvg(s, '', i, e, [s.structWidth * 0.5, -s.structHeight * 0.25], 0, { colors }))
+        .concat(s.structMode === 2
+          ? s.elements.map((e, i) => elementToSvg(s, '', i, e, [s.structWidth, -s.structHeight * 0.75], 0, { colors }))
+            .concat(s.elements.map((e, i) => elementToSvg(s, '', i, e, [0, -s.structHeight * 0.75], 0, { colors })))
+          : [])
+    })
+  }
+
+  return patterns
+}
+
+const createSvgNode = n => {
+  const node = document.createElementNS('http://www.w3.org/2000/svg', n.type)
+  n.id && (node.id = n.id)
+  n.attrs && Object.keys(n.attrs).forEach(attrName => node.setAttribute(attrName, n.attrs[attrName]))
+  n.children && n.children.forEach(child => node.appendChild(createSvgNode(child)))
+
+  return node
+}
+
+module.exports = {
+  ocadToSvg: function (ocadFile, options) {
+    options = { ...defaultOptions, ...options }
+
+    const usedSymbols = usedSymbolNumbers(ocadFile)
+      .map(symNum => ocadFile.symbols.find(s => symNum === s.symNum))
+      .filter(s => s)
+
+    const patterns = flatten(usedSymbols
+      .filter(s => s.type === AreaSymbolType && (s.hatchMode || s.structMode))
+      .map(patternToSvg.bind(null, ocadFile.colors)))
+
+    const root = {
+      type: 'svg',
+      attrs: { fill: 'transparent' },
+      children: [
+        {
+          type: 'defs',
+          children: patterns
+        }
+      ].concat({
+        type: 'g',
+        children: transformFeatures(ocadFile, objectToSvg, elementToSvg, options)
+          .sort((a, b) => b.order - a.order)
+      })
+    }
+
+    return createSvgNode(root)
+  },
+  patternToSvg,
+  createSvgNode
+}
+
+const usedSymbolNumbers = ocadFile => ocadFile.objects.reduce((a, f) => {
+  const symbolNum = f.sym
+  if (!a.idSet.has(symbolNum)) {
+    a.symbolNums.push(symbolNum)
+    a.idSet.add(symbolNum)
+  }
+
+  return a
+}, { symbolNums: [], idSet: new Set() }).symbolNums
+
+const objectToSvg = (options, symbols, object) => {
+  const symbol = symbols[object.sym]
+  if (!options.exportHidden && (!symbol || symbol.isHidden())) return
+
+  let node
+  switch (object.objType) {
+    case LineObjectType:
+      node = symbol.lineWidth && lineToPath(object.coordinates, symbol.lineWidth, options.colors[symbol.lineColor], symbol.mainGap, symbol.mainLength)
+      break
+    case AreaObjectType:
+      const fillColorIndex = symbol.fillOn !== undefined
+        ? symbol.fillOn ? symbol.fillColor : symbol.colors[0]
+        : symbol.color
+      const fillPattern = (symbol.hatchMode && `url(#hatch-fill-${symbol.symNum}-1)`) ||
+        (symbol.structMode && `url(#struct-fill-${symbol.symNum})`)
+      node = areaToPath(object.coordinates, fillPattern, options.colors[fillColorIndex])
+
+      if (symbol.hatchMode === 2) {
+        node = {
+          type: 'g',
+          children: [
+            node,
+            areaToPath(object.coordinates, `url(#hatch-fill-${symbol.symNum}-2)`, options.colors[fillColorIndex])
+          ],
+          order: options.colors[fillColorIndex].renderOrder
+        }
+      }
+
+      break
+      // case UnformattedTextObjectType:
+      // case FormattedTextObjectType:
+      //   const lineHeight = symbol.fontSize / 10 * 0.352778 * 100
+      //   const anchorCoord = [object.coordinates[0][0], object.coordinates[0][1] + lineHeight]
+
+    //   node = {
+    //     type: 'Point',
+    //     coordinates: anchorCoord
+    //   }
+    //   break
+    default:
+      return
+  }
+
+  if (node) {
+    node.geometry = { coordinates: object.coordinates }
+    node.properties = { sym: object.sym }
+  }
+
+  return node
+}
+
+const elementToSvg = (symbol, name, index, element, c, angle, options) => {
+  let node
+  const rotatedCoords = angle ? element.coords.map(lc => lc.rotate(angle)) : element.coords
+  const translatedCoords = rotatedCoords.map(lc => lc.add(c))
+
+  switch (element.type) {
+    case LineElementType:
+      node = lineToPath(translatedCoords, element.lineWidth, options.colors[element.color], element.mainGap, element.mainLength)
+      break
+    case AreaElementType:
+      node = areaToPath(translatedCoords, null, options.colors[element.color])
+      break
+    case CircleElementType:
+    case DotElementType:
+      node = {
+        type: 'circle',
+        attrs: {
+          cx: c[0],
+          cy: -c[1],
+          r: element.diameter / 2
+        },
+        order: options.colors[element.color].renderOrder
+      }
+
+      node.attrs[element.type === CircleElementType ? 'stroke' : 'fill'] = options.colors[element.color].rgb
+      if (element.type === CircleElementType) {
+        node.attrs['stroke-width'] = element.lineWidth
+      }
+
+      break
+  }
+
+  return node
+}
+
+const lineToPath = (coordinates, width, color, baseMainGap, baseMainLength) => ({
+  type: 'path',
+  attrs: {
+    d: coordsToPath(coordinates),
+    style: `stroke: ${color.rgb}; stroke-width: ${width}; ${baseMainGap && baseMainLength ? `stroke-dasharray: ${baseMainLength} ${baseMainGap};` : ''}`
+  },
+  order: color.renderOrder
+})
+
+const areaToPath = (coordinates, fillPattern, color) => ({
+  type: 'path',
+  attrs: {
+    d: coordsToPath(coordinates),
+    style: `fill: ${fillPattern || color.rgb};`
+  },
+  order: color.renderOrder
+})
+
+const coordsToPath = coords =>
+  coords
+    .map((c, i) => `${i === 0 || c.isFirstHolePoint() ? 'M' : 'L'} ${c[0]} ${-c[1]}`)
+    .join(' ')
+
+},{"./ocad-reader/object-types":108,"./ocad-reader/symbol-element-types":112,"./ocad-reader/symbol-types":115,"./transform-features":123,"arr-flatten":10}],123:[function(require,module,exports){
+const { PointSymbolType, LineSymbolType } = require('./ocad-reader/symbol-types')
+
+const defaultOptions = {
+  assignIds: true,
+  applyCrs: true,
+  generateSymbolElements: true,
+  exportHidden: false,
+  coordinatePrecision: 6
+}
+
+module.exports = function (ocadFile, createObject, createElement, options) {
+  options = { ...defaultOptions, ...options, colors: ocadFile.colors }
+
+  const symbols = ocadFile.symbols.reduce((ss, s) => {
+    ss[s.symNum] = s
+    return ss
+  }, {})
+
+  let features = ocadFile.objects
+    .map(createObject.bind(null, options, symbols))
+    .filter(f => f)
+
+  if (options.generateSymbolElements) {
+    const elementFeatures = ocadFile.objects
+      .map(generateSymbolElements.bind(null, createElement, options, symbols))
+
+    features = features.concat(Array.prototype.concat.apply([], elementFeatures))
+      .filter(f => f)
+  }
+
+  return features
+}
+
+const generateSymbolElements = (createElement, options, symbols, object) => {
+  const symbol = symbols[object.sym]
+  let elements = []
+
+  if (!options.exportHidden && (!symbol || symbol.isHidden())) return elements
+
+  switch (symbol.type) {
+    case PointSymbolType:
+      const angle = object.ang ? object.ang / 10 / 180 * Math.PI : 0
+      elements = symbol.elements
+        .map((e, i) => createElement(symbol, 'element', i, e, object.coordinates[0], angle, options))
+      break
+    case LineSymbolType:
+      if (symbol.primSymElements.length > 0) {
+        const coords = object.coordinates
+        const endLength = symbol.endLength
+        const mainLength = symbol.mainLength
+        const spotDist = symbol.primSymDist
+
+        let d = endLength
+
+        for (let i = 1; i < coords.length; i++) {
+          const c0 = coords[i - 1]
+          const c1 = coords[i]
+          const v = c1.sub(c0)
+          const angle = Math.atan2(v[1], v[0])
+          const u = v.unit()
+          const segmentLength = v.vLength()
+
+          let c = c0.add(u.mul(d))
+          let j = 0
+          while (d < segmentLength) {
+            elements = elements.concat(symbol.primSymElements
+              .map((e, i) => createElement(symbol, 'prim', i, e, c, angle, options)))
+
+            j++
+            const step = (spotDist && j % symbol.nPrimSym) ? spotDist : mainLength
+
+            c = c.add(u.mul(step))
+            d += step
+          }
+
+          d -= segmentLength
+        }
+      }
+  }
+
+  return elements
+}
+
+},{"./ocad-reader/symbol-types":115}],124:[function(require,module,exports){
 // Top level file is just a mixin of submodules & constants
 'use strict';
 
@@ -14008,7 +17023,7 @@ assign(pako, deflate, inflate, constants);
 
 module.exports = pako;
 
-},{"./lib/deflate":114,"./lib/inflate":115,"./lib/utils/common":116,"./lib/zlib/constants":119}],114:[function(require,module,exports){
+},{"./lib/deflate":125,"./lib/inflate":126,"./lib/utils/common":127,"./lib/zlib/constants":130}],125:[function(require,module,exports){
 'use strict';
 
 
@@ -14410,7 +17425,7 @@ exports.deflate = deflate;
 exports.deflateRaw = deflateRaw;
 exports.gzip = gzip;
 
-},{"./utils/common":116,"./utils/strings":117,"./zlib/deflate":121,"./zlib/messages":126,"./zlib/zstream":128}],115:[function(require,module,exports){
+},{"./utils/common":127,"./utils/strings":128,"./zlib/deflate":132,"./zlib/messages":137,"./zlib/zstream":139}],126:[function(require,module,exports){
 'use strict';
 
 
@@ -14830,7 +17845,7 @@ exports.inflate = inflate;
 exports.inflateRaw = inflateRaw;
 exports.ungzip  = inflate;
 
-},{"./utils/common":116,"./utils/strings":117,"./zlib/constants":119,"./zlib/gzheader":122,"./zlib/inflate":124,"./zlib/messages":126,"./zlib/zstream":128}],116:[function(require,module,exports){
+},{"./utils/common":127,"./utils/strings":128,"./zlib/constants":130,"./zlib/gzheader":133,"./zlib/inflate":135,"./zlib/messages":137,"./zlib/zstream":139}],127:[function(require,module,exports){
 'use strict';
 
 
@@ -14937,7 +17952,7 @@ exports.setTyped = function (on) {
 
 exports.setTyped(TYPED_OK);
 
-},{}],117:[function(require,module,exports){
+},{}],128:[function(require,module,exports){
 // String encode/decode helpers
 'use strict';
 
@@ -15124,7 +18139,7 @@ exports.utf8border = function (buf, max) {
   return (pos + _utf8len[buf[pos]] > max) ? pos : max;
 };
 
-},{"./common":116}],118:[function(require,module,exports){
+},{"./common":127}],129:[function(require,module,exports){
 'use strict';
 
 // Note: adler32 takes 12% for level 0 and 2% for level 6.
@@ -15177,7 +18192,7 @@ function adler32(adler, buf, len, pos) {
 
 module.exports = adler32;
 
-},{}],119:[function(require,module,exports){
+},{}],130:[function(require,module,exports){
 'use strict';
 
 // (C) 1995-2013 Jean-loup Gailly and Mark Adler
@@ -15247,7 +18262,7 @@ module.exports = {
   //Z_NULL:                 null // Use -1 or null inline, depending on var type
 };
 
-},{}],120:[function(require,module,exports){
+},{}],131:[function(require,module,exports){
 'use strict';
 
 // Note: we can't get significant speed boost here.
@@ -15308,7 +18323,7 @@ function crc32(crc, buf, len, pos) {
 
 module.exports = crc32;
 
-},{}],121:[function(require,module,exports){
+},{}],132:[function(require,module,exports){
 'use strict';
 
 // (C) 1995-2013 Jean-loup Gailly and Mark Adler
@@ -17184,7 +20199,7 @@ exports.deflatePrime = deflatePrime;
 exports.deflateTune = deflateTune;
 */
 
-},{"../utils/common":116,"./adler32":118,"./crc32":120,"./messages":126,"./trees":127}],122:[function(require,module,exports){
+},{"../utils/common":127,"./adler32":129,"./crc32":131,"./messages":137,"./trees":138}],133:[function(require,module,exports){
 'use strict';
 
 // (C) 1995-2013 Jean-loup Gailly and Mark Adler
@@ -17244,7 +20259,7 @@ function GZheader() {
 
 module.exports = GZheader;
 
-},{}],123:[function(require,module,exports){
+},{}],134:[function(require,module,exports){
 'use strict';
 
 // (C) 1995-2013 Jean-loup Gailly and Mark Adler
@@ -17591,7 +20606,7 @@ module.exports = function inflate_fast(strm, start) {
   return;
 };
 
-},{}],124:[function(require,module,exports){
+},{}],135:[function(require,module,exports){
 'use strict';
 
 // (C) 1995-2013 Jean-loup Gailly and Mark Adler
@@ -19149,7 +22164,7 @@ exports.inflateSyncPoint = inflateSyncPoint;
 exports.inflateUndermine = inflateUndermine;
 */
 
-},{"../utils/common":116,"./adler32":118,"./crc32":120,"./inffast":123,"./inftrees":125}],125:[function(require,module,exports){
+},{"../utils/common":127,"./adler32":129,"./crc32":131,"./inffast":134,"./inftrees":136}],136:[function(require,module,exports){
 'use strict';
 
 // (C) 1995-2013 Jean-loup Gailly and Mark Adler
@@ -19494,7 +22509,7 @@ module.exports = function inflate_table(type, lens, lens_index, codes, table, ta
   return 0;
 };
 
-},{"../utils/common":116}],126:[function(require,module,exports){
+},{"../utils/common":127}],137:[function(require,module,exports){
 'use strict';
 
 // (C) 1995-2013 Jean-loup Gailly and Mark Adler
@@ -19528,7 +22543,7 @@ module.exports = {
   '-6':   'incompatible version' /* Z_VERSION_ERROR (-6) */
 };
 
-},{}],127:[function(require,module,exports){
+},{}],138:[function(require,module,exports){
 'use strict';
 
 // (C) 1995-2013 Jean-loup Gailly and Mark Adler
@@ -20750,7 +23765,7 @@ exports._tr_flush_block  = _tr_flush_block;
 exports._tr_tally = _tr_tally;
 exports._tr_align = _tr_align;
 
-},{"../utils/common":116}],128:[function(require,module,exports){
+},{"../utils/common":127}],139:[function(require,module,exports){
 'use strict';
 
 // (C) 1995-2013 Jean-loup Gailly and Mark Adler
@@ -20799,7 +23814,7 @@ function ZStream() {
 
 module.exports = ZStream;
 
-},{}],129:[function(require,module,exports){
+},{}],140:[function(require,module,exports){
 'use strict';
 
 module.exports = Pbf;
@@ -21419,7 +24434,7 @@ function writeUtf8(buf, str, pos) {
     return pos;
 }
 
-},{"ieee754":50}],130:[function(require,module,exports){
+},{"ieee754":58}],141:[function(require,module,exports){
 (function (process){
 'use strict';
 
@@ -21466,7 +24481,7 @@ function nextTick(fn, arg1, arg2, arg3) {
 }
 
 }).call(this,require('_process'))
-},{"_process":131}],131:[function(require,module,exports){
+},{"_process":142}],142:[function(require,module,exports){
 // shim for using process in browser
 var process = module.exports = {};
 
@@ -21652,7 +24667,7 @@ process.chdir = function (dir) {
 };
 process.umask = function() { return 0; };
 
-},{}],132:[function(require,module,exports){
+},{}],143:[function(require,module,exports){
 (function (global, factory) {
 	typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory() :
 	typeof define === 'function' && define.amd ? define(factory) :
@@ -28183,10 +31198,10 @@ process.umask = function() { return 0; };
 
 })));
 
-},{}],133:[function(require,module,exports){
+},{}],144:[function(require,module,exports){
 module.exports = require("./lib/_stream_duplex.js")
 
-},{"./lib/_stream_duplex.js":134}],134:[function(require,module,exports){
+},{"./lib/_stream_duplex.js":145}],145:[function(require,module,exports){
 // a duplex stream is just a stream that is both readable and writable.
 // Since JS doesn't have multiple prototypal inheritance, this class
 // prototypally inherits from Readable, and then parasitically from
@@ -28262,7 +31277,7 @@ function forEach(xs, f) {
     f(xs[i], i);
   }
 }
-},{"./_stream_readable":136,"./_stream_writable":138,"core-util-is":41,"inherits":52,"process-nextick-args":130}],135:[function(require,module,exports){
+},{"./_stream_readable":147,"./_stream_writable":149,"core-util-is":49,"inherits":60,"process-nextick-args":141}],146:[function(require,module,exports){
 // a passthrough stream.
 // basically just the most minimal sort of Transform stream.
 // Every written chunk gets output as-is.
@@ -28289,7 +31304,7 @@ function PassThrough(options) {
 PassThrough.prototype._transform = function (chunk, encoding, cb) {
   cb(null, chunk);
 };
-},{"./_stream_transform":137,"core-util-is":41,"inherits":52}],136:[function(require,module,exports){
+},{"./_stream_transform":148,"core-util-is":49,"inherits":60}],147:[function(require,module,exports){
 (function (process){
 'use strict';
 
@@ -29172,7 +32187,7 @@ function indexOf(xs, x) {
   return -1;
 }
 }).call(this,require('_process'))
-},{"./_stream_duplex":134,"_process":131,"buffer":19,"core-util-is":41,"events":47,"inherits":52,"isarray":54,"process-nextick-args":130,"string_decoder/":195,"util":17}],137:[function(require,module,exports){
+},{"./_stream_duplex":145,"_process":142,"buffer":27,"core-util-is":49,"events":55,"inherits":60,"isarray":62,"process-nextick-args":141,"string_decoder/":207,"util":24}],148:[function(require,module,exports){
 // a transform stream is a readable/writable stream where you do
 // something with the data.  Sometimes it's called a "filter",
 // but that's not a great name for it, since that implies a thing where
@@ -29353,7 +32368,7 @@ function done(stream, er) {
 
   return stream.push(null);
 }
-},{"./_stream_duplex":134,"core-util-is":41,"inherits":52}],138:[function(require,module,exports){
+},{"./_stream_duplex":145,"core-util-is":49,"inherits":60}],149:[function(require,module,exports){
 (function (process,setImmediate){
 // A bit simpler than readable streams.
 // Implement an async ._write(chunk, encoding, cb), and it'll handle all
@@ -29872,10 +32887,10 @@ function CorkedRequest(state) {
   };
 }
 }).call(this,require('_process'),require("timers").setImmediate)
-},{"./_stream_duplex":134,"_process":131,"buffer":19,"core-util-is":41,"events":47,"inherits":52,"process-nextick-args":130,"timers":196,"util-deprecate":197}],139:[function(require,module,exports){
+},{"./_stream_duplex":145,"_process":142,"buffer":27,"core-util-is":49,"events":55,"inherits":60,"process-nextick-args":141,"timers":208,"util-deprecate":209}],150:[function(require,module,exports){
 module.exports = require("./lib/_stream_passthrough.js")
 
-},{"./lib/_stream_passthrough.js":135}],140:[function(require,module,exports){
+},{"./lib/_stream_passthrough.js":146}],151:[function(require,module,exports){
 var Stream = (function (){
   try {
     return require('st' + 'ream'); // hack to fix a circular dependency issue when used with browserify
@@ -29889,13 +32904,13 @@ exports.Duplex = require('./lib/_stream_duplex.js');
 exports.Transform = require('./lib/_stream_transform.js');
 exports.PassThrough = require('./lib/_stream_passthrough.js');
 
-},{"./lib/_stream_duplex.js":134,"./lib/_stream_passthrough.js":135,"./lib/_stream_readable.js":136,"./lib/_stream_transform.js":137,"./lib/_stream_writable.js":138}],141:[function(require,module,exports){
+},{"./lib/_stream_duplex.js":145,"./lib/_stream_passthrough.js":146,"./lib/_stream_readable.js":147,"./lib/_stream_transform.js":148,"./lib/_stream_writable.js":149}],152:[function(require,module,exports){
 module.exports = require("./lib/_stream_transform.js")
 
-},{"./lib/_stream_transform.js":137}],142:[function(require,module,exports){
+},{"./lib/_stream_transform.js":148}],153:[function(require,module,exports){
 module.exports = require("./lib/_stream_writable.js")
 
-},{"./lib/_stream_writable.js":138}],143:[function(require,module,exports){
+},{"./lib/_stream_writable.js":149}],154:[function(require,module,exports){
 'use strict';
 
 var proj4 = require('proj4').hasOwnProperty('default') ? require('proj4').default : require('proj4');
@@ -29999,7 +33014,17 @@ function reproject(geojson, from, to, projs) {
   }
 
   to = determineCrs(to, projs);
-  var transform = proj4(from, to).forward.bind(transform);
+  
+  var transformFunc = proj4(from, to).forward.bind(transformFunc);
+
+  function transform(coords) {
+    var transformed = transformFunc(coords);
+    if (coords.length === 3 && coords[2] !== undefined && transformed[2] === undefined) {
+      // If the projection doesn't explicitly handle Z coordinate, retain the old one.
+      transformed[2] = coords[2];
+    }
+    return transformed;
+  }
 
   var transformGeometryCoords = function(gj) {
     // No easy way to put correct CRS info into the GeoJSON,
@@ -30037,12 +33062,76 @@ module.exports = {
   }
 };
 
-},{"proj4":132}],144:[function(require,module,exports){
+},{"proj4":143}],155:[function(require,module,exports){
+/* eslint-disable node/no-deprecated-api */
+var buffer = require('buffer')
+var Buffer = buffer.Buffer
+
+// alternative to using Object.keys for old browsers
+function copyProps (src, dst) {
+  for (var key in src) {
+    dst[key] = src[key]
+  }
+}
+if (Buffer.from && Buffer.alloc && Buffer.allocUnsafe && Buffer.allocUnsafeSlow) {
+  module.exports = buffer
+} else {
+  // Copy properties from require('buffer')
+  copyProps(buffer, exports)
+  exports.Buffer = SafeBuffer
+}
+
+function SafeBuffer (arg, encodingOrOffset, length) {
+  return Buffer(arg, encodingOrOffset, length)
+}
+
+// Copy static methods from Buffer
+copyProps(Buffer, SafeBuffer)
+
+SafeBuffer.from = function (arg, encodingOrOffset, length) {
+  if (typeof arg === 'number') {
+    throw new TypeError('Argument must not be a number')
+  }
+  return Buffer(arg, encodingOrOffset, length)
+}
+
+SafeBuffer.alloc = function (size, fill, encoding) {
+  if (typeof size !== 'number') {
+    throw new TypeError('Argument must be a number')
+  }
+  var buf = Buffer(size)
+  if (fill !== undefined) {
+    if (typeof encoding === 'string') {
+      buf.fill(fill, encoding)
+    } else {
+      buf.fill(fill)
+    }
+  } else {
+    buf.fill(0)
+  }
+  return buf
+}
+
+SafeBuffer.allocUnsafe = function (size) {
+  if (typeof size !== 'number') {
+    throw new TypeError('Argument must be a number')
+  }
+  return Buffer(size)
+}
+
+SafeBuffer.allocUnsafeSlow = function (size) {
+  if (typeof size !== 'number') {
+    throw new TypeError('Argument must be a number')
+  }
+  return buffer.SlowBuffer(size)
+}
+
+},{"buffer":27}],156:[function(require,module,exports){
 module.exports.download = require('./src/download')
 module.exports.write = require('./src/write')
 module.exports.zip = require('./src/zip')
 
-},{"./src/download":184,"./src/write":192,"./src/zip":193}],145:[function(require,module,exports){
+},{"./src/download":196,"./src/write":204,"./src/zip":205}],157:[function(require,module,exports){
 'use strict';
 // private property
 var _keyStr = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=";
@@ -30114,7 +33203,7 @@ exports.decode = function(input, utf8) {
 
 };
 
-},{}],146:[function(require,module,exports){
+},{}],158:[function(require,module,exports){
 'use strict';
 function CompressedObject() {
     this.compressedSize = 0;
@@ -30144,7 +33233,7 @@ CompressedObject.prototype = {
 };
 module.exports = CompressedObject;
 
-},{}],147:[function(require,module,exports){
+},{}],159:[function(require,module,exports){
 'use strict';
 exports.STORE = {
     magic: "\x00\x00",
@@ -30159,7 +33248,7 @@ exports.STORE = {
 };
 exports.DEFLATE = require('./flate');
 
-},{"./flate":152}],148:[function(require,module,exports){
+},{"./flate":164}],160:[function(require,module,exports){
 'use strict';
 
 var utils = require('./utils');
@@ -30263,7 +33352,7 @@ module.exports = function crc32(input, crc) {
 };
 // vim: set shiftwidth=4 softtabstop=4:
 
-},{"./utils":165}],149:[function(require,module,exports){
+},{"./utils":177}],161:[function(require,module,exports){
 'use strict';
 var utils = require('./utils');
 
@@ -30372,7 +33461,7 @@ DataReader.prototype = {
 };
 module.exports = DataReader;
 
-},{"./utils":165}],150:[function(require,module,exports){
+},{"./utils":177}],162:[function(require,module,exports){
 'use strict';
 exports.base64 = false;
 exports.binary = false;
@@ -30385,7 +33474,7 @@ exports.comment = null;
 exports.unixPermissions = null;
 exports.dosPermissions = null;
 
-},{}],151:[function(require,module,exports){
+},{}],163:[function(require,module,exports){
 'use strict';
 var utils = require('./utils');
 
@@ -30492,7 +33581,7 @@ exports.isRegExp = function (object) {
 };
 
 
-},{"./utils":165}],152:[function(require,module,exports){
+},{"./utils":177}],164:[function(require,module,exports){
 'use strict';
 var USE_TYPEDARRAY = (typeof Uint8Array !== 'undefined') && (typeof Uint16Array !== 'undefined') && (typeof Uint32Array !== 'undefined');
 
@@ -30510,7 +33599,7 @@ exports.uncompress =  function(input) {
     return pako.inflateRaw(input);
 };
 
-},{"pako":168}],153:[function(require,module,exports){
+},{"pako":180}],165:[function(require,module,exports){
 'use strict';
 
 var base64 = require('./base64');
@@ -30591,7 +33680,7 @@ JSZip.base64 = {
 JSZip.compressions = require('./compressions');
 module.exports = JSZip;
 
-},{"./base64":145,"./compressions":147,"./defaults":150,"./deprecatedPublicUtils":151,"./load":154,"./object":157,"./support":161}],154:[function(require,module,exports){
+},{"./base64":157,"./compressions":159,"./defaults":162,"./deprecatedPublicUtils":163,"./load":166,"./object":169,"./support":173}],166:[function(require,module,exports){
 'use strict';
 var base64 = require('./base64');
 var ZipEntries = require('./zipEntries');
@@ -30624,7 +33713,7 @@ module.exports = function(data, options) {
     return this;
 };
 
-},{"./base64":145,"./zipEntries":166}],155:[function(require,module,exports){
+},{"./base64":157,"./zipEntries":178}],167:[function(require,module,exports){
 (function (Buffer){
 'use strict';
 module.exports = function(data, encoding){
@@ -30635,7 +33724,7 @@ module.exports.test = function(b){
 };
 
 }).call(this,require("buffer").Buffer)
-},{"buffer":19}],156:[function(require,module,exports){
+},{"buffer":27}],168:[function(require,module,exports){
 'use strict';
 var Uint8ArrayReader = require('./uint8ArrayReader');
 
@@ -30657,7 +33746,7 @@ NodeBufferReader.prototype.readData = function(size) {
 };
 module.exports = NodeBufferReader;
 
-},{"./uint8ArrayReader":162}],157:[function(require,module,exports){
+},{"./uint8ArrayReader":174}],169:[function(require,module,exports){
 'use strict';
 var support = require('./support');
 var utils = require('./utils');
@@ -31542,9 +34631,9 @@ var out = {
 };
 module.exports = out;
 
-},{"./base64":145,"./compressedObject":146,"./compressions":147,"./crc32":148,"./defaults":150,"./nodeBuffer":155,"./signature":158,"./stringWriter":160,"./support":161,"./uint8ArrayWriter":163,"./utf8":164,"./utils":165}],158:[function(require,module,exports){
-arguments[4][77][0].apply(exports,arguments)
-},{"dup":77}],159:[function(require,module,exports){
+},{"./base64":157,"./compressedObject":158,"./compressions":159,"./crc32":160,"./defaults":162,"./nodeBuffer":167,"./signature":170,"./stringWriter":172,"./support":173,"./uint8ArrayWriter":175,"./utf8":176,"./utils":177}],170:[function(require,module,exports){
+arguments[4][85][0].apply(exports,arguments)
+},{"dup":85}],171:[function(require,module,exports){
 'use strict';
 var DataReader = require('./dataReader');
 var utils = require('./utils');
@@ -31582,7 +34671,7 @@ StringReader.prototype.readData = function(size) {
 };
 module.exports = StringReader;
 
-},{"./dataReader":149,"./utils":165}],160:[function(require,module,exports){
+},{"./dataReader":161,"./utils":177}],172:[function(require,module,exports){
 'use strict';
 
 var utils = require('./utils');
@@ -31614,7 +34703,7 @@ StringWriter.prototype = {
 
 module.exports = StringWriter;
 
-},{"./utils":165}],161:[function(require,module,exports){
+},{"./utils":177}],173:[function(require,module,exports){
 (function (Buffer){
 'use strict';
 exports.base64 = true;
@@ -31652,7 +34741,7 @@ else {
 }
 
 }).call(this,require("buffer").Buffer)
-},{"buffer":19}],162:[function(require,module,exports){
+},{"buffer":27}],174:[function(require,module,exports){
 'use strict';
 var DataReader = require('./dataReader');
 
@@ -31701,7 +34790,7 @@ Uint8ArrayReader.prototype.readData = function(size) {
 };
 module.exports = Uint8ArrayReader;
 
-},{"./dataReader":149}],163:[function(require,module,exports){
+},{"./dataReader":161}],175:[function(require,module,exports){
 'use strict';
 
 var utils = require('./utils');
@@ -31739,7 +34828,7 @@ Uint8ArrayWriter.prototype = {
 
 module.exports = Uint8ArrayWriter;
 
-},{"./utils":165}],164:[function(require,module,exports){
+},{"./utils":177}],176:[function(require,module,exports){
 'use strict';
 
 var utils = require('./utils');
@@ -31948,7 +35037,7 @@ exports.utf8decode = function utf8decode(buf) {
 };
 // vim: set shiftwidth=4 softtabstop=4:
 
-},{"./nodeBuffer":155,"./support":161,"./utils":165}],165:[function(require,module,exports){
+},{"./nodeBuffer":167,"./support":173,"./utils":177}],177:[function(require,module,exports){
 'use strict';
 var support = require('./support');
 var compressions = require('./compressions');
@@ -32276,7 +35365,7 @@ exports.isRegExp = function (object) {
 };
 
 
-},{"./compressions":147,"./nodeBuffer":155,"./support":161}],166:[function(require,module,exports){
+},{"./compressions":159,"./nodeBuffer":167,"./support":173}],178:[function(require,module,exports){
 'use strict';
 var StringReader = require('./stringReader');
 var NodeBufferReader = require('./nodeBufferReader');
@@ -32499,7 +35588,7 @@ ZipEntries.prototype = {
 // }}} end of ZipEntries
 module.exports = ZipEntries;
 
-},{"./nodeBufferReader":156,"./object":157,"./signature":158,"./stringReader":159,"./support":161,"./uint8ArrayReader":162,"./utils":165,"./zipEntry":167}],167:[function(require,module,exports){
+},{"./nodeBufferReader":168,"./object":169,"./signature":170,"./stringReader":171,"./support":173,"./uint8ArrayReader":174,"./utils":177,"./zipEntry":179}],179:[function(require,module,exports){
 'use strict';
 var StringReader = require('./stringReader');
 var utils = require('./utils');
@@ -32811,9 +35900,9 @@ ZipEntry.prototype = {
 };
 module.exports = ZipEntry;
 
-},{"./compressedObject":146,"./object":157,"./stringReader":159,"./utils":165}],168:[function(require,module,exports){
-arguments[4][113][0].apply(exports,arguments)
-},{"./lib/deflate":169,"./lib/inflate":170,"./lib/utils/common":171,"./lib/zlib/constants":174,"dup":113}],169:[function(require,module,exports){
+},{"./compressedObject":158,"./object":169,"./stringReader":171,"./utils":177}],180:[function(require,module,exports){
+arguments[4][124][0].apply(exports,arguments)
+},{"./lib/deflate":181,"./lib/inflate":182,"./lib/utils/common":183,"./lib/zlib/constants":186,"dup":124}],181:[function(require,module,exports){
 'use strict';
 
 
@@ -33215,7 +36304,7 @@ exports.deflate = deflate;
 exports.deflateRaw = deflateRaw;
 exports.gzip = gzip;
 
-},{"./utils/common":171,"./utils/strings":172,"./zlib/deflate":176,"./zlib/messages":181,"./zlib/zstream":183}],170:[function(require,module,exports){
+},{"./utils/common":183,"./utils/strings":184,"./zlib/deflate":188,"./zlib/messages":193,"./zlib/zstream":195}],182:[function(require,module,exports){
 'use strict';
 
 
@@ -33635,7 +36724,7 @@ exports.inflate = inflate;
 exports.inflateRaw = inflateRaw;
 exports.ungzip  = inflate;
 
-},{"./utils/common":171,"./utils/strings":172,"./zlib/constants":174,"./zlib/gzheader":177,"./zlib/inflate":179,"./zlib/messages":181,"./zlib/zstream":183}],171:[function(require,module,exports){
+},{"./utils/common":183,"./utils/strings":184,"./zlib/constants":186,"./zlib/gzheader":189,"./zlib/inflate":191,"./zlib/messages":193,"./zlib/zstream":195}],183:[function(require,module,exports){
 'use strict';
 
 
@@ -33739,7 +36828,7 @@ exports.setTyped = function (on) {
 
 exports.setTyped(TYPED_OK);
 
-},{}],172:[function(require,module,exports){
+},{}],184:[function(require,module,exports){
 // String encode/decode helpers
 'use strict';
 
@@ -33926,7 +37015,7 @@ exports.utf8border = function (buf, max) {
   return (pos + _utf8len[buf[pos]] > max) ? pos : max;
 };
 
-},{"./common":171}],173:[function(require,module,exports){
+},{"./common":183}],185:[function(require,module,exports){
 'use strict';
 
 // Note: adler32 takes 12% for level 0 and 2% for level 6.
@@ -33960,7 +37049,7 @@ function adler32(adler, buf, len, pos) {
 
 module.exports = adler32;
 
-},{}],174:[function(require,module,exports){
+},{}],186:[function(require,module,exports){
 'use strict';
 
 
@@ -34012,7 +37101,7 @@ module.exports = {
   //Z_NULL:                 null // Use -1 or null inline, depending on var type
 };
 
-},{}],175:[function(require,module,exports){
+},{}],187:[function(require,module,exports){
 'use strict';
 
 // Note: we can't get significant speed boost here.
@@ -34055,7 +37144,7 @@ function crc32(crc, buf, len, pos) {
 
 module.exports = crc32;
 
-},{}],176:[function(require,module,exports){
+},{}],188:[function(require,module,exports){
 'use strict';
 
 var utils   = require('../utils/common');
@@ -35912,7 +39001,7 @@ exports.deflatePrime = deflatePrime;
 exports.deflateTune = deflateTune;
 */
 
-},{"../utils/common":171,"./adler32":173,"./crc32":175,"./messages":181,"./trees":182}],177:[function(require,module,exports){
+},{"../utils/common":183,"./adler32":185,"./crc32":187,"./messages":193,"./trees":194}],189:[function(require,module,exports){
 'use strict';
 
 
@@ -35954,7 +39043,7 @@ function GZheader() {
 
 module.exports = GZheader;
 
-},{}],178:[function(require,module,exports){
+},{}],190:[function(require,module,exports){
 'use strict';
 
 // See state defs from inflate.js
@@ -36282,7 +39371,7 @@ module.exports = function inflate_fast(strm, start) {
   return;
 };
 
-},{}],179:[function(require,module,exports){
+},{}],191:[function(require,module,exports){
 'use strict';
 
 
@@ -37822,7 +40911,7 @@ exports.inflateSyncPoint = inflateSyncPoint;
 exports.inflateUndermine = inflateUndermine;
 */
 
-},{"../utils/common":171,"./adler32":173,"./crc32":175,"./inffast":178,"./inftrees":180}],180:[function(require,module,exports){
+},{"../utils/common":183,"./adler32":185,"./crc32":187,"./inffast":190,"./inftrees":192}],192:[function(require,module,exports){
 'use strict';
 
 
@@ -38151,7 +41240,7 @@ module.exports = function inflate_table(type, lens, lens_index, codes, table, ta
   return 0;
 };
 
-},{"../utils/common":171}],181:[function(require,module,exports){
+},{"../utils/common":183}],193:[function(require,module,exports){
 'use strict';
 
 module.exports = {
@@ -38166,7 +41255,7 @@ module.exports = {
   '-6':   'incompatible version' /* Z_VERSION_ERROR (-6) */
 };
 
-},{}],182:[function(require,module,exports){
+},{}],194:[function(require,module,exports){
 'use strict';
 
 
@@ -39370,7 +42459,7 @@ exports._tr_flush_block  = _tr_flush_block;
 exports._tr_tally = _tr_tally;
 exports._tr_align = _tr_align;
 
-},{"../utils/common":171}],183:[function(require,module,exports){
+},{"../utils/common":183}],195:[function(require,module,exports){
 'use strict';
 
 
@@ -39401,7 +42490,7 @@ function ZStream() {
 
 module.exports = ZStream;
 
-},{}],184:[function(require,module,exports){
+},{}],196:[function(require,module,exports){
 var zip = require('./zip');
 
 module.exports = function(gj, options) {
@@ -39409,7 +42498,7 @@ module.exports = function(gj, options) {
     location.href = 'data:application/zip;base64,' + content;
 };
 
-},{"./zip":193}],185:[function(require,module,exports){
+},{"./zip":205}],197:[function(require,module,exports){
 module.exports.enlarge = function enlargeExtent(extent, pt) {
     if (pt[0] < extent.xmin) extent.xmin = pt[0];
     if (pt[0] > extent.xmax) extent.xmax = pt[0];
@@ -39435,7 +42524,7 @@ module.exports.blank = function() {
     };
 };
 
-},{}],186:[function(require,module,exports){
+},{}],198:[function(require,module,exports){
 var types = require('./types').jstypes;
 
 module.exports.geojson = geojson;
@@ -39465,7 +42554,7 @@ function obj(_) {
     return o;
 }
 
-},{"./types":191}],187:[function(require,module,exports){
+},{"./types":203}],199:[function(require,module,exports){
 module.exports.point = justType('Point', 'POINT');
 module.exports.line = justType('LineString', 'POLYLINE');
 module.exports.polygon = justType('Polygon', 'POLYGON');
@@ -39499,7 +42588,7 @@ function isType(t) {
     return function(f) { return f.geometry.type === t; };
 }
 
-},{}],188:[function(require,module,exports){
+},{}],200:[function(require,module,exports){
 var ext = require('./extent');
 
 module.exports.write = function writePoints(coordinates, extent, shpView, shxView) {
@@ -39550,7 +42639,7 @@ module.exports.shpLength = function(coordinates) {
     return coordinates.length * 28;
 };
 
-},{"./extent":185}],189:[function(require,module,exports){
+},{"./extent":197}],201:[function(require,module,exports){
 var ext = require('./extent'),
     types = require('./types');
 
@@ -39669,10 +42758,10 @@ function justCoords(coords, l) {
 }
 
 
-},{"./extent":185,"./types":191}],190:[function(require,module,exports){
+},{"./extent":197,"./types":203}],202:[function(require,module,exports){
 module.exports = 'GEOGCS["GCS_WGS_1984",DATUM["D_WGS_1984",SPHEROID["WGS_1984",6378137,298.257223563]],PRIMEM["Greenwich",0],UNIT["Degree",0.017453292519943295]]';
 
-},{}],191:[function(require,module,exports){
+},{}],203:[function(require,module,exports){
 module.exports.geometries = {
     NULL: 0,
     POINT: 1,
@@ -39690,7 +42779,7 @@ module.exports.geometries = {
     MULTIPATCH: 31,
 };
 
-},{}],192:[function(require,module,exports){
+},{}],204:[function(require,module,exports){
 var types = require('./types'),
     dbf = require('dbf'),
     prj = require('./prj'),
@@ -39760,7 +42849,7 @@ function writeExtent(extent, view) {
     view.setFloat64(60, extent.ymax, true);
 }
 
-},{"./extent":185,"./fields":186,"./points":188,"./poly":189,"./prj":190,"./types":191,"assert":10,"dbf":42}],193:[function(require,module,exports){
+},{"./extent":197,"./fields":198,"./points":200,"./poly":201,"./prj":202,"./types":203,"assert":11,"dbf":50}],205:[function(require,module,exports){
 (function (process){
 var write = require('./write'),
     geojson = require('./geojson'),
@@ -39802,7 +42891,7 @@ module.exports = function(gj, options) {
 };
 
 }).call(this,require('_process'))
-},{"./geojson":187,"./prj":190,"./write":192,"_process":131,"jszip":153}],194:[function(require,module,exports){
+},{"./geojson":199,"./prj":202,"./write":204,"_process":142,"jszip":165}],206:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -39931,7 +43020,7 @@ Stream.prototype.pipe = function(dest, options) {
   return dest;
 };
 
-},{"events":47,"inherits":52,"readable-stream/duplex.js":133,"readable-stream/passthrough.js":139,"readable-stream/readable.js":140,"readable-stream/transform.js":141,"readable-stream/writable.js":142}],195:[function(require,module,exports){
+},{"events":55,"inherits":60,"readable-stream/duplex.js":144,"readable-stream/passthrough.js":150,"readable-stream/readable.js":151,"readable-stream/transform.js":152,"readable-stream/writable.js":153}],207:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -40154,7 +43243,7 @@ function base64DetectIncompleteChar(buffer) {
   this.charLength = this.charReceived ? 3 : 0;
 }
 
-},{"buffer":19}],196:[function(require,module,exports){
+},{"buffer":27}],208:[function(require,module,exports){
 (function (setImmediate,clearImmediate){
 var nextTick = require('process/browser.js').nextTick;
 var apply = Function.prototype.apply;
@@ -40233,7 +43322,7 @@ exports.clearImmediate = typeof clearImmediate === "function" ? clearImmediate :
   delete immediateIds[id];
 };
 }).call(this,require("timers").setImmediate,require("timers").clearImmediate)
-},{"process/browser.js":131,"timers":196}],197:[function(require,module,exports){
+},{"process/browser.js":142,"timers":208}],209:[function(require,module,exports){
 (function (global){
 
 /**
@@ -40304,7 +43393,7 @@ function config (name) {
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],198:[function(require,module,exports){
+},{}],210:[function(require,module,exports){
 var Pbf = require('pbf')
 var GeoJSONWrapper = require('./lib/geojson_wrapper')
 
@@ -40482,7 +43571,7 @@ function writeValue (value, pbf) {
   }
 }
 
-},{"./lib/geojson_wrapper":199,"pbf":129}],199:[function(require,module,exports){
+},{"./lib/geojson_wrapper":211,"pbf":140}],211:[function(require,module,exports){
 'use strict'
 
 var Point = require('@mapbox/point-geometry')

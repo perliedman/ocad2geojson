@@ -8,9 +8,9 @@ module.exports = function ocadToMapboxGlStyle (ocadFile, options) {
     .map(symNum => ocadFile.symbols.find(s => symNum === s.symNum))
     .filter(s => s)
 
-  const symbolLayers = usedSymbols
+  const symbolLayers = Array.prototype.concat.apply([], usedSymbols
     .map(symbol => symbolToMapboxLayer(symbol, ocadFile.colors, options))
-    .filter(l => l)
+    .filter(l => l))
 
   const elementLayers = Array.prototype.concat.apply([], usedSymbols
     .map(symbol => symbolElementsToMapboxLayer(symbol, ocadFile.colors, options))
@@ -64,9 +64,9 @@ const symbolElementsToMapboxLayer = (symbol, colors, options) => {
       break
   }
 
-  return elements
+  return Array.prototype.concat.apply([], elements
     .map((e, i) => createElementLayer(e, name, i, symbol, colors, options))
-    .filter(l => l)
+    .filter(l => l))
 }
 
 const createElementLayer = (element, name, index, symbol, colors, options) => {
@@ -129,14 +129,14 @@ const lineLayer = (id, source, sourceLayer, scaleFactor, filter, lineDef, colors
     layer.paint['line-dasharray'] = [baseMainLength, baseMainGap]
   }
 
-  return layer
+  return [layer]
 }
 
 const areaLayer = (id, source, sourceLayer, scaleFactor, filter, areaDef, colors) => {
   const fillColorIndex = areaDef.fillOn !== undefined
     ? areaDef.fillOn ? areaDef.fillColor : areaDef.colors[0]
     : areaDef.color
-  return {
+  return [{
     id,
     source,
     'source-layer': sourceLayer,
@@ -151,7 +151,7 @@ const areaLayer = (id, source, sourceLayer, scaleFactor, filter, areaDef, colors
     metadata: {
       sort: colors[fillColorIndex].renderOrder
     }
-  }
+  }]
 }
 
 const circleLayer = (id, source, sourceLayer, scaleFactor, filter, element, colors) => {
@@ -181,7 +181,7 @@ const circleLayer = (id, source, sourceLayer, scaleFactor, filter, element, colo
     layer.paint['circle-color'] = color
   }
 
-  return layer
+  return [layer]
 }
 
 const textLayer = (id, source, sourceLayer, scaleFactor, filter, element, colors) => {
@@ -224,7 +224,7 @@ const textLayer = (id, source, sourceLayer, scaleFactor, filter, element, colors
     }
   }
 
-  return layer
+  return [layer]
 }
 
 const expFunc = base => ({

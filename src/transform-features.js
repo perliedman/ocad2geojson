@@ -76,6 +76,18 @@ const generateSymbolElements = (createElement, options, symbols, object) => {
           d -= segmentLength
         }
       }
+
+      if (symbol.cornerSymElements.length > 0) {
+        const coords = object.coordinates
+        for (let i = 1; i < coords.length - 1; i++) {
+          const c0 = coords[i - 1]
+          const c1 = coords[i]
+          const v = c1.sub(c0)
+          const angle = Math.atan2(v[1], v[0])
+          elements = elements.concat(symbol.cornerSymElements
+            .map((e, i) => createElement(symbol, 'corner', i, e, c1, angle, options)))
+        }
+      }
   }
 
   return elements

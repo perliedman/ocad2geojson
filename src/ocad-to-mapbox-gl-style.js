@@ -1,4 +1,4 @@
-const { PointSymbolType, LineSymbolType, AreaSymbolType, TextSymbolType } = require('./ocad-reader/symbol-types')
+const { PointSymbolType, LineSymbolType, AreaSymbolType, TextSymbolType, DblFillColorOn } = require('./ocad-reader/symbol-types')
 const { LineElementType, AreaElementType, CircleElementType, DotElementType } = require('./ocad-reader/symbol-element-types')
 const { HorizontalAlignCenter, HorizontalAlignRight, VerticalAlignBottom, VerticalAlignMiddle, VerticalAlignTop } = require('./ocad-reader/text-symbol')
 
@@ -37,7 +37,7 @@ const symbolToMapboxLayer = (symbol, colors, options) => {
 
   switch (symbol.type) {
     case LineSymbolType:
-      layerFactory = symbol.lineWidth && lineLayer
+      layerFactory = lineLayer
       break
     case AreaSymbolType:
       layerFactory = areaLayer
@@ -52,20 +52,18 @@ const symbolToMapboxLayer = (symbol, colors, options) => {
 
 const symbolElementsToMapboxLayer = (symbol, colors, options) => {
   var elements = []
-  var name
   switch (symbol.type) {
     case PointSymbolType:
-      elements = symbol.elements
-      name = 'element'
+      elements = symbol.elements.map(e => [e, 'element'])
       break
     case LineSymbolType:
-      elements = symbol.primSymElements
-      name = 'prim'
+      elements = symbol.primSymElements.map(e => [e, 'prim'])
+        .concat(symbol.cornerSymElements.map(e => [e, 'corner']))
       break
   }
 
   return Array.prototype.concat.apply([], elements
-    .map((e, i) => createElementLayer(e, name, i, symbol, colors, options))
+    .map(([e, name], i) => createElementLayer(e, name, i, symbol, colors, options))
     .filter(l => l))
 }
 
@@ -103,33 +101,88 @@ const createElementLayer = (element, name, index, symbol, colors, options) => {
 }
 
 const lineLayer = (id, source, sourceLayer, scaleFactor, filter, lineDef, colors) => {
-  const baseWidth = (lineDef.lineWidth / 10) * scaleFactor
-  const baseMainLength = lineDef.mainLength / (10 * baseWidth)
-  const baseMainGap = lineDef.mainGap / (10 * baseWidth)
-  const colorIndex = lineDef.lineColor !== undefined ? lineDef.lineColor : lineDef.color
+  const createLayer = (id, width, length, gap, color) => {
+    if (width <= 0 || color >= colors.length) return
 
-  if (baseWidth <= 0 || colorIndex >= colors.length) return
+    const baseWidth = (width / 10) * scaleFactor
+    const baseMainLength = length / (10 * baseWidth)
+    const baseMainGap = gap / (10 * baseWidth)
 
-  const layer = {
-    id,
-    source,
-    'source-layer': sourceLayer,
-    type: 'line',
-    filter,
-    paint: {
-      'line-color': colors[colorIndex].rgb,
-      'line-width': expFunc(baseWidth)
-    },
-    metadata: {
-      sort: colors[colorIndex].renderOrder
+    const l = {
+      id,
+      source,
+      'source-layer': sourceLayer,
+      type: 'line',
+      filter,
+      paint: {
+        'line-color': colors[color].rgb,
+        'line-width': expFunc(baseWidth)
+      },
+      metadata: {
+        sort: colors[color].renderOrder
+      }
+    }
+
+    if (baseMainLength && baseMainGap) {
+      l.paint['line-dasharray'] = [baseMainLength, baseMainGap]
+    }
+  
+    return l
+  }
+
+  const isDoubleLine = lineDef.doubleLine && lineDef.doubleLine.dblMode
+  let layers
+
+  if (!isDoubleLine) {
+    layers = [
+      createLayer(
+        id, 
+        lineDef.lineWidth, 
+        lineDef.mainLength, 
+        lineDef.mainGap, 
+        lineDef.lineColor !== undefined ? lineDef.lineColor : lineDef.color)
+    ]
+  } else {
+    const dbl = lineDef.doubleLine
+
+    // TODO: look into maybe using line-gap-width for some of this
+    if (dbl.dblFlags & DblFillColorOn) {
+      layers = [
+        createLayer(
+          id, 
+          dbl.dblLeftWidth * 1.5 + dbl.dblRightWidth * 1.5 + dbl.dblWidth * 2, 
+          dbl.dblLength, 
+          dbl.dblGap, 
+          dbl.dblLeftColor),
+        createLayer(
+          id + '_fill', 
+          dbl.dblWidth * 2,
+          dbl.dblLength, 
+          dbl.dblGap, 
+          dbl.dblFillColor)
+      ]
+    } else {
+      layers = [
+        -dbl.dblWidth - dbl.dblLeftWidth / 2,
+        dbl.dblWidth + dbl.dblRightWidth / 2
+      ].map((offset, i) => {
+        const l = createLayer(
+          id + '_' + i,
+          i === 0 ? dbl.dblLeftWidth : dbl.dblRightWidth, 
+          dbl.dblLength,
+          dbl.dblGap, 
+          i === 0 ? dbl.dblLeftColor : dbl.dblRightColor)
+
+        if (l) {
+          l.paint['line-offset'] = expFunc(offset / 10 * scaleFactor)
+        }
+
+        return l
+      })
     }
   }
 
-  if (baseMainLength && baseMainGap) {
-    layer.paint['line-dasharray'] = [baseMainLength, baseMainGap]
-  }
-
-  return [layer]
+  return layers.filter(l => l)
 }
 
 const areaLayer = (id, source, sourceLayer, scaleFactor, filter, areaDef, colors) => {

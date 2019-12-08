@@ -148,7 +148,7 @@ const lineLayer = (id, source, sourceLayer, scaleFactor, filter, lineDef, colors
     // TODO: look into maybe using line-gap-width for some of this
     if (dbl.dblFlags & DblFillColorOn) {
       layers = [
-        createLayer(
+        dbl.dblLeftWidth > 0 && dbl.dblRightWidth > 0 && createLayer(
           id, 
           dbl.dblLeftWidth * 1.5 + dbl.dblRightWidth * 1.5 + dbl.dblWidth * 2, 
           dbl.dblLength, 

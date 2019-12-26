@@ -8,6 +8,7 @@ class BaseSymbol extends Block {
     this.type = symbolType
     this.size = this.readInteger()
     this.symNum = this.readInteger()
+    this.number = `${Math.floor(this.symNum / 1000)}.${this.symNum % 1000}`
     this.otp = this.readByte()
     this.flags = this.readByte()
     this.selected = !!this.readByte()

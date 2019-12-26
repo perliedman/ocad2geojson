@@ -8,13 +8,26 @@ module.exports = function ocadToMapboxGlStyle (ocadFile, options) {
     .map(symNum => ocadFile.symbols.find(s => symNum === s.symNum))
     .filter(s => s)
 
-  const symbolLayers = Array.prototype.concat.apply([], usedSymbols
-    .map(symbol => symbolToMapboxLayer(symbol, ocadFile.colors, options))
-    .filter(l => l))
+  const metadata = symbol => {
+    const metadata = Object.keys(symbol).filter(k => symbol[k] !== Object(symbol[k])).reduce((a, k) => {
+      a[k] = symbol[k]
+      return a
+    }, {})
 
+    return layer => ({
+      ...layer,
+      metadata: {
+        ...metadata,
+        sort: layer.metadata.sort
+      }
+    })
+  }
+
+  const symbolLayers = Array.prototype.concat.apply([], usedSymbols
+    .map(symbol => (symbolToMapboxLayer(symbol, ocadFile.colors, options) || []).map(metadata(symbol))))
+  
   const elementLayers = Array.prototype.concat.apply([], usedSymbols
-    .map(symbol => symbolElementsToMapboxLayer(symbol, ocadFile.colors, options))
-    .filter(l => l))
+    .map(symbol => (symbolElementsToMapboxLayer(symbol, ocadFile.colors, options) || []).map(metadata(symbol))))
 
   return symbolLayers.concat(elementLayers)
     .sort((a, b) => b.metadata.sort - a.metadata.sort)

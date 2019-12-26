@@ -18,14 +18,6 @@ module.exports = function (ocadFile, options) {
   options = { ...defaultOptions, ...options }
 
   let features = transformFeatures(ocadFile, tObjectToGeoJson, createElement, options)
-
-  if (options.assignIds) {
-    let id = 1
-    features.forEach(o => {
-      o.id = id++
-    })
-  }
-
   const featureCollection = {
     type: 'FeatureCollection',
     features
@@ -43,7 +35,7 @@ module.exports = function (ocadFile, options) {
   return featureCollection
 }
 
-const tObjectToGeoJson = (options, symbols, object) => {
+const tObjectToGeoJson = (options, symbols, object, i) => {
   const symbol = symbols[object.sym]
   if (!options.exportHidden && (!symbol || symbol.isHidden())) return
 
@@ -84,6 +76,7 @@ const tObjectToGeoJson = (options, symbols, object) => {
   return {
     type: 'Feature',
     properties: object.getProperties(),
+    id: i + 1,
     geometry
   }
 }
@@ -117,7 +110,7 @@ const extractCoords = coords => {
   return cs
 }
 
-const createElement = (symbol, name, index, element, c, angle) => {
+const createElement = (symbol, name, index, element, c, angle, options, object, objectId) => {
   var geometry
   const coords = extractCoords(element.coords)
   const rotatedCoords = angle ? coords.map(lc => lc.rotate(angle)) : coords
@@ -148,8 +141,10 @@ const createElement = (symbol, name, index, element, c, angle) => {
   return {
     type: 'Feature',
     properties: {
-      element: `${symbol.symNum}-${name}-${index}`
+      element: `${symbol.symNum}-${name}-${index}`,
+      parentId: objectId + 1
     },
+    id: ++options.idCount,
     geometry
   }
 }

@@ -229,7 +229,8 @@ const circleLayer = (id, source, sourceLayer, scaleFactor, filter, element, colo
     type: 'circle',
     filter,
     paint: {
-      'circle-radius': expFunc(baseRadius * scaleFactor)
+      'circle-radius': expFunc(baseRadius * scaleFactor),
+      'circle-pitch-alignment': 'map'
     },
     metadata: {
       sort: colors[element.color].renderOrder
@@ -243,7 +244,7 @@ const circleLayer = (id, source, sourceLayer, scaleFactor, filter, element, colo
     layer.paint['circle-stroke-color'] = color
     layer.paint['circle-stroke-width'] = expFunc(baseWidth)
   } else {
-    // DotElementType
+      // DotElementType
     layer.paint['circle-color'] = color
   }
 
@@ -280,7 +281,9 @@ const textLayer = (id, source, sourceLayer, scaleFactor, filter, element, colors
       'text-ignore-placement': true,
       'text-max-width': Infinity,
       'text-justify': justify,
-      'text-anchor': `${anchor}${anchor !== 'center' ? `-${justify}` : ''}`
+      'text-anchor': `${anchor}${anchor !== 'center' ? `-${justify}` : ''}`,
+      'text-pitch-alignment': 'map',
+      'text-rotation-alignment': 'map'
     },
     paint: {
       'text-color': colors[element.fontColor].rgb

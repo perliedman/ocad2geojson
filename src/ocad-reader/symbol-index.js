@@ -3,7 +3,7 @@ const PointSymbol = require('./point-symbol')
 const LineSymbol = require('./line-symbol')
 const AreaSymbol = require('./area-symbol')
 const TextSymbol = require('./text-symbol')
-const { PointSymbolType, LineSymbolType, AreaSymbolType, TextSymbolType } = require('./symbol-types')
+const { PointSymbolType, LineSymbolType, AreaSymbolType, TextSymbolType, RectangleSymbolType } = require('./symbol-types')
 
 module.exports = class SymbolIndex extends Block {
   constructor (buffer, offset, version, options) {
@@ -30,17 +30,31 @@ module.exports = class SymbolIndex extends Block {
     if (!offset) return
 
     const type = this.buffer.readInt8(offset + 8)
+    let cls
     try {
       switch (type) {
         case PointSymbolType:
-          return new PointSymbol[this.version](this.buffer, offset)
+          cls = PointSymbol[this.version]
+          break
         case LineSymbolType:
-          return new LineSymbol[this.version](this.buffer, offset)
+          cls = LineSymbol[this.version]
+          break
         case AreaSymbolType:
-          return new AreaSymbol[this.version](this.buffer, offset)
+          cls = AreaSymbol[this.version]
+          break
         case TextSymbolType:
-          return new TextSymbol[this.version](this.buffer, offset)
+          cls = TextSymbol[this.version]
+          break
+        case RectangleSymbolType:
+          this.warnings.push('Ignoring rectangle symbol.')
+          return null
+        default:
+          throw new Error(`Unknown symbol type ${type}`)
       }
+
+      const symbol = new cls(this.buffer, offset)
+      this.warnings = this.warnings.concat(symbol.warnings)
+      return symbol
     } catch (e) {
       if (!this.options.failOnWarning) {
         this.warnings.push(e)

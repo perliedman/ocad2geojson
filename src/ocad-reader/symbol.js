@@ -1,10 +1,12 @@
 const Block = require('./block')
 const SymbolElement = require('./symbol-element')
+const InvalidSymbolElementException = require('./invalid-symbol-element-exception')
 
 class BaseSymbol extends Block {
   constructor (buffer, offset, symbolType) {
     super(buffer, offset)
 
+    this.warnings = []
     this.type = symbolType
     this.size = this.readInteger()
     this.symNum = this.readInteger()
@@ -25,11 +27,20 @@ class BaseSymbol extends Block {
     const elements = []
 
     for (let i = 0; i < dataSize; i += 2) {
-      const element = new SymbolElement(this.buffer, this.offset)
-      this.offset += element.getSize()
-      elements.push(element)
+      try {
+        const element = new SymbolElement(this.buffer, this.offset)
+        this.offset += element.getSize()
+        elements.push(element)
 
-      i += element.numberCoords
+        i += element.numberCoords
+      } catch (e) {
+        if (e instanceof InvalidSymbolElementException) {
+          this.offset += e.symbolElement.getSize()
+          this.warnings.push(e)
+        } else {
+          throw e
+        }
+      }
     }
 
     return elements

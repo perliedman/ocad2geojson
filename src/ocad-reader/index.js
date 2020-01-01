@@ -71,7 +71,7 @@ const parseOcadBuffer = async (buffer, options) => new Promise((resolve, reject)
   }
 
   if (!options.quietWarnings) {
-    warnings.forEach(console.warn)
+    warnings.forEach(w => console.warn(w))
   }
 
   resolve(new OcadFile(

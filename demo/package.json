@@ -26,7 +26,7 @@
     "brfs": "^2.0.1",
     "color": "^3.0.0",
     "pdfkit": "^0.9.0",
-    "reproject": "^1.2.2",
+    "reproject": "^1.2.5",
     "svg-to-pdfkit": "^0.1.7"
   }
 }

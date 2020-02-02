@@ -1,7 +1,7 @@
 const { coordEach } = require('@turf/meta')
 const Bezier = require('bezier-js')
 const flatten = require('arr-flatten')
-const { PointObjectType, LineObjectType, AreaObjectType, UnformattedTextObjectType, FormattedTextObjectType } = require('./ocad-reader/object-types')
+const { PointObjectType, LineObjectType, AreaObjectType, UnformattedTextObjectType, FormattedTextObjectType, LineTextObjectType } = require('./ocad-reader/object-types')
 const { LineElementType, AreaElementType, CircleElementType, DotElementType } = require('./ocad-reader/symbol-element-types')
 const transformFeatures = require('./transform-features')
 const TdPoly = require('./ocad-reader/td-poly')
@@ -61,6 +61,7 @@ const tObjectToGeoJson = (options, symbols, object, i) => {
       break
     case UnformattedTextObjectType:
     case FormattedTextObjectType:
+    case LineTextObjectType:
       const lineHeight = symbol.fontSize / 10 * 0.352778 * 100
       const anchorCoord = [object.coordinates[0][0], object.coordinates[0][1] + lineHeight]
 

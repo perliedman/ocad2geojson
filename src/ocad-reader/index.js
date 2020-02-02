@@ -42,7 +42,7 @@ const parseOcadBuffer = async (buffer, options) => new Promise((resolve, reject)
     Array.prototype.push.apply(symbols, symbolIndex.parseSymbols())
     warnings = warnings.concat(symbolIndex.warnings)
 
-    symbolIndexOffset = symbolIndex.nextObjectIndexBlock
+    symbolIndexOffset = symbolIndex.nextSymbolIndexBlock
   }
 
   let objects = []

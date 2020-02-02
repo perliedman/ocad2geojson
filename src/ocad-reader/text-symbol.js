@@ -62,7 +62,7 @@ const readTextSymbol = block => {
   block.nTabs = block.readSmallInt()
   block.tabs = []
   for (let i = 0; i < 32; i++) {
-    block.tabs.push(block.readCardinal)
+    block.tabs.push(block.readCardinal())
   }
   block.lbOn = block.readWordBool()
   block.lbColor = block.readSmallInt()

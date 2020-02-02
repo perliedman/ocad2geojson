@@ -46,7 +46,7 @@ module.exports = class SymbolIndex extends Block {
           cls = TextSymbol[this.version]
           break
         case RectangleSymbolType:
-          this.warnings.push('Ignoring rectangle symbol.')
+          this.warnings.push(`Ignoring rectangle symbol ${this.buffer.readInt32LE(offset + 4)}.`)
           return null
         default:
           throw new Error(`Unknown symbol type ${type}`)

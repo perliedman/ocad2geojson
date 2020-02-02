@@ -62,7 +62,8 @@ class Symbol10 extends BaseSymbol {
       this.colors[i] = this.readSmallInt()
     }
     this.description = ''
-    for (let i = 0; i < 32; i++) {
+    this.readByte() // String length
+    for (let i = 1; i < 32; i++) {
       const c = this.readByte()
       if (c) {
         this.description += String.fromCharCode(c)

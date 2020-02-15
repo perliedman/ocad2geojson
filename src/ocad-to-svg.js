@@ -13,7 +13,7 @@ const patternToSvg = (colors, s) => {
   const patterns = []
 
   if (s.hatchMode) {
-    const height = s.hatchLineWidth + s.hatchDist
+    const height = s.hatchDist
     const width = 10
     const a1 = s.hatchAngle1
     const a2 = s.hatchAngle2
@@ -43,18 +43,18 @@ const patternToSvg = (colors, s) => {
 
   if (s.structMode) {
     const width = s.structWidth
-    const height = s.structHeight
+    const height = s.structHeight * 2
 
     patterns.push({
       id: `struct-fill-${s.symNum}`,
       'data-symbol-name': s.name,
       type: 'pattern',
       // , viewbox: `${-width / 2} ${-height / 2} ${width * 1.5} ${height * 1.5}`
-      attrs: { patternUnits: 'userSpaceOnUse', width, height },
-      children: s.elements.map((e, i) => elementToSvg(s, '', i, e, [s.structWidth * 0.5, -s.structHeight * 0.25], 0, { colors }))
+      attrs: { patternUnits: 'userSpaceOnUse', width, height: height },
+      children: s.elements.map((e, i) => elementToSvg(s, '', i, e, [s.structWidth * 0.5, -s.structHeight * 0.5], 0, { colors }))
         .concat(s.structMode === 2
-          ? s.elements.map((e, i) => elementToSvg(s, '', i, e, [s.structWidth, -s.structHeight * 0.75], 0, { colors }))
-            .concat(s.elements.map((e, i) => elementToSvg(s, '', i, e, [0, -s.structHeight * 0.75], 0, { colors })))
+          ? s.elements.map((e, i) => elementToSvg(s, '', i, e, [s.structWidth, -s.structHeight * 1.5], 0, { colors }))
+            .concat(s.elements.map((e, i) => elementToSvg(s, '', i, e, [0, -s.structHeight * 1.5], 0, { colors })))
           : [])
     })
   }

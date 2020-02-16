@@ -13,10 +13,11 @@ fetch('example.ocd')
   .then(buffer => readOcad(buffer))
   .then(ocadFile => {
     const svg = ocadToSvg(ocadFile)
-    const container = document.getElementById('container')
+    const container = document.getElementById('svg-container')
+    // width / height corresponds to A4 paper
     svg.setAttribute('width', '595')
     svg.setAttribute('height', '842')
-    svg.querySelector('g').setAttribute('transform', 'scale(0.028) translate(14000, 16000)')
+    svg.querySelector('g').setAttribute('transform', 'scale(0.14) translate(2400, 9200)')
     container.appendChild(svg)
 
     const doc = new PDFDocument()

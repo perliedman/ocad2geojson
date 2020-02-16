@@ -1,0 +1,22 @@
+{
+  "name": "ocad2geosjon-svg-example",
+  "version": "1.0.0",
+  "description": "Create SVG from an OCAD file",
+  "main": "index.js",
+  "scripts": {
+    "dev": "watchify index.js -o bundle.js &",
+    "postdev": "http-server",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Per Liedman <per@liedman.net>",
+  "license": "ISC",
+  "dependencies": {
+    "blob-stream": "^0.1.3",
+    "blob-to-buffer": "^1.2.8",
+    "pdfkit": "^0.11.0",
+    "svg-to-pdfkit": "^0.1.8"
+  },
+  "devDependencies": {
+    "watchify": "^3.11.1"
+  }
+}

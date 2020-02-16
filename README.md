@@ -1,7 +1,7 @@
 OCAD to GeoJSON
 ===============
 
-Export OCAD files to open formats:
+Export [OCAD](https://www.ocad.com/) files to open formats:
 
 * [GeoJSON](http://geojson.org/)
 * [Mapbox Style Spec](https://www.mapbox.com/mapbox-gl-js/style-spec/)

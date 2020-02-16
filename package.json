@@ -4,12 +4,15 @@
   "description": "A demo application to try out ocad2geojson",
   "main": "index.js",
   "scripts": {
+    "dev": "watchify index.js -o bundle.js &",
+    "postdev": "http-server",
     "install": "browserify index.js -o bundle.js"
   },
   "author": "Per Liedman <per@liedman.net>",
   "license": "ISC",
   "devDependencies": {
     "browserify": "^16.2.2",
+    "http-server": "^0.12.1",
     "watchify": "^3.11.1"
   },
   "dependencies": {
@@ -24,7 +27,7 @@
     "file-saver": "^2.0.0-rc.4",
     "geojson-vt": "^3.2.1",
     "jszip": "^3.1.5",
-    "ocad2geojson": "^1.5.0",
+    "ocad2geojson": "^1.6.2",
     "reproject": "^1.2.4",
     "shp-write": "^0.3.2",
     "vt-pbf": "^3.1.1"

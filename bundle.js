@@ -235,7 +235,7 @@ function formatNum(num, digits) {
 	return Math.round(num * pow) / pow;
 }
 
-},{"@turf/bbox":7,"@turf/meta":9,"b64-to-blob":15,"blob-to-buffer":23,"file-saver":56,"geojson-vt":57,"jszip":72,"ocad2geojson":100,"reproject":154,"shp-write":156,"vt-pbf":210}],2:[function(require,module,exports){
+},{"@turf/bbox":7,"@turf/meta":9,"b64-to-blob":15,"blob-to-buffer":23,"file-saver":56,"geojson-vt":57,"jszip":72,"ocad2geojson":100,"reproject":155,"shp-write":157,"vt-pbf":211}],2:[function(require,module,exports){
 'use strict';
 
 module.exports = Point;
@@ -3918,7 +3918,7 @@ function hasOwnProperty(obj, prop) {
 }
 
 }).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./support/isBuffer":13,"_process":142,"inherits":12}],15:[function(require,module,exports){
+},{"./support/isBuffer":13,"_process":143,"inherits":12}],15:[function(require,module,exports){
 (function(root, globalName, factory) {
   if (typeof define === 'function' && define.amd) {
     // AMD:
@@ -4390,13 +4390,6 @@ module.exports = require('./lib/bezier');
         closest = utils.closest(LUT, point),
         mdist = closest.mdist,
         mpos = closest.mpos;
-      if (mpos === 0 || mpos === l) {
-        var t = mpos / l,
-          pt = this.compute(t);
-        pt.t = t;
-        pt.d = mdist;
-        return pt;
-      }
 
       // step 2: fine check
       var ft,
@@ -4669,6 +4662,9 @@ module.exports = require('./lib/bezier');
       }
       var reduced = this.reduce();
       return reduced.map(function(s) {
+        if (s._linear) {
+          return s.offset(t)[0];
+        }
         return s.scale(t);
       });
     },
@@ -6043,7 +6039,7 @@ module.exports = convertPath;
       //
       //              x'y" - y'x"
       //   k(t) = ------------------
-      //           (x'² + y'²)^(2/3)
+      //           (x'² + y'²)^(3/2)
       //
       // from https://en.wikipedia.org/wiki/Radius_of_curvature#Definition
       //
@@ -6051,7 +6047,7 @@ module.exports = convertPath;
       //
       //          sqrt( (y'z" - y"z')² + (z'x" - z"x')² + (x'y" - x"y')²)
       //   k(t) = -------------------------------------------------------
-      //                     (x'² + y'² + z'²)^(2/3)
+      //                     (x'² + y'² + z'²)^(3/2)
       //
 
       var d = utils.compute(t, d1);
@@ -6063,10 +6059,10 @@ module.exports = convertPath;
           pow(d.z*dd.x - dd.z*d.x, 2) +
           pow(d.x*dd.y - dd.x*d.y, 2)
         );
-        dnm = pow(qdsum + d.z*d.z, 2/3);
+        dnm = pow(qdsum + d.z*d.z, 3/2);
       } else {
         num = d.x*dd.y - d.y*dd.x;
-        dnm = pow(qdsum, 2/3);
+        dnm = pow(qdsum, 3/2);
       }
 
       if (num === 0 || dnm === 0) {
@@ -6606,7 +6602,7 @@ function simpleWrite(buf) {
 function simpleEnd(buf) {
   return buf && buf.length ? this.write(buf) : '';
 }
-},{"safe-buffer":155}],27:[function(require,module,exports){
+},{"safe-buffer":156}],27:[function(require,module,exports){
 /*!
  * The buffer module from node.js, for the browser.
  *
@@ -11029,7 +11025,7 @@ exports.uncompressWorker = function () {
     return new FlateWorker("Inflate", {});
 };
 
-},{"./stream/GenericWorker":90,"./utils":94,"pako":124}],70:[function(require,module,exports){
+},{"./stream/GenericWorker":90,"./utils":94,"pako":125}],70:[function(require,module,exports){
 'use strict';
 
 var utils = require('../utils');
@@ -12346,7 +12342,7 @@ module.exports = out;
  */
 module.exports = require("stream");
 
-},{"stream":206}],79:[function(require,module,exports){
+},{"stream":207}],79:[function(require,module,exports){
 'use strict';
 var DataReader = require('./DataReader');
 var utils = require('../utils');
@@ -15137,7 +15133,7 @@ module.exports = {
   ocadToMapboxGlStyle
 }
 
-},{"./ocad-reader":104,"./ocad-to-geojson":120,"./ocad-to-mapbox-gl-style":121,"./ocad-to-svg":122}],101:[function(require,module,exports){
+},{"./ocad-reader":104,"./ocad-to-geojson":121,"./ocad-to-mapbox-gl-style":122,"./ocad-to-svg":123}],101:[function(require,module,exports){
 const { Symbol10, Symbol11 } = require('./symbol')
 
 class AreaSymbol10 extends Symbol10 {
@@ -15205,7 +15201,7 @@ module.exports = {
   2018: AreaSymbol11
 }
 
-},{"./symbol":116}],102:[function(require,module,exports){
+},{"./symbol":117}],102:[function(require,module,exports){
 module.exports = class Block {
   constructor (buffer, offset) {
     this.buffer = buffer
@@ -15339,7 +15335,7 @@ const parseOcadBuffer = async (buffer, options) => new Promise((resolve, reject)
     Array.prototype.push.apply(symbols, symbolIndex.parseSymbols())
     warnings = warnings.concat(symbolIndex.warnings)
 
-    symbolIndexOffset = symbolIndex.nextObjectIndexBlock
+    symbolIndexOffset = symbolIndex.nextSymbolIndexBlock
   }
 
   let objects = []
@@ -15368,7 +15364,7 @@ const parseOcadBuffer = async (buffer, options) => new Promise((resolve, reject)
   }
 
   if (!options.quietWarnings) {
-    warnings.forEach(console.warn)
+    warnings.forEach(w => console.warn(w))
   }
 
   resolve(new OcadFile(
@@ -15425,7 +15421,15 @@ class OcadFile {
   }
 }
 
-},{"../cmyk-to-rgb":99,"./file-header":103,"./object-index":107,"./string-index":111,"./symbol-index":114,"buffer":27,"fs":25}],105:[function(require,module,exports){
+},{"../cmyk-to-rgb":99,"./file-header":103,"./object-index":108,"./string-index":112,"./symbol-index":115,"buffer":27,"fs":25}],105:[function(require,module,exports){
+module.exports = class InvalidSymbolElementException extends Error {
+  constructor (msg, symbolElement) {
+    super(msg)
+    this.symbolElement = symbolElement
+  }
+}
+
+},{}],106:[function(require,module,exports){
 const Block = require('./block')
 const { Symbol10, Symbol11 } = require('./symbol')
 
@@ -15555,7 +15559,7 @@ module.exports = {
   2018: LineSymbol11
 }
 
-},{"./block":102,"./symbol":116}],106:[function(require,module,exports){
+},{"./block":102,"./symbol":117}],107:[function(require,module,exports){
 const Block = require('./block')
 
 module.exports = class LRect extends Block {
@@ -15576,7 +15580,7 @@ module.exports = class LRect extends Block {
   }
 }
 
-},{"./block":102}],107:[function(require,module,exports){
+},{"./block":102}],108:[function(require,module,exports){
 const Block = require('./block')
 const LRect = require('./lrect')
 const TObject = require('./tobject')
@@ -15624,7 +15628,7 @@ module.exports = class ObjectIndex extends Block {
   }
 }
 
-},{"./block":102,"./lrect":106,"./tobject":119}],108:[function(require,module,exports){
+},{"./block":102,"./lrect":107,"./tobject":120}],109:[function(require,module,exports){
 module.exports = {
   PointObjectType: 1,
   LineObjectType: 2,
@@ -15635,7 +15639,7 @@ module.exports = {
   RectangleObjectType: 7
 }
 
-},{}],109:[function(require,module,exports){
+},{}],110:[function(require,module,exports){
 const Block = require('./block')
 const { StringDecoder } = require('string_decoder');
 
@@ -15671,7 +15675,7 @@ module.exports = class ParameterString extends Block {
   }
 }
 
-},{"./block":102,"string_decoder":26}],110:[function(require,module,exports){
+},{"./block":102,"string_decoder":26}],111:[function(require,module,exports){
 const { Symbol10, Symbol11 } = require('./symbol')
 
 class PointSymbol10 extends Symbol10 {
@@ -15709,7 +15713,7 @@ module.exports = {
   2018: PointSymbol11
 }
 
-},{"./symbol":116}],111:[function(require,module,exports){
+},{"./symbol":117}],112:[function(require,module,exports){
 const Block = require('./block')
 const ParameterString = require('./parameter-string')
 
@@ -15746,7 +15750,7 @@ module.exports = class StringIndex extends Block {
   }
 }
 
-},{"./block":102,"./parameter-string":109}],112:[function(require,module,exports){
+},{"./block":102,"./parameter-string":110}],113:[function(require,module,exports){
 module.exports = {
   LineElementType: 1,
   AreaElementType: 2,
@@ -15754,9 +15758,10 @@ module.exports = {
   DotElementType: 4
 }
 
-},{}],113:[function(require,module,exports){
+},{}],114:[function(require,module,exports){
 const Block = require('./block')
 const TdPoly = require('./td-poly')
+const InvalidSymbolElementException = require('./invalid-symbol-element-exception')
 
 module.exports = class SymbolElement extends Block {
   constructor (buffer, offset) {
@@ -15770,20 +15775,25 @@ module.exports = class SymbolElement extends Block {
     this.numberCoords = this.readSmallInt()
     this.readCardinal() // Reserved
 
-    this.coords = new Array(this.numberCoords)
-    for (let j = 0; j < this.numberCoords; j++) {
-      this.coords[j] = new TdPoly(this.readInteger(), this.readInteger())
+    if (this.numberCoords >= 0) {
+      this.coords = new Array(this.numberCoords)
+      for (let j = 0; j < this.numberCoords; j++) {
+        this.coords[j] = new TdPoly(this.readInteger(), this.readInteger())
+      }
+    } else {
+      // Negative number of coords seems to happen in some files; we ignore it for now.
+      throw new InvalidSymbolElementException(`Symbol element with invalid (${this.numberCoords}) number of coordinates.`, this)
     }
   }
 }
 
-},{"./block":102,"./td-poly":117}],114:[function(require,module,exports){
+},{"./block":102,"./invalid-symbol-element-exception":105,"./td-poly":118}],115:[function(require,module,exports){
 const Block = require('./block')
 const PointSymbol = require('./point-symbol')
 const LineSymbol = require('./line-symbol')
 const AreaSymbol = require('./area-symbol')
 const TextSymbol = require('./text-symbol')
-const { PointSymbolType, LineSymbolType, AreaSymbolType, TextSymbolType } = require('./symbol-types')
+const { PointSymbolType, LineSymbolType, AreaSymbolType, TextSymbolType, RectangleSymbolType } = require('./symbol-types')
 
 module.exports = class SymbolIndex extends Block {
   constructor (buffer, offset, version, options) {
@@ -15810,17 +15820,31 @@ module.exports = class SymbolIndex extends Block {
     if (!offset) return
 
     const type = this.buffer.readInt8(offset + 8)
+    let cls
     try {
       switch (type) {
         case PointSymbolType:
-          return new PointSymbol[this.version](this.buffer, offset)
+          cls = PointSymbol[this.version]
+          break
         case LineSymbolType:
-          return new LineSymbol[this.version](this.buffer, offset)
+          cls = LineSymbol[this.version]
+          break
         case AreaSymbolType:
-          return new AreaSymbol[this.version](this.buffer, offset)
+          cls = AreaSymbol[this.version]
+          break
         case TextSymbolType:
-          return new TextSymbol[this.version](this.buffer, offset)
+          cls = TextSymbol[this.version]
+          break
+        case RectangleSymbolType:
+          this.warnings.push(`Ignoring rectangle symbol ${this.buffer.readInt32LE(offset + 4)}.`)
+          return null
+        default:
+          throw new Error(`Unknown symbol type ${type}`)
       }
+
+      const symbol = new cls(this.buffer, offset)
+      this.warnings = this.warnings.concat(symbol.warnings)
+      return symbol
     } catch (e) {
       if (!this.options.failOnWarning) {
         this.warnings.push(e)
@@ -15833,26 +15857,30 @@ module.exports = class SymbolIndex extends Block {
   }
 }
 
-},{"./area-symbol":101,"./block":102,"./line-symbol":105,"./point-symbol":110,"./symbol-types":115,"./text-symbol":118}],115:[function(require,module,exports){
+},{"./area-symbol":101,"./block":102,"./line-symbol":106,"./point-symbol":111,"./symbol-types":116,"./text-symbol":119}],116:[function(require,module,exports){
 module.exports = {
   PointSymbolType: 1,
   LineSymbolType: 2,
   AreaSymbolType: 3,
   TextSymbolType: 4,
+  RectangleSymbolType: 7,
   DblFillColorOn: 1    // Line symbol dblFlag Line color on
 }
 
-},{}],116:[function(require,module,exports){
+},{}],117:[function(require,module,exports){
 const Block = require('./block')
 const SymbolElement = require('./symbol-element')
+const InvalidSymbolElementException = require('./invalid-symbol-element-exception')
 
 class BaseSymbol extends Block {
   constructor (buffer, offset, symbolType) {
     super(buffer, offset)
 
+    this.warnings = []
     this.type = symbolType
     this.size = this.readInteger()
     this.symNum = this.readInteger()
+    this.number = `${Math.floor(this.symNum / 1000)}.${this.symNum % 1000}`
     this.otp = this.readByte()
     this.flags = this.readByte()
     this.selected = !!this.readByte()
@@ -15869,11 +15897,20 @@ class BaseSymbol extends Block {
     const elements = []
 
     for (let i = 0; i < dataSize; i += 2) {
-      const element = new SymbolElement(this.buffer, this.offset)
-      this.offset += element.getSize()
-      elements.push(element)
+      try {
+        const element = new SymbolElement(this.buffer, this.offset)
+        this.offset += element.getSize()
+        elements.push(element)
 
-      i += element.numberCoords
+        i += element.numberCoords
+      } catch (e) {
+        if (e instanceof InvalidSymbolElementException) {
+          this.offset += e.symbolElement.getSize()
+          this.warnings.push(e)
+        } else {
+          throw e
+        }
+      }
     }
 
     return elements
@@ -15895,7 +15932,8 @@ class Symbol10 extends BaseSymbol {
       this.colors[i] = this.readSmallInt()
     }
     this.description = ''
-    for (let i = 0; i < 32; i++) {
+    this.readByte() // String length
+    for (let i = 1; i < 32; i++) {
       const c = this.readByte()
       if (c) {
         this.description += String.fromCharCode(c)
@@ -15945,7 +15983,7 @@ module.exports = {
   Symbol11
 }
 
-},{"./block":102,"./symbol-element":113}],117:[function(require,module,exports){
+},{"./block":102,"./invalid-symbol-element-exception":105,"./symbol-element":114}],118:[function(require,module,exports){
 class TdPoly extends Array {
   constructor (ocadX, ocadY, xFlags, yFlags) {
     super(xFlags === undefined ? ocadX >> 8 : ocadX, yFlags === undefined ? ocadY >> 8 : ocadY)
@@ -16019,7 +16057,7 @@ TdPoly.fromCoords = (x, y) => new TdPoly(x << 8, y << 8)
 
 module.exports = TdPoly
 
-},{}],118:[function(require,module,exports){
+},{}],119:[function(require,module,exports){
 const { TextSymbolType } = require('./symbol-types')
 const { Symbol10, Symbol11 } = require('./symbol')
 
@@ -16061,7 +16099,8 @@ class TextSymbol11 extends Symbol11 {
 const readTextSymbol = block => {
   // ASCII string, 32 bytes
   block.fontName = ''
-  for (let i = 0; i < 32; i++) {
+  block.readByte() // String length
+  for (let i = 1; i < 32; i++) {
     const c = block.readByte()
     if (c) {
       block.fontName += String.fromCharCode(c)
@@ -16083,7 +16122,7 @@ const readTextSymbol = block => {
   block.nTabs = block.readSmallInt()
   block.tabs = []
   for (let i = 0; i < 32; i++) {
-    block.tabs.push(block.readCardinal)
+    block.tabs.push(block.readCardinal())
   }
   block.lbOn = block.readWordBool()
   block.lbColor = block.readSmallInt()
@@ -16114,7 +16153,7 @@ module.exports = {
   HorizontalAlignAllLine: 3
 }
 
-},{"./symbol":116,"./symbol-types":115}],119:[function(require,module,exports){
+},{"./symbol":117,"./symbol-types":116}],120:[function(require,module,exports){
 const Block = require('./block')
 const TdPoly = require('./td-poly')
 
@@ -16264,11 +16303,11 @@ module.exports = {
   2018: TObject12
 }
 
-},{"./block":102,"./td-poly":117}],120:[function(require,module,exports){
+},{"./block":102,"./td-poly":118}],121:[function(require,module,exports){
 const { coordEach } = require('@turf/meta')
 const Bezier = require('bezier-js')
 const flatten = require('arr-flatten')
-const { PointObjectType, LineObjectType, AreaObjectType, UnformattedTextObjectType, FormattedTextObjectType } = require('./ocad-reader/object-types')
+const { PointObjectType, LineObjectType, AreaObjectType, UnformattedTextObjectType, FormattedTextObjectType, LineTextObjectType } = require('./ocad-reader/object-types')
 const { LineElementType, AreaElementType, CircleElementType, DotElementType } = require('./ocad-reader/symbol-element-types')
 const transformFeatures = require('./transform-features')
 const TdPoly = require('./ocad-reader/td-poly')
@@ -16285,14 +16324,6 @@ module.exports = function (ocadFile, options) {
   options = { ...defaultOptions, ...options }
 
   let features = transformFeatures(ocadFile, tObjectToGeoJson, createElement, options)
-
-  if (options.assignIds) {
-    let id = 1
-    features.forEach(o => {
-      o.id = id++
-    })
-  }
-
   const featureCollection = {
     type: 'FeatureCollection',
     features
@@ -16310,7 +16341,7 @@ module.exports = function (ocadFile, options) {
   return featureCollection
 }
 
-const tObjectToGeoJson = (options, symbols, object) => {
+const tObjectToGeoJson = (options, symbols, object, i) => {
   const symbol = symbols[object.sym]
   if (!options.exportHidden && (!symbol || symbol.isHidden())) return
 
@@ -16336,6 +16367,7 @@ const tObjectToGeoJson = (options, symbols, object) => {
       break
     case UnformattedTextObjectType:
     case FormattedTextObjectType:
+    case LineTextObjectType:
       const lineHeight = symbol.fontSize / 10 * 0.352778 * 100
       const anchorCoord = [object.coordinates[0][0], object.coordinates[0][1] + lineHeight]
 
@@ -16351,6 +16383,7 @@ const tObjectToGeoJson = (options, symbols, object) => {
   return {
     type: 'Feature',
     properties: object.getProperties(),
+    id: i + 1,
     geometry
   }
 }
@@ -16384,7 +16417,7 @@ const extractCoords = coords => {
   return cs
 }
 
-const createElement = (symbol, name, index, element, c, angle) => {
+const createElement = (symbol, name, index, element, c, angle, options, object, objectId) => {
   var geometry
   const coords = extractCoords(element.coords)
   const rotatedCoords = angle ? coords.map(lc => lc.rotate(angle)) : coords
@@ -16415,8 +16448,10 @@ const createElement = (symbol, name, index, element, c, angle) => {
   return {
     type: 'Feature',
     properties: {
-      element: `${symbol.symNum}-${name}-${index}`
+      element: `${symbol.symNum}-${name}-${index}`,
+      parentId: objectId + 1
     },
+    id: ++options.idCount,
     geometry
   }
 }
@@ -16459,7 +16494,7 @@ const coordinatesToRings = coordinates => {
   return rings
 }
 
-},{"./ocad-reader/object-types":108,"./ocad-reader/symbol-element-types":112,"./ocad-reader/td-poly":117,"./transform-features":123,"@turf/meta":9,"arr-flatten":10,"bezier-js":17}],121:[function(require,module,exports){
+},{"./ocad-reader/object-types":109,"./ocad-reader/symbol-element-types":113,"./ocad-reader/td-poly":118,"./transform-features":124,"@turf/meta":9,"arr-flatten":10,"bezier-js":17}],122:[function(require,module,exports){
 const { PointSymbolType, LineSymbolType, AreaSymbolType, TextSymbolType, DblFillColorOn } = require('./ocad-reader/symbol-types')
 const { LineElementType, AreaElementType, CircleElementType, DotElementType } = require('./ocad-reader/symbol-element-types')
 const { HorizontalAlignCenter, HorizontalAlignRight, VerticalAlignBottom, VerticalAlignMiddle, VerticalAlignTop } = require('./ocad-reader/text-symbol')
@@ -16470,13 +16505,26 @@ module.exports = function ocadToMapboxGlStyle (ocadFile, options) {
     .map(symNum => ocadFile.symbols.find(s => symNum === s.symNum))
     .filter(s => s)
 
-  const symbolLayers = Array.prototype.concat.apply([], usedSymbols
-    .map(symbol => symbolToMapboxLayer(symbol, ocadFile.colors, options))
-    .filter(l => l))
+  const metadata = symbol => {
+    const metadata = Object.keys(symbol).filter(k => symbol[k] !== Object(symbol[k])).reduce((a, k) => {
+      a[k] = symbol[k]
+      return a
+    }, {})
 
+    return layer => ({
+      ...layer,
+      metadata: {
+        ...metadata,
+        sort: layer.metadata.sort
+      }
+    })
+  }
+
+  const symbolLayers = Array.prototype.concat.apply([], usedSymbols
+    .map(symbol => (symbolToMapboxLayer(symbol, ocadFile.colors, options) || []).map(metadata(symbol))))
+  
   const elementLayers = Array.prototype.concat.apply([], usedSymbols
-    .map(symbol => symbolElementsToMapboxLayer(symbol, ocadFile.colors, options))
-    .filter(l => l))
+    .map(symbol => (symbolElementsToMapboxLayer(symbol, ocadFile.colors, options) || []).map(metadata(symbol))))
 
   return symbolLayers.concat(elementLayers)
     .sort((a, b) => b.metadata.sort - a.metadata.sort)
@@ -16610,7 +16658,7 @@ const lineLayer = (id, source, sourceLayer, scaleFactor, filter, lineDef, colors
     // TODO: look into maybe using line-gap-width for some of this
     if (dbl.dblFlags & DblFillColorOn) {
       layers = [
-        createLayer(
+        dbl.dblLeftWidth > 0 && dbl.dblRightWidth > 0 && createLayer(
           id, 
           dbl.dblLeftWidth * 1.5 + dbl.dblRightWidth * 1.5 + dbl.dblWidth * 2, 
           dbl.dblLength, 
@@ -16678,7 +16726,8 @@ const circleLayer = (id, source, sourceLayer, scaleFactor, filter, element, colo
     type: 'circle',
     filter,
     paint: {
-      'circle-radius': expFunc(baseRadius * scaleFactor)
+      'circle-radius': expFunc(baseRadius * scaleFactor),
+      'circle-pitch-alignment': 'map'
     },
     metadata: {
       sort: colors[element.color].renderOrder
@@ -16692,7 +16741,7 @@ const circleLayer = (id, source, sourceLayer, scaleFactor, filter, element, colo
     layer.paint['circle-stroke-color'] = color
     layer.paint['circle-stroke-width'] = expFunc(baseWidth)
   } else {
-    // DotElementType
+      // DotElementType
     layer.paint['circle-color'] = color
   }
 
@@ -16729,7 +16778,9 @@ const textLayer = (id, source, sourceLayer, scaleFactor, filter, element, colors
       'text-ignore-placement': true,
       'text-max-width': Infinity,
       'text-justify': justify,
-      'text-anchor': `${anchor}${anchor !== 'center' ? `-${justify}` : ''}`
+      'text-anchor': `${anchor}${anchor !== 'center' ? `-${justify}` : ''}`,
+      'text-pitch-alignment': 'map',
+      'text-rotation-alignment': 'map'
     },
     paint: {
       'text-color': colors[element.fontColor].rgb
@@ -16751,7 +16802,7 @@ const expFunc = base => ({
   ]
 })
 
-},{"./ocad-reader/symbol-element-types":112,"./ocad-reader/symbol-types":115,"./ocad-reader/text-symbol":118}],122:[function(require,module,exports){
+},{"./ocad-reader/symbol-element-types":113,"./ocad-reader/symbol-types":116,"./ocad-reader/text-symbol":119}],123:[function(require,module,exports){
 const { AreaSymbolType } = require('./ocad-reader/symbol-types')
 const { PointObjectType, LineObjectType, AreaObjectType, UnformattedTextObjectType, FormattedTextObjectType } = require('./ocad-reader/object-types')
 const { LineElementType, AreaElementType, CircleElementType, DotElementType } = require('./ocad-reader/symbol-element-types')
@@ -16977,7 +17028,7 @@ const coordsToPath = coords =>
     .map((c, i) => `${i === 0 || c.isFirstHolePoint() ? 'M' : 'L'} ${c[0]} ${-c[1]}`)
     .join(' ')
 
-},{"./ocad-reader/object-types":108,"./ocad-reader/symbol-element-types":112,"./ocad-reader/symbol-types":115,"./transform-features":123,"arr-flatten":10}],123:[function(require,module,exports){
+},{"./ocad-reader/object-types":109,"./ocad-reader/symbol-element-types":113,"./ocad-reader/symbol-types":116,"./transform-features":124,"arr-flatten":10}],124:[function(require,module,exports){
 const { PointSymbolType, LineSymbolType } = require('./ocad-reader/symbol-types')
 
 const defaultOptions = {
@@ -16989,7 +17040,7 @@ const defaultOptions = {
 }
 
 module.exports = function (ocadFile, createObject, createElement, options) {
-  options = { ...defaultOptions, ...options, colors: ocadFile.colors }
+  options = { ...defaultOptions, ...options, colors: ocadFile.colors, idCount: ocadFile.objects.length }
 
   const symbols = ocadFile.symbols.reduce((ss, s) => {
     ss[s.symNum] = s
@@ -17011,7 +17062,7 @@ module.exports = function (ocadFile, createObject, createElement, options) {
   return features
 }
 
-const generateSymbolElements = (createElement, options, symbols, object) => {
+const generateSymbolElements = (createElement, options, symbols, object, objectIndex) => {
   const symbol = symbols[object.sym]
   let elements = []
 
@@ -17021,7 +17072,7 @@ const generateSymbolElements = (createElement, options, symbols, object) => {
     case PointSymbolType:
       const angle = object.ang ? object.ang / 10 / 180 * Math.PI : 0
       elements = symbol.elements
-        .map((e, i) => createElement(symbol, 'element', i, e, object.coordinates[0], angle, options))
+        .map((e, i) => createElement(symbol, 'element', i, e, object.coordinates[0], angle, options, object, objectIndex))
       break
     case LineSymbolType:
       if (symbol.primSymElements.length > 0) {
@@ -17044,7 +17095,7 @@ const generateSymbolElements = (createElement, options, symbols, object) => {
           let j = 0
           while (d < segmentLength) {
             elements = elements.concat(symbol.primSymElements
-              .map((e, i) => createElement(symbol, 'prim', i, e, c, angle, options)))
+              .map((e, i) => createElement(symbol, 'prim', i, e, c, angle, options, object, objectIndex)))
 
             j++
             const step = (spotDist && j % symbol.nPrimSym) ? spotDist : mainLength
@@ -17065,7 +17116,7 @@ const generateSymbolElements = (createElement, options, symbols, object) => {
           const v = c1.sub(c0)
           const angle = Math.atan2(v[1], v[0])
           elements = elements.concat(symbol.cornerSymElements
-            .map((e, i) => createElement(symbol, 'corner', i, e, c1, angle, options)))
+            .map((e, i) => createElement(symbol, 'corner', i, e, c1, angle, options, object, objectIndex)))
         }
       }
   }
@@ -17073,7 +17124,7 @@ const generateSymbolElements = (createElement, options, symbols, object) => {
   return elements
 }
 
-},{"./ocad-reader/symbol-types":115}],124:[function(require,module,exports){
+},{"./ocad-reader/symbol-types":116}],125:[function(require,module,exports){
 // Top level file is just a mixin of submodules & constants
 'use strict';
 
@@ -17089,7 +17140,7 @@ assign(pako, deflate, inflate, constants);
 
 module.exports = pako;
 
-},{"./lib/deflate":125,"./lib/inflate":126,"./lib/utils/common":127,"./lib/zlib/constants":130}],125:[function(require,module,exports){
+},{"./lib/deflate":126,"./lib/inflate":127,"./lib/utils/common":128,"./lib/zlib/constants":131}],126:[function(require,module,exports){
 'use strict';
 
 
@@ -17491,7 +17542,7 @@ exports.deflate = deflate;
 exports.deflateRaw = deflateRaw;
 exports.gzip = gzip;
 
-},{"./utils/common":127,"./utils/strings":128,"./zlib/deflate":132,"./zlib/messages":137,"./zlib/zstream":139}],126:[function(require,module,exports){
+},{"./utils/common":128,"./utils/strings":129,"./zlib/deflate":133,"./zlib/messages":138,"./zlib/zstream":140}],127:[function(require,module,exports){
 'use strict';
 
 
@@ -17911,7 +17962,7 @@ exports.inflate = inflate;
 exports.inflateRaw = inflateRaw;
 exports.ungzip  = inflate;
 
-},{"./utils/common":127,"./utils/strings":128,"./zlib/constants":130,"./zlib/gzheader":133,"./zlib/inflate":135,"./zlib/messages":137,"./zlib/zstream":139}],127:[function(require,module,exports){
+},{"./utils/common":128,"./utils/strings":129,"./zlib/constants":131,"./zlib/gzheader":134,"./zlib/inflate":136,"./zlib/messages":138,"./zlib/zstream":140}],128:[function(require,module,exports){
 'use strict';
 
 
@@ -18018,7 +18069,7 @@ exports.setTyped = function (on) {
 
 exports.setTyped(TYPED_OK);
 
-},{}],128:[function(require,module,exports){
+},{}],129:[function(require,module,exports){
 // String encode/decode helpers
 'use strict';
 
@@ -18205,7 +18256,7 @@ exports.utf8border = function (buf, max) {
   return (pos + _utf8len[buf[pos]] > max) ? pos : max;
 };
 
-},{"./common":127}],129:[function(require,module,exports){
+},{"./common":128}],130:[function(require,module,exports){
 'use strict';
 
 // Note: adler32 takes 12% for level 0 and 2% for level 6.
@@ -18258,7 +18309,7 @@ function adler32(adler, buf, len, pos) {
 
 module.exports = adler32;
 
-},{}],130:[function(require,module,exports){
+},{}],131:[function(require,module,exports){
 'use strict';
 
 // (C) 1995-2013 Jean-loup Gailly and Mark Adler
@@ -18328,7 +18379,7 @@ module.exports = {
   //Z_NULL:                 null // Use -1 or null inline, depending on var type
 };
 
-},{}],131:[function(require,module,exports){
+},{}],132:[function(require,module,exports){
 'use strict';
 
 // Note: we can't get significant speed boost here.
@@ -18389,7 +18440,7 @@ function crc32(crc, buf, len, pos) {
 
 module.exports = crc32;
 
-},{}],132:[function(require,module,exports){
+},{}],133:[function(require,module,exports){
 'use strict';
 
 // (C) 1995-2013 Jean-loup Gailly and Mark Adler
@@ -20265,7 +20316,7 @@ exports.deflatePrime = deflatePrime;
 exports.deflateTune = deflateTune;
 */
 
-},{"../utils/common":127,"./adler32":129,"./crc32":131,"./messages":137,"./trees":138}],133:[function(require,module,exports){
+},{"../utils/common":128,"./adler32":130,"./crc32":132,"./messages":138,"./trees":139}],134:[function(require,module,exports){
 'use strict';
 
 // (C) 1995-2013 Jean-loup Gailly and Mark Adler
@@ -20325,7 +20376,7 @@ function GZheader() {
 
 module.exports = GZheader;
 
-},{}],134:[function(require,module,exports){
+},{}],135:[function(require,module,exports){
 'use strict';
 
 // (C) 1995-2013 Jean-loup Gailly and Mark Adler
@@ -20672,7 +20723,7 @@ module.exports = function inflate_fast(strm, start) {
   return;
 };
 
-},{}],135:[function(require,module,exports){
+},{}],136:[function(require,module,exports){
 'use strict';
 
 // (C) 1995-2013 Jean-loup Gailly and Mark Adler
@@ -22230,7 +22281,7 @@ exports.inflateSyncPoint = inflateSyncPoint;
 exports.inflateUndermine = inflateUndermine;
 */
 
-},{"../utils/common":127,"./adler32":129,"./crc32":131,"./inffast":134,"./inftrees":136}],136:[function(require,module,exports){
+},{"../utils/common":128,"./adler32":130,"./crc32":132,"./inffast":135,"./inftrees":137}],137:[function(require,module,exports){
 'use strict';
 
 // (C) 1995-2013 Jean-loup Gailly and Mark Adler
@@ -22575,7 +22626,7 @@ module.exports = function inflate_table(type, lens, lens_index, codes, table, ta
   return 0;
 };
 
-},{"../utils/common":127}],137:[function(require,module,exports){
+},{"../utils/common":128}],138:[function(require,module,exports){
 'use strict';
 
 // (C) 1995-2013 Jean-loup Gailly and Mark Adler
@@ -22609,7 +22660,7 @@ module.exports = {
   '-6':   'incompatible version' /* Z_VERSION_ERROR (-6) */
 };
 
-},{}],138:[function(require,module,exports){
+},{}],139:[function(require,module,exports){
 'use strict';
 
 // (C) 1995-2013 Jean-loup Gailly and Mark Adler
@@ -23831,7 +23882,7 @@ exports._tr_flush_block  = _tr_flush_block;
 exports._tr_tally = _tr_tally;
 exports._tr_align = _tr_align;
 
-},{"../utils/common":127}],139:[function(require,module,exports){
+},{"../utils/common":128}],140:[function(require,module,exports){
 'use strict';
 
 // (C) 1995-2013 Jean-loup Gailly and Mark Adler
@@ -23880,7 +23931,7 @@ function ZStream() {
 
 module.exports = ZStream;
 
-},{}],140:[function(require,module,exports){
+},{}],141:[function(require,module,exports){
 'use strict';
 
 module.exports = Pbf;
@@ -24500,7 +24551,7 @@ function writeUtf8(buf, str, pos) {
     return pos;
 }
 
-},{"ieee754":58}],141:[function(require,module,exports){
+},{"ieee754":58}],142:[function(require,module,exports){
 (function (process){
 'use strict';
 
@@ -24547,7 +24598,7 @@ function nextTick(fn, arg1, arg2, arg3) {
 }
 
 }).call(this,require('_process'))
-},{"_process":142}],142:[function(require,module,exports){
+},{"_process":143}],143:[function(require,module,exports){
 // shim for using process in browser
 var process = module.exports = {};
 
@@ -24733,7 +24784,7 @@ process.chdir = function (dir) {
 };
 process.umask = function() { return 0; };
 
-},{}],143:[function(require,module,exports){
+},{}],144:[function(require,module,exports){
 (function (global, factory) {
 	typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory() :
 	typeof define === 'function' && define.amd ? define(factory) :
@@ -31264,10 +31315,10 @@ process.umask = function() { return 0; };
 
 })));
 
-},{}],144:[function(require,module,exports){
+},{}],145:[function(require,module,exports){
 module.exports = require("./lib/_stream_duplex.js")
 
-},{"./lib/_stream_duplex.js":145}],145:[function(require,module,exports){
+},{"./lib/_stream_duplex.js":146}],146:[function(require,module,exports){
 // a duplex stream is just a stream that is both readable and writable.
 // Since JS doesn't have multiple prototypal inheritance, this class
 // prototypally inherits from Readable, and then parasitically from
@@ -31343,7 +31394,7 @@ function forEach(xs, f) {
     f(xs[i], i);
   }
 }
-},{"./_stream_readable":147,"./_stream_writable":149,"core-util-is":49,"inherits":60,"process-nextick-args":141}],146:[function(require,module,exports){
+},{"./_stream_readable":148,"./_stream_writable":150,"core-util-is":49,"inherits":60,"process-nextick-args":142}],147:[function(require,module,exports){
 // a passthrough stream.
 // basically just the most minimal sort of Transform stream.
 // Every written chunk gets output as-is.
@@ -31370,7 +31421,7 @@ function PassThrough(options) {
 PassThrough.prototype._transform = function (chunk, encoding, cb) {
   cb(null, chunk);
 };
-},{"./_stream_transform":148,"core-util-is":49,"inherits":60}],147:[function(require,module,exports){
+},{"./_stream_transform":149,"core-util-is":49,"inherits":60}],148:[function(require,module,exports){
 (function (process){
 'use strict';
 
@@ -32253,7 +32304,7 @@ function indexOf(xs, x) {
   return -1;
 }
 }).call(this,require('_process'))
-},{"./_stream_duplex":145,"_process":142,"buffer":27,"core-util-is":49,"events":55,"inherits":60,"isarray":62,"process-nextick-args":141,"string_decoder/":207,"util":24}],148:[function(require,module,exports){
+},{"./_stream_duplex":146,"_process":143,"buffer":27,"core-util-is":49,"events":55,"inherits":60,"isarray":62,"process-nextick-args":142,"string_decoder/":208,"util":24}],149:[function(require,module,exports){
 // a transform stream is a readable/writable stream where you do
 // something with the data.  Sometimes it's called a "filter",
 // but that's not a great name for it, since that implies a thing where
@@ -32434,7 +32485,7 @@ function done(stream, er) {
 
   return stream.push(null);
 }
-},{"./_stream_duplex":145,"core-util-is":49,"inherits":60}],149:[function(require,module,exports){
+},{"./_stream_duplex":146,"core-util-is":49,"inherits":60}],150:[function(require,module,exports){
 (function (process,setImmediate){
 // A bit simpler than readable streams.
 // Implement an async ._write(chunk, encoding, cb), and it'll handle all
@@ -32953,10 +33004,10 @@ function CorkedRequest(state) {
   };
 }
 }).call(this,require('_process'),require("timers").setImmediate)
-},{"./_stream_duplex":145,"_process":142,"buffer":27,"core-util-is":49,"events":55,"inherits":60,"process-nextick-args":141,"timers":208,"util-deprecate":209}],150:[function(require,module,exports){
+},{"./_stream_duplex":146,"_process":143,"buffer":27,"core-util-is":49,"events":55,"inherits":60,"process-nextick-args":142,"timers":209,"util-deprecate":210}],151:[function(require,module,exports){
 module.exports = require("./lib/_stream_passthrough.js")
 
-},{"./lib/_stream_passthrough.js":146}],151:[function(require,module,exports){
+},{"./lib/_stream_passthrough.js":147}],152:[function(require,module,exports){
 var Stream = (function (){
   try {
     return require('st' + 'ream'); // hack to fix a circular dependency issue when used with browserify
@@ -32970,13 +33021,13 @@ exports.Duplex = require('./lib/_stream_duplex.js');
 exports.Transform = require('./lib/_stream_transform.js');
 exports.PassThrough = require('./lib/_stream_passthrough.js');
 
-},{"./lib/_stream_duplex.js":145,"./lib/_stream_passthrough.js":146,"./lib/_stream_readable.js":147,"./lib/_stream_transform.js":148,"./lib/_stream_writable.js":149}],152:[function(require,module,exports){
+},{"./lib/_stream_duplex.js":146,"./lib/_stream_passthrough.js":147,"./lib/_stream_readable.js":148,"./lib/_stream_transform.js":149,"./lib/_stream_writable.js":150}],153:[function(require,module,exports){
 module.exports = require("./lib/_stream_transform.js")
 
-},{"./lib/_stream_transform.js":148}],153:[function(require,module,exports){
+},{"./lib/_stream_transform.js":149}],154:[function(require,module,exports){
 module.exports = require("./lib/_stream_writable.js")
 
-},{"./lib/_stream_writable.js":149}],154:[function(require,module,exports){
+},{"./lib/_stream_writable.js":150}],155:[function(require,module,exports){
 'use strict';
 
 var proj4 = require('proj4').hasOwnProperty('default') ? require('proj4').default : require('proj4');
@@ -33128,7 +33179,7 @@ module.exports = {
   }
 };
 
-},{"proj4":143}],155:[function(require,module,exports){
+},{"proj4":144}],156:[function(require,module,exports){
 /* eslint-disable node/no-deprecated-api */
 var buffer = require('buffer')
 var Buffer = buffer.Buffer
@@ -33192,12 +33243,12 @@ SafeBuffer.allocUnsafeSlow = function (size) {
   return buffer.SlowBuffer(size)
 }
 
-},{"buffer":27}],156:[function(require,module,exports){
+},{"buffer":27}],157:[function(require,module,exports){
 module.exports.download = require('./src/download')
 module.exports.write = require('./src/write')
 module.exports.zip = require('./src/zip')
 
-},{"./src/download":196,"./src/write":204,"./src/zip":205}],157:[function(require,module,exports){
+},{"./src/download":197,"./src/write":205,"./src/zip":206}],158:[function(require,module,exports){
 'use strict';
 // private property
 var _keyStr = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=";
@@ -33269,7 +33320,7 @@ exports.decode = function(input, utf8) {
 
 };
 
-},{}],158:[function(require,module,exports){
+},{}],159:[function(require,module,exports){
 'use strict';
 function CompressedObject() {
     this.compressedSize = 0;
@@ -33299,7 +33350,7 @@ CompressedObject.prototype = {
 };
 module.exports = CompressedObject;
 
-},{}],159:[function(require,module,exports){
+},{}],160:[function(require,module,exports){
 'use strict';
 exports.STORE = {
     magic: "\x00\x00",
@@ -33314,7 +33365,7 @@ exports.STORE = {
 };
 exports.DEFLATE = require('./flate');
 
-},{"./flate":164}],160:[function(require,module,exports){
+},{"./flate":165}],161:[function(require,module,exports){
 'use strict';
 
 var utils = require('./utils');
@@ -33418,7 +33469,7 @@ module.exports = function crc32(input, crc) {
 };
 // vim: set shiftwidth=4 softtabstop=4:
 
-},{"./utils":177}],161:[function(require,module,exports){
+},{"./utils":178}],162:[function(require,module,exports){
 'use strict';
 var utils = require('./utils');
 
@@ -33527,7 +33578,7 @@ DataReader.prototype = {
 };
 module.exports = DataReader;
 
-},{"./utils":177}],162:[function(require,module,exports){
+},{"./utils":178}],163:[function(require,module,exports){
 'use strict';
 exports.base64 = false;
 exports.binary = false;
@@ -33540,7 +33591,7 @@ exports.comment = null;
 exports.unixPermissions = null;
 exports.dosPermissions = null;
 
-},{}],163:[function(require,module,exports){
+},{}],164:[function(require,module,exports){
 'use strict';
 var utils = require('./utils');
 
@@ -33647,7 +33698,7 @@ exports.isRegExp = function (object) {
 };
 
 
-},{"./utils":177}],164:[function(require,module,exports){
+},{"./utils":178}],165:[function(require,module,exports){
 'use strict';
 var USE_TYPEDARRAY = (typeof Uint8Array !== 'undefined') && (typeof Uint16Array !== 'undefined') && (typeof Uint32Array !== 'undefined');
 
@@ -33665,7 +33716,7 @@ exports.uncompress =  function(input) {
     return pako.inflateRaw(input);
 };
 
-},{"pako":180}],165:[function(require,module,exports){
+},{"pako":181}],166:[function(require,module,exports){
 'use strict';
 
 var base64 = require('./base64');
@@ -33746,7 +33797,7 @@ JSZip.base64 = {
 JSZip.compressions = require('./compressions');
 module.exports = JSZip;
 
-},{"./base64":157,"./compressions":159,"./defaults":162,"./deprecatedPublicUtils":163,"./load":166,"./object":169,"./support":173}],166:[function(require,module,exports){
+},{"./base64":158,"./compressions":160,"./defaults":163,"./deprecatedPublicUtils":164,"./load":167,"./object":170,"./support":174}],167:[function(require,module,exports){
 'use strict';
 var base64 = require('./base64');
 var ZipEntries = require('./zipEntries');
@@ -33779,7 +33830,7 @@ module.exports = function(data, options) {
     return this;
 };
 
-},{"./base64":157,"./zipEntries":178}],167:[function(require,module,exports){
+},{"./base64":158,"./zipEntries":179}],168:[function(require,module,exports){
 (function (Buffer){
 'use strict';
 module.exports = function(data, encoding){
@@ -33790,7 +33841,7 @@ module.exports.test = function(b){
 };
 
 }).call(this,require("buffer").Buffer)
-},{"buffer":27}],168:[function(require,module,exports){
+},{"buffer":27}],169:[function(require,module,exports){
 'use strict';
 var Uint8ArrayReader = require('./uint8ArrayReader');
 
@@ -33812,7 +33863,7 @@ NodeBufferReader.prototype.readData = function(size) {
 };
 module.exports = NodeBufferReader;
 
-},{"./uint8ArrayReader":174}],169:[function(require,module,exports){
+},{"./uint8ArrayReader":175}],170:[function(require,module,exports){
 'use strict';
 var support = require('./support');
 var utils = require('./utils');
@@ -34697,9 +34748,9 @@ var out = {
 };
 module.exports = out;
 
-},{"./base64":157,"./compressedObject":158,"./compressions":159,"./crc32":160,"./defaults":162,"./nodeBuffer":167,"./signature":170,"./stringWriter":172,"./support":173,"./uint8ArrayWriter":175,"./utf8":176,"./utils":177}],170:[function(require,module,exports){
+},{"./base64":158,"./compressedObject":159,"./compressions":160,"./crc32":161,"./defaults":163,"./nodeBuffer":168,"./signature":171,"./stringWriter":173,"./support":174,"./uint8ArrayWriter":176,"./utf8":177,"./utils":178}],171:[function(require,module,exports){
 arguments[4][85][0].apply(exports,arguments)
-},{"dup":85}],171:[function(require,module,exports){
+},{"dup":85}],172:[function(require,module,exports){
 'use strict';
 var DataReader = require('./dataReader');
 var utils = require('./utils');
@@ -34737,7 +34788,7 @@ StringReader.prototype.readData = function(size) {
 };
 module.exports = StringReader;
 
-},{"./dataReader":161,"./utils":177}],172:[function(require,module,exports){
+},{"./dataReader":162,"./utils":178}],173:[function(require,module,exports){
 'use strict';
 
 var utils = require('./utils');
@@ -34769,7 +34820,7 @@ StringWriter.prototype = {
 
 module.exports = StringWriter;
 
-},{"./utils":177}],173:[function(require,module,exports){
+},{"./utils":178}],174:[function(require,module,exports){
 (function (Buffer){
 'use strict';
 exports.base64 = true;
@@ -34807,7 +34858,7 @@ else {
 }
 
 }).call(this,require("buffer").Buffer)
-},{"buffer":27}],174:[function(require,module,exports){
+},{"buffer":27}],175:[function(require,module,exports){
 'use strict';
 var DataReader = require('./dataReader');
 
@@ -34856,7 +34907,7 @@ Uint8ArrayReader.prototype.readData = function(size) {
 };
 module.exports = Uint8ArrayReader;
 
-},{"./dataReader":161}],175:[function(require,module,exports){
+},{"./dataReader":162}],176:[function(require,module,exports){
 'use strict';
 
 var utils = require('./utils');
@@ -34894,7 +34945,7 @@ Uint8ArrayWriter.prototype = {
 
 module.exports = Uint8ArrayWriter;
 
-},{"./utils":177}],176:[function(require,module,exports){
+},{"./utils":178}],177:[function(require,module,exports){
 'use strict';
 
 var utils = require('./utils');
@@ -35103,7 +35154,7 @@ exports.utf8decode = function utf8decode(buf) {
 };
 // vim: set shiftwidth=4 softtabstop=4:
 
-},{"./nodeBuffer":167,"./support":173,"./utils":177}],177:[function(require,module,exports){
+},{"./nodeBuffer":168,"./support":174,"./utils":178}],178:[function(require,module,exports){
 'use strict';
 var support = require('./support');
 var compressions = require('./compressions');
@@ -35431,7 +35482,7 @@ exports.isRegExp = function (object) {
 };
 
 
-},{"./compressions":159,"./nodeBuffer":167,"./support":173}],178:[function(require,module,exports){
+},{"./compressions":160,"./nodeBuffer":168,"./support":174}],179:[function(require,module,exports){
 'use strict';
 var StringReader = require('./stringReader');
 var NodeBufferReader = require('./nodeBufferReader');
@@ -35654,7 +35705,7 @@ ZipEntries.prototype = {
 // }}} end of ZipEntries
 module.exports = ZipEntries;
 
-},{"./nodeBufferReader":168,"./object":169,"./signature":170,"./stringReader":171,"./support":173,"./uint8ArrayReader":174,"./utils":177,"./zipEntry":179}],179:[function(require,module,exports){
+},{"./nodeBufferReader":169,"./object":170,"./signature":171,"./stringReader":172,"./support":174,"./uint8ArrayReader":175,"./utils":178,"./zipEntry":180}],180:[function(require,module,exports){
 'use strict';
 var StringReader = require('./stringReader');
 var utils = require('./utils');
@@ -35966,9 +36017,9 @@ ZipEntry.prototype = {
 };
 module.exports = ZipEntry;
 
-},{"./compressedObject":158,"./object":169,"./stringReader":171,"./utils":177}],180:[function(require,module,exports){
-arguments[4][124][0].apply(exports,arguments)
-},{"./lib/deflate":181,"./lib/inflate":182,"./lib/utils/common":183,"./lib/zlib/constants":186,"dup":124}],181:[function(require,module,exports){
+},{"./compressedObject":159,"./object":170,"./stringReader":172,"./utils":178}],181:[function(require,module,exports){
+arguments[4][125][0].apply(exports,arguments)
+},{"./lib/deflate":182,"./lib/inflate":183,"./lib/utils/common":184,"./lib/zlib/constants":187,"dup":125}],182:[function(require,module,exports){
 'use strict';
 
 
@@ -36370,7 +36421,7 @@ exports.deflate = deflate;
 exports.deflateRaw = deflateRaw;
 exports.gzip = gzip;
 
-},{"./utils/common":183,"./utils/strings":184,"./zlib/deflate":188,"./zlib/messages":193,"./zlib/zstream":195}],182:[function(require,module,exports){
+},{"./utils/common":184,"./utils/strings":185,"./zlib/deflate":189,"./zlib/messages":194,"./zlib/zstream":196}],183:[function(require,module,exports){
 'use strict';
 
 
@@ -36790,7 +36841,7 @@ exports.inflate = inflate;
 exports.inflateRaw = inflateRaw;
 exports.ungzip  = inflate;
 
-},{"./utils/common":183,"./utils/strings":184,"./zlib/constants":186,"./zlib/gzheader":189,"./zlib/inflate":191,"./zlib/messages":193,"./zlib/zstream":195}],183:[function(require,module,exports){
+},{"./utils/common":184,"./utils/strings":185,"./zlib/constants":187,"./zlib/gzheader":190,"./zlib/inflate":192,"./zlib/messages":194,"./zlib/zstream":196}],184:[function(require,module,exports){
 'use strict';
 
 
@@ -36894,7 +36945,7 @@ exports.setTyped = function (on) {
 
 exports.setTyped(TYPED_OK);
 
-},{}],184:[function(require,module,exports){
+},{}],185:[function(require,module,exports){
 // String encode/decode helpers
 'use strict';
 
@@ -37081,7 +37132,7 @@ exports.utf8border = function (buf, max) {
   return (pos + _utf8len[buf[pos]] > max) ? pos : max;
 };
 
-},{"./common":183}],185:[function(require,module,exports){
+},{"./common":184}],186:[function(require,module,exports){
 'use strict';
 
 // Note: adler32 takes 12% for level 0 and 2% for level 6.
@@ -37115,7 +37166,7 @@ function adler32(adler, buf, len, pos) {
 
 module.exports = adler32;
 
-},{}],186:[function(require,module,exports){
+},{}],187:[function(require,module,exports){
 'use strict';
 
 
@@ -37167,7 +37218,7 @@ module.exports = {
   //Z_NULL:                 null // Use -1 or null inline, depending on var type
 };
 
-},{}],187:[function(require,module,exports){
+},{}],188:[function(require,module,exports){
 'use strict';
 
 // Note: we can't get significant speed boost here.
@@ -37210,7 +37261,7 @@ function crc32(crc, buf, len, pos) {
 
 module.exports = crc32;
 
-},{}],188:[function(require,module,exports){
+},{}],189:[function(require,module,exports){
 'use strict';
 
 var utils   = require('../utils/common');
@@ -39067,7 +39118,7 @@ exports.deflatePrime = deflatePrime;
 exports.deflateTune = deflateTune;
 */
 
-},{"../utils/common":183,"./adler32":185,"./crc32":187,"./messages":193,"./trees":194}],189:[function(require,module,exports){
+},{"../utils/common":184,"./adler32":186,"./crc32":188,"./messages":194,"./trees":195}],190:[function(require,module,exports){
 'use strict';
 
 
@@ -39109,7 +39160,7 @@ function GZheader() {
 
 module.exports = GZheader;
 
-},{}],190:[function(require,module,exports){
+},{}],191:[function(require,module,exports){
 'use strict';
 
 // See state defs from inflate.js
@@ -39437,7 +39488,7 @@ module.exports = function inflate_fast(strm, start) {
   return;
 };
 
-},{}],191:[function(require,module,exports){
+},{}],192:[function(require,module,exports){
 'use strict';
 
 
@@ -40977,7 +41028,7 @@ exports.inflateSyncPoint = inflateSyncPoint;
 exports.inflateUndermine = inflateUndermine;
 */
 
-},{"../utils/common":183,"./adler32":185,"./crc32":187,"./inffast":190,"./inftrees":192}],192:[function(require,module,exports){
+},{"../utils/common":184,"./adler32":186,"./crc32":188,"./inffast":191,"./inftrees":193}],193:[function(require,module,exports){
 'use strict';
 
 
@@ -41306,7 +41357,7 @@ module.exports = function inflate_table(type, lens, lens_index, codes, table, ta
   return 0;
 };
 
-},{"../utils/common":183}],193:[function(require,module,exports){
+},{"../utils/common":184}],194:[function(require,module,exports){
 'use strict';
 
 module.exports = {
@@ -41321,7 +41372,7 @@ module.exports = {
   '-6':   'incompatible version' /* Z_VERSION_ERROR (-6) */
 };
 
-},{}],194:[function(require,module,exports){
+},{}],195:[function(require,module,exports){
 'use strict';
 
 
@@ -42525,7 +42576,7 @@ exports._tr_flush_block  = _tr_flush_block;
 exports._tr_tally = _tr_tally;
 exports._tr_align = _tr_align;
 
-},{"../utils/common":183}],195:[function(require,module,exports){
+},{"../utils/common":184}],196:[function(require,module,exports){
 'use strict';
 
 
@@ -42556,7 +42607,7 @@ function ZStream() {
 
 module.exports = ZStream;
 
-},{}],196:[function(require,module,exports){
+},{}],197:[function(require,module,exports){
 var zip = require('./zip');
 
 module.exports = function(gj, options) {
@@ -42564,7 +42615,7 @@ module.exports = function(gj, options) {
     location.href = 'data:application/zip;base64,' + content;
 };
 
-},{"./zip":205}],197:[function(require,module,exports){
+},{"./zip":206}],198:[function(require,module,exports){
 module.exports.enlarge = function enlargeExtent(extent, pt) {
     if (pt[0] < extent.xmin) extent.xmin = pt[0];
     if (pt[0] > extent.xmax) extent.xmax = pt[0];
@@ -42590,7 +42641,7 @@ module.exports.blank = function() {
     };
 };
 
-},{}],198:[function(require,module,exports){
+},{}],199:[function(require,module,exports){
 var types = require('./types').jstypes;
 
 module.exports.geojson = geojson;
@@ -42620,7 +42671,7 @@ function obj(_) {
     return o;
 }
 
-},{"./types":203}],199:[function(require,module,exports){
+},{"./types":204}],200:[function(require,module,exports){
 module.exports.point = justType('Point', 'POINT');
 module.exports.line = justType('LineString', 'POLYLINE');
 module.exports.polygon = justType('Polygon', 'POLYGON');
@@ -42654,7 +42705,7 @@ function isType(t) {
     return function(f) { return f.geometry.type === t; };
 }
 
-},{}],200:[function(require,module,exports){
+},{}],201:[function(require,module,exports){
 var ext = require('./extent');
 
 module.exports.write = function writePoints(coordinates, extent, shpView, shxView) {
@@ -42705,7 +42756,7 @@ module.exports.shpLength = function(coordinates) {
     return coordinates.length * 28;
 };
 
-},{"./extent":197}],201:[function(require,module,exports){
+},{"./extent":198}],202:[function(require,module,exports){
 var ext = require('./extent'),
     types = require('./types');
 
@@ -42824,10 +42875,10 @@ function justCoords(coords, l) {
 }
 
 
-},{"./extent":197,"./types":203}],202:[function(require,module,exports){
+},{"./extent":198,"./types":204}],203:[function(require,module,exports){
 module.exports = 'GEOGCS["GCS_WGS_1984",DATUM["D_WGS_1984",SPHEROID["WGS_1984",6378137,298.257223563]],PRIMEM["Greenwich",0],UNIT["Degree",0.017453292519943295]]';
 
-},{}],203:[function(require,module,exports){
+},{}],204:[function(require,module,exports){
 module.exports.geometries = {
     NULL: 0,
     POINT: 1,
@@ -42845,7 +42896,7 @@ module.exports.geometries = {
     MULTIPATCH: 31,
 };
 
-},{}],204:[function(require,module,exports){
+},{}],205:[function(require,module,exports){
 var types = require('./types'),
     dbf = require('dbf'),
     prj = require('./prj'),
@@ -42915,7 +42966,7 @@ function writeExtent(extent, view) {
     view.setFloat64(60, extent.ymax, true);
 }
 
-},{"./extent":197,"./fields":198,"./points":200,"./poly":201,"./prj":202,"./types":203,"assert":11,"dbf":50}],205:[function(require,module,exports){
+},{"./extent":198,"./fields":199,"./points":201,"./poly":202,"./prj":203,"./types":204,"assert":11,"dbf":50}],206:[function(require,module,exports){
 (function (process){
 var write = require('./write'),
     geojson = require('./geojson'),
@@ -42957,7 +43008,7 @@ module.exports = function(gj, options) {
 };
 
 }).call(this,require('_process'))
-},{"./geojson":199,"./prj":202,"./write":204,"_process":142,"jszip":165}],206:[function(require,module,exports){
+},{"./geojson":200,"./prj":203,"./write":205,"_process":143,"jszip":166}],207:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -43086,7 +43137,7 @@ Stream.prototype.pipe = function(dest, options) {
   return dest;
 };
 
-},{"events":55,"inherits":60,"readable-stream/duplex.js":144,"readable-stream/passthrough.js":150,"readable-stream/readable.js":151,"readable-stream/transform.js":152,"readable-stream/writable.js":153}],207:[function(require,module,exports){
+},{"events":55,"inherits":60,"readable-stream/duplex.js":145,"readable-stream/passthrough.js":151,"readable-stream/readable.js":152,"readable-stream/transform.js":153,"readable-stream/writable.js":154}],208:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -43309,7 +43360,7 @@ function base64DetectIncompleteChar(buffer) {
   this.charLength = this.charReceived ? 3 : 0;
 }
 
-},{"buffer":27}],208:[function(require,module,exports){
+},{"buffer":27}],209:[function(require,module,exports){
 (function (setImmediate,clearImmediate){
 var nextTick = require('process/browser.js').nextTick;
 var apply = Function.prototype.apply;
@@ -43388,7 +43439,7 @@ exports.clearImmediate = typeof clearImmediate === "function" ? clearImmediate :
   delete immediateIds[id];
 };
 }).call(this,require("timers").setImmediate,require("timers").clearImmediate)
-},{"process/browser.js":142,"timers":208}],209:[function(require,module,exports){
+},{"process/browser.js":143,"timers":209}],210:[function(require,module,exports){
 (function (global){
 
 /**
@@ -43459,7 +43510,7 @@ function config (name) {
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],210:[function(require,module,exports){
+},{}],211:[function(require,module,exports){
 var Pbf = require('pbf')
 var GeoJSONWrapper = require('./lib/geojson_wrapper')
 
@@ -43637,7 +43688,7 @@ function writeValue (value, pbf) {
   }
 }
 
-},{"./lib/geojson_wrapper":211,"pbf":140}],211:[function(require,module,exports){
+},{"./lib/geojson_wrapper":212,"pbf":141}],212:[function(require,module,exports){
 'use strict'
 
 var Point = require('@mapbox/point-geometry')

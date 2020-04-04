@@ -25,7 +25,7 @@ module.exports = function ocadToMapboxGlStyle (ocadFile, options) {
 
   const symbolLayers = Array.prototype.concat.apply([], usedSymbols
     .map(symbol => (symbolToMapboxLayer(symbol, ocadFile.colors, options) || []).map(metadata(symbol))))
-  
+
   const elementLayers = Array.prototype.concat.apply([], usedSymbols
     .map(symbol => (symbolElementsToMapboxLayer(symbol, ocadFile.colors, options) || []).map(metadata(symbol))))
 
@@ -139,7 +139,7 @@ const lineLayer = (id, source, sourceLayer, scaleFactor, filter, lineDef, colors
     if (baseMainLength && baseMainGap) {
       l.paint['line-dasharray'] = [baseMainLength, baseMainGap]
     }
-  
+
     return l
   }
 
@@ -149,10 +149,10 @@ const lineLayer = (id, source, sourceLayer, scaleFactor, filter, lineDef, colors
   if (!isDoubleLine) {
     layers = [
       createLayer(
-        id, 
-        lineDef.lineWidth, 
-        lineDef.mainLength, 
-        lineDef.mainGap, 
+        id,
+        lineDef.lineWidth,
+        lineDef.mainLength,
+        lineDef.mainGap,
         lineDef.lineColor !== undefined ? lineDef.lineColor : lineDef.color)
     ]
   } else {
@@ -162,16 +162,16 @@ const lineLayer = (id, source, sourceLayer, scaleFactor, filter, lineDef, colors
     if (dbl.dblFlags & DblFillColorOn) {
       layers = [
         dbl.dblLeftWidth > 0 && dbl.dblRightWidth > 0 && createLayer(
-          id, 
-          dbl.dblLeftWidth * 1.5 + dbl.dblRightWidth * 1.5 + dbl.dblWidth * 2, 
-          dbl.dblLength, 
-          dbl.dblGap, 
+          id,
+          dbl.dblLeftWidth * 1.5 + dbl.dblRightWidth * 1.5 + dbl.dblWidth * 2,
+          dbl.dblLength,
+          dbl.dblGap,
           dbl.dblLeftColor),
         createLayer(
-          id + '_fill', 
+          id + '_fill',
           dbl.dblWidth * 2,
-          dbl.dblLength, 
-          dbl.dblGap, 
+          dbl.dblLength,
+          dbl.dblGap,
           dbl.dblFillColor)
       ]
     } else {
@@ -181,9 +181,9 @@ const lineLayer = (id, source, sourceLayer, scaleFactor, filter, lineDef, colors
       ].map((offset, i) => {
         const l = createLayer(
           id + '_' + i,
-          i === 0 ? dbl.dblLeftWidth : dbl.dblRightWidth, 
+          i === 0 ? dbl.dblLeftWidth : dbl.dblRightWidth,
           dbl.dblLength,
-          dbl.dblGap, 
+          dbl.dblGap,
           i === 0 ? dbl.dblLeftColor : dbl.dblRightColor)
 
         if (l) {

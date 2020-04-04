@@ -218,7 +218,32 @@ const areaToPath = (coordinates, fillPattern, color) => ({
   order: color.renderOrder
 })
 
-const coordsToPath = coords =>
-  coords
-    .map((c, i) => `${i === 0 || c.isFirstHolePoint() ? 'M' : 'L'} ${c[0]} ${-c[1]}`)
-    .join(' ')
+const coordsToPath = coords => {
+  if (coords == []) { return [] }
+  const cs = []
+  let cp1
+  let cp2
+  // Move to the start of the path
+  cs.push(`M ${coords[0][0]} ${-coords[0][1]}`)
+
+  for (let i = 0; i < coords.length; i++) {
+    const c = coords[i]
+
+    if (c.isFirstBezier()) {
+      cp1 = c
+    } else if (c.isSecondBezier()) {
+      cp2 = c
+    } else if (c.isFirstHolePoint()) {
+      cs.push (`M ${c[0]} ${-c[1]}`)
+    } else if (cp1 && cp2) {
+      const bezier = `C ${cp1[0]} ${-cp1[1]} ${cp2[0]} ${-cp2[1]} ${c[0]} ${-c[1]}`
+      cp1 = cp2 = undefined
+      cs.push(bezier)
+
+    } else {
+      cs.push(`L ${c[0]} ${-c[1]}`)
+    }
+  }
+
+  return cs.join(' ')
+}

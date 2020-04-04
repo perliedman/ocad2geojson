@@ -281,7 +281,7 @@ const textLayer = (id, source, sourceLayer, scaleFactor, filter, element, colors
       'text-ignore-placement': true,
       'text-max-width': Infinity,
       'text-justify': justify,
-      'text-anchor': `${anchor}${anchor !== 'center' ? `-${justify}` : ''}`,
+      'text-anchor': `${anchor}${justify !== 'center' ? `-${justify}` : ''}`,
       'text-pitch-alignment': 'map',
       'text-rotation-alignment': 'map'
     },

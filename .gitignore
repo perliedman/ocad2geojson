@@ -1,5 +1,7 @@
 node_modules/
-demo/node_modules
+examples/viewer/node_modules
+examples/svg/node_modules
+examples/svg-patterns/node_modules
 demo/tiles
 demo/*.gpx
 *.ocd

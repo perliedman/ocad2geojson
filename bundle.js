@@ -4338,7 +4338,19 @@ module.exports = require('./lib/bezier');
       this.ratios = ratios;
       this._lut = []; //  invalidate any precomputed LUT
     },
-    update: function() {
+    verify: function() {
+      var print = this.coordDigest();
+      if (print !== this._print) {
+        this._print = print;
+        this.update();
+      }
+    },
+    coordDigest: function() {
+      return this.points.map(function(c,pos) {
+        return '' + pos + c.x + c.y + (c.z?c.z:0);
+      }).join('');
+    },
+    update: function(newprint) {
       // invalidate any precomputed LUT
       this._lut = [];
       this.dpoints = utils.derive(this.points, this._3d);
@@ -4354,6 +4366,7 @@ module.exports = require('./lib/bezier');
     },
     _lut: [],
     getLUT: function(steps) {
+      this.verify();
       steps = steps || 100;
       if (this._lut.length === steps) {
         return this._lut;
@@ -16522,7 +16535,7 @@ module.exports = function ocadToMapboxGlStyle (ocadFile, options) {
 
   const symbolLayers = Array.prototype.concat.apply([], usedSymbols
     .map(symbol => (symbolToMapboxLayer(symbol, ocadFile.colors, options) || []).map(metadata(symbol))))
-  
+
   const elementLayers = Array.prototype.concat.apply([], usedSymbols
     .map(symbol => (symbolElementsToMapboxLayer(symbol, ocadFile.colors, options) || []).map(metadata(symbol))))
 
@@ -16636,7 +16649,7 @@ const lineLayer = (id, source, sourceLayer, scaleFactor, filter, lineDef, colors
     if (baseMainLength && baseMainGap) {
       l.paint['line-dasharray'] = [baseMainLength, baseMainGap]
     }
-  
+
     return l
   }
 
@@ -16646,10 +16659,10 @@ const lineLayer = (id, source, sourceLayer, scaleFactor, filter, lineDef, colors
   if (!isDoubleLine) {
     layers = [
       createLayer(
-        id, 
-        lineDef.lineWidth, 
-        lineDef.mainLength, 
-        lineDef.mainGap, 
+        id,
+        lineDef.lineWidth,
+        lineDef.mainLength,
+        lineDef.mainGap,
         lineDef.lineColor !== undefined ? lineDef.lineColor : lineDef.color)
     ]
   } else {
@@ -16659,16 +16672,16 @@ const lineLayer = (id, source, sourceLayer, scaleFactor, filter, lineDef, colors
     if (dbl.dblFlags & DblFillColorOn) {
       layers = [
         dbl.dblLeftWidth > 0 && dbl.dblRightWidth > 0 && createLayer(
-          id, 
-          dbl.dblLeftWidth * 1.5 + dbl.dblRightWidth * 1.5 + dbl.dblWidth * 2, 
-          dbl.dblLength, 
-          dbl.dblGap, 
+          id,
+          dbl.dblLeftWidth * 1.5 + dbl.dblRightWidth * 1.5 + dbl.dblWidth * 2,
+          dbl.dblLength,
+          dbl.dblGap,
           dbl.dblLeftColor),
         createLayer(
-          id + '_fill', 
+          id + '_fill',
           dbl.dblWidth * 2,
-          dbl.dblLength, 
-          dbl.dblGap, 
+          dbl.dblLength,
+          dbl.dblGap,
           dbl.dblFillColor)
       ]
     } else {
@@ -16678,9 +16691,9 @@ const lineLayer = (id, source, sourceLayer, scaleFactor, filter, lineDef, colors
       ].map((offset, i) => {
         const l = createLayer(
           id + '_' + i,
-          i === 0 ? dbl.dblLeftWidth : dbl.dblRightWidth, 
+          i === 0 ? dbl.dblLeftWidth : dbl.dblRightWidth,
           dbl.dblLength,
-          dbl.dblGap, 
+          dbl.dblGap,
           i === 0 ? dbl.dblLeftColor : dbl.dblRightColor)
 
         if (l) {
@@ -16778,7 +16791,7 @@ const textLayer = (id, source, sourceLayer, scaleFactor, filter, element, colors
       'text-ignore-placement': true,
       'text-max-width': Infinity,
       'text-justify': justify,
-      'text-anchor': `${anchor}${anchor !== 'center' ? `-${justify}` : ''}`,
+      'text-anchor': `${anchor}${justify !== 'center' ? `-${justify}` : ''}`,
       'text-pitch-alignment': 'map',
       'text-rotation-alignment': 'map'
     },
@@ -16818,7 +16831,7 @@ const patternToSvg = (colors, s) => {
   const patterns = []
 
   if (s.hatchMode) {
-    const height = s.hatchLineWidth + s.hatchDist
+    const height = s.hatchDist
     const width = 10
     const a1 = s.hatchAngle1
     const a2 = s.hatchAngle2
@@ -16848,18 +16861,18 @@ const patternToSvg = (colors, s) => {
 
   if (s.structMode) {
     const width = s.structWidth
-    const height = s.structHeight
+    const height = s.structHeight * 2
 
     patterns.push({
       id: `struct-fill-${s.symNum}`,
       'data-symbol-name': s.name,
       type: 'pattern',
       // , viewbox: `${-width / 2} ${-height / 2} ${width * 1.5} ${height * 1.5}`
-      attrs: { patternUnits: 'userSpaceOnUse', width, height },
-      children: s.elements.map((e, i) => elementToSvg(s, '', i, e, [s.structWidth * 0.5, -s.structHeight * 0.25], 0, { colors }))
+      attrs: { patternUnits: 'userSpaceOnUse', width, height: height },
+      children: s.elements.map((e, i) => elementToSvg(s, '', i, e, [s.structWidth * 0.5, -s.structHeight * 0.5], 0, { colors }))
         .concat(s.structMode === 2
-          ? s.elements.map((e, i) => elementToSvg(s, '', i, e, [s.structWidth, -s.structHeight * 0.75], 0, { colors }))
-            .concat(s.elements.map((e, i) => elementToSvg(s, '', i, e, [0, -s.structHeight * 0.75], 0, { colors })))
+          ? s.elements.map((e, i) => elementToSvg(s, '', i, e, [s.structWidth, -s.structHeight * 1.5], 0, { colors }))
+            .concat(s.elements.map((e, i) => elementToSvg(s, '', i, e, [0, -s.structHeight * 1.5], 0, { colors })))
           : [])
     })
   }
@@ -17023,10 +17036,35 @@ const areaToPath = (coordinates, fillPattern, color) => ({
   order: color.renderOrder
 })
 
-const coordsToPath = coords =>
-  coords
-    .map((c, i) => `${i === 0 || c.isFirstHolePoint() ? 'M' : 'L'} ${c[0]} ${-c[1]}`)
-    .join(' ')
+const coordsToPath = coords => {
+  if (coords == []) { return [] }
+  const cs = []
+  let cp1
+  let cp2
+  // Move to the start of the path
+  cs.push(`M ${coords[0][0]} ${-coords[0][1]}`)
+
+  for (let i = 0; i < coords.length; i++) {
+    const c = coords[i]
+
+    if (c.isFirstBezier()) {
+      cp1 = c
+    } else if (c.isSecondBezier()) {
+      cp2 = c
+    } else if (c.isFirstHolePoint()) {
+      cs.push (`M ${c[0]} ${-c[1]}`)
+    } else if (cp1 && cp2) {
+      const bezier = `C ${cp1[0]} ${-cp1[1]} ${cp2[0]} ${-cp2[1]} ${c[0]} ${-c[1]}`
+      cp1 = cp2 = undefined
+      cs.push(bezier)
+
+    } else {
+      cs.push(`L ${c[0]} ${-c[1]}`)
+    }
+  }
+
+  return cs.join(' ')
+}
 
 },{"./ocad-reader/object-types":109,"./ocad-reader/symbol-element-types":113,"./ocad-reader/symbol-types":116,"./transform-features":124,"arr-flatten":10}],124:[function(require,module,exports){
 const { PointSymbolType, LineSymbolType } = require('./ocad-reader/symbol-types')

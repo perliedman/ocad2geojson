@@ -4,9 +4,10 @@ const { LineElementType, AreaElementType, CircleElementType, DotElementType } = 
 const transformFeatures = require('./transform-features')
 const flatten = require('arr-flatten')
 const uuidv4 = require('uuid/v4')
-const DOMImplementation = global.document
-  ? global.document.DOMImplementation
+const DOMImplementation = global.DOMImplementation
+  ? global.DOMImplementation
   : new (require('xmldom').DOMImplementation)()
+const XMLSerializer = global.XMLSerializer || (require('xmldom').XMLSerializer)
 
 const defaultOptions = {
   generateSymbolElements: true,

@@ -6,6 +6,9 @@
   "scripts": {
     "test": "ava"
   },
+  "bin": {
+    "ocad-export": "./cli.js"
+  },
   "keywords": [
     "ocad",
     "geojson",

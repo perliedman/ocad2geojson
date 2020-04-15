@@ -53,7 +53,11 @@ readOcad(filePath)
 
     switch (mode) {
       case 'geojson':
-        outStream.write(JSON.stringify(ocadToGeoJson(ocadFile), null, 2))
+        const options = {
+          generateSymbolElements: argv['symbol-elements'] === undefined || argv['symbol-elements'] !== 'false'
+        }
+        const geojson = ocadToGeoJson(ocadFile, options)
+        outStream.write(JSON.stringify(geojson, null, 2))
         break
       case 'qml':
         outStream.write(new XMLSerializer().serializeToString(ocadToQml(ocadFile)))

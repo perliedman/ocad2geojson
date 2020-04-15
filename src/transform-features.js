@@ -38,11 +38,12 @@ const generateSymbolElements = (createElement, options, symbols, object, objectI
   if (!options.exportHidden && (!symbol || symbol.isHidden())) return elements
 
   switch (symbol.type) {
-    case PointSymbolType:
+    case PointSymbolType: {
       const angle = object.ang ? object.ang / 10 / 180 * Math.PI : 0
       elements = symbol.elements
         .map((e, i) => createElement(symbol, 'element', i, e, object.coordinates[0], angle, options, object, objectIndex))
       break
+    }
     case LineSymbolType:
       if (symbol.primSymElements.length > 0 && symbol.spotDist > 0 && symbol.mainLength > 0) {
         const coords = object.coordinates

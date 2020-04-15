@@ -1,5 +1,5 @@
 const { AreaSymbolType } = require('./ocad-reader/symbol-types')
-const { PointObjectType, LineObjectType, AreaObjectType, UnformattedTextObjectType, FormattedTextObjectType } = require('./ocad-reader/object-types')
+const { LineObjectType, AreaObjectType } = require('./ocad-reader/object-types')
 const { LineElementType, AreaElementType, CircleElementType, DotElementType } = require('./ocad-reader/symbol-element-types')
 const transformFeatures = require('./transform-features')
 const flatten = require('arr-flatten')
@@ -123,7 +123,7 @@ const objectToSvg = (options, symbols, object) => {
     case LineObjectType:
       node = symbol.lineWidth && lineToPath(object.coordinates, symbol.lineWidth, options.colors[symbol.lineColor], symbol.mainGap, symbol.mainLength)
       break
-    case AreaObjectType:
+    case AreaObjectType: {
       const fillColorIndex = symbol.fillOn !== undefined
         ? symbol.fillOn ? symbol.fillColor : symbol.colors[0]
         : symbol.color
@@ -143,16 +143,7 @@ const objectToSvg = (options, symbols, object) => {
       }
 
       break
-      // case UnformattedTextObjectType:
-      // case FormattedTextObjectType:
-      //   const lineHeight = symbol.fontSize / 10 * 0.352778 * 100
-      //   const anchorCoord = [object.coordinates[0][0], object.coordinates[0][1] + lineHeight]
-
-    //   node = {
-    //     type: 'Point',
-    //     coordinates: anchorCoord
-    //   }
-    //   break
+    }
     default:
       return
   }
@@ -219,7 +210,7 @@ const areaToPath = (coordinates, fillPattern, color) => ({
 })
 
 const coordsToPath = coords => {
-  if (coords == []) { return [] }
+  if (coords === []) { return [] }
   const cs = []
   let cp1
   let cp2
@@ -234,12 +225,11 @@ const coordsToPath = coords => {
     } else if (c.isSecondBezier()) {
       cp2 = c
     } else if (c.isFirstHolePoint()) {
-      cs.push (`M ${c[0]} ${-c[1]}`)
+      cs.push(`M ${c[0]} ${-c[1]}`)
     } else if (cp1 && cp2) {
       const bezier = `C ${cp1[0]} ${-cp1[1]} ${cp2[0]} ${-cp2[1]} ${c[0]} ${-c[1]}`
       cp1 = cp2 = undefined
       cs.push(bezier)
-
     } else {
       cs.push(`L ${c[0]} ${-c[1]}`)
     }

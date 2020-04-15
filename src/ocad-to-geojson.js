@@ -17,7 +17,7 @@ const defaultOptions = {
 module.exports = function (ocadFile, options) {
   options = { ...defaultOptions, ...options }
 
-  let features = transformFeatures(ocadFile, tObjectToGeoJson, createElement, options)
+  const features = transformFeatures(ocadFile, tObjectToGeoJson, createElement, options)
   const featureCollection = {
     type: 'FeatureCollection',
     features
@@ -61,7 +61,7 @@ const tObjectToGeoJson = (options, symbols, object, i) => {
       break
     case UnformattedTextObjectType:
     case FormattedTextObjectType:
-    case LineTextObjectType:
+    case LineTextObjectType: {
       const lineHeight = symbol.fontSize / 10 * 0.352778 * 100
       const anchorCoord = [object.coordinates[0][0], object.coordinates[0][1] + lineHeight]
 
@@ -70,6 +70,7 @@ const tObjectToGeoJson = (options, symbols, object, i) => {
         coordinates: anchorCoord
       }
       break
+    }
     default:
       return
   }

@@ -1,13 +1,8 @@
 const { LineSymbolType, AreaSymbolType } = require('./ocad-reader/symbol-types')
-const { PointObjectType, LineObjectType, AreaObjectType, UnformattedTextObjectType, FormattedTextObjectType } = require('./ocad-reader/object-types')
-const { LineElementType, AreaElementType, CircleElementType, DotElementType } = require('./ocad-reader/symbol-element-types')
-const transformFeatures = require('./transform-features')
-const flatten = require('arr-flatten')
 const uuidv4 = require('uuid/v4')
 const DOMImplementation = global.DOMImplementation
   ? global.DOMImplementation
   : new (require('xmldom').DOMImplementation)()
-const XMLSerializer = global.XMLSerializer || (require('xmldom').XMLSerializer)
 
 const defaultOptions = {
   generateSymbolElements: true,
@@ -175,112 +170,3 @@ const prop = (k, v) => ({
 })
 
 const toMapUnit = (scale, x) => x / (100 * 1000) * scale
-
-const objectToSvg = (options, symbols, object) => {
-  const symbol = symbols[object.sym]
-  if (!options.exportHidden && (!symbol || symbol.isHidden())) return
-
-  let node
-  switch (object.objType) {
-    case LineObjectType:
-      node = symbol.lineWidth && lineToPath(object.coordinates, symbol.lineWidth, options.colors[symbol.lineColor], symbol.mainGap, symbol.mainLength)
-      break
-    case AreaObjectType:
-      const fillColorIndex = symbol.fillOn !== undefined
-        ? symbol.fillOn ? symbol.fillColor : symbol.colors[0]
-        : symbol.color
-      const fillPattern = (symbol.hatchMode && `url(#hatch-fill-${symbol.symNum}-1)`) ||
-        (symbol.structMode && `url(#struct-fill-${symbol.symNum})`)
-      node = areaToPath(object.coordinates, fillPattern, options.colors[fillColorIndex])
-
-      if (symbol.hatchMode === 2) {
-        node = {
-          type: 'g',
-          children: [
-            node,
-            areaToPath(object.coordinates, `url(#hatch-fill-${symbol.symNum}-2)`, options.colors[fillColorIndex])
-          ],
-          order: options.colors[fillColorIndex].renderOrder
-        }
-      }
-
-      break
-      // case UnformattedTextObjectType:
-      // case FormattedTextObjectType:
-      //   const lineHeight = symbol.fontSize / 10 * 0.352778 * 100
-      //   const anchorCoord = [object.coordinates[0][0], object.coordinates[0][1] + lineHeight]
-
-    //   node = {
-    //     type: 'Point',
-    //     coordinates: anchorCoord
-    //   }
-    //   break
-    default:
-      return
-  }
-
-  if (node) {
-    node.geometry = { coordinates: object.coordinates }
-    node.properties = { sym: object.sym }
-  }
-
-  return node
-}
-
-const elementToSvg = (symbol, name, index, element, c, angle, options) => {
-  let node
-  const rotatedCoords = angle ? element.coords.map(lc => lc.rotate(angle)) : element.coords
-  const translatedCoords = rotatedCoords.map(lc => lc.add(c))
-
-  switch (element.type) {
-    case LineElementType:
-      node = lineToPath(translatedCoords, element.lineWidth, options.colors[element.color], element.mainGap, element.mainLength)
-      break
-    case AreaElementType:
-      node = areaToPath(translatedCoords, null, options.colors[element.color])
-      break
-    case CircleElementType:
-    case DotElementType:
-      node = {
-        type: 'circle',
-        attrs: {
-          cx: c[0],
-          cy: -c[1],
-          r: element.diameter / 2
-        },
-        order: options.colors[element.color].renderOrder
-      }
-
-      node.attrs[element.type === CircleElementType ? 'stroke' : 'fill'] = options.colors[element.color].rgb
-      if (element.type === CircleElementType) {
-        node.attrs['stroke-width'] = element.lineWidth
-      }
-
-      break
-  }
-
-  return node
-}
-
-const lineToPath = (coordinates, width, color, baseMainGap, baseMainLength) => ({
-  type: 'path',
-  attrs: {
-    d: coordsToPath(coordinates),
-    style: `stroke: ${color.rgb}; stroke-width: ${width}; ${baseMainGap && baseMainLength ? `stroke-dasharray: ${baseMainLength} ${baseMainGap};` : ''}`
-  },
-  order: color.renderOrder
-})
-
-const areaToPath = (coordinates, fillPattern, color) => ({
-  type: 'path',
-  attrs: {
-    d: coordsToPath(coordinates),
-    style: `fill: ${fillPattern || color.rgb};`
-  },
-  order: color.renderOrder
-})
-
-const coordsToPath = coords =>
-  coords
-    .map((c, i) => `${i === 0 || c.isFirstHolePoint() ? 'M' : 'L'} ${c[0]} ${-c[1]}`)
-    .join(' ')

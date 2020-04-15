@@ -35,34 +35,34 @@ const parseOcadBuffer = async (buffer, options) => new Promise((resolve, reject)
     throw new Error(`Unsupport OCAD file version (${header.version}), only >= 10 supported for now.`)
   }
 
-  let symbols = []
+  const symbols = []
   let symbolIndexOffset = header.symbolIndexBlock
   while (symbolIndexOffset) {
-    let symbolIndex = new SymbolIndex(buffer, symbolIndexOffset, header.version, options)
+    const symbolIndex = new SymbolIndex(buffer, symbolIndexOffset, header.version, options)
     Array.prototype.push.apply(symbols, symbolIndex.parseSymbols())
     warnings = warnings.concat(symbolIndex.warnings)
 
     symbolIndexOffset = symbolIndex.nextSymbolIndexBlock
   }
 
-  let objects = []
+  const objects = []
   let objectIndexOffset = header.objectIndexBlock
   while (objectIndexOffset) {
-    let objectIndex = new ObjectIndex(buffer, objectIndexOffset, header.version)
+    const objectIndex = new ObjectIndex(buffer, objectIndexOffset, header.version)
     Array.prototype.push.apply(objects, objectIndex.parseObjects())
 
     objectIndexOffset = objectIndex.nextObjectIndexBlock
   }
 
-  let parameterStrings = {}
+  const parameterStrings = {}
   let stringIndexOffset = header.stringIndexBlock
   while (stringIndexOffset) {
-    let stringIndex = new StringIndex(buffer, stringIndexOffset)
+    const stringIndex = new StringIndex(buffer, stringIndexOffset)
     const strings = stringIndex.getStrings()
 
     Object.keys(strings).reduce((a, recType) => {
       const typeStrings = strings[recType]
-      let concatStrings = a[recType] || []
+      const concatStrings = a[recType] || []
       a[recType] = concatStrings.concat(typeStrings.map(s => s.values))
       return a
     }, parameterStrings)

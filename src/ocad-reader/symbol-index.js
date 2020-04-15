@@ -30,20 +30,20 @@ module.exports = class SymbolIndex extends Block {
     if (!offset) return
 
     const type = this.buffer.readInt8(offset + 8)
-    let cls
+    let Cls
     try {
       switch (type) {
         case PointSymbolType:
-          cls = PointSymbol[this.version]
+          Cls = PointSymbol[this.version]
           break
         case LineSymbolType:
-          cls = LineSymbol[this.version]
+          Cls = LineSymbol[this.version]
           break
         case AreaSymbolType:
-          cls = AreaSymbol[this.version]
+          Cls = AreaSymbol[this.version]
           break
         case TextSymbolType:
-          cls = TextSymbol[this.version]
+          Cls = TextSymbol[this.version]
           break
         case RectangleSymbolType:
           this.warnings.push(`Ignoring rectangle symbol ${this.buffer.readInt32LE(offset + 4)}.`)
@@ -52,7 +52,7 @@ module.exports = class SymbolIndex extends Block {
           throw new Error(`Unknown symbol type ${type}`)
       }
 
-      const symbol = new cls(this.buffer, offset)
+      const symbol = new Cls(this.buffer, offset)
       this.warnings = this.warnings.concat(symbol.warnings)
       return symbol
     } catch (e) {

@@ -1,6 +1,6 @@
 const { PointSymbolType, LineSymbolType, AreaSymbolType, TextSymbolType, DblFillColorOn } = require('./ocad-reader/symbol-types')
 const { LineElementType, AreaElementType, CircleElementType, DotElementType } = require('./ocad-reader/symbol-element-types')
-const { HorizontalAlignCenter, HorizontalAlignRight, VerticalAlignBottom, VerticalAlignMiddle, VerticalAlignTop } = require('./ocad-reader/text-symbol')
+const { HorizontalAlignCenter, HorizontalAlignRight, VerticalAlignMiddle } = require('./ocad-reader/text-symbol')
 
 module.exports = function ocadToMapboxGlStyle (ocadFile, options) {
   options = { scaleFactor: ocadFile.getCrs().scale / 15000, ...options }
@@ -244,7 +244,7 @@ const circleLayer = (id, source, sourceLayer, scaleFactor, filter, element, colo
     layer.paint['circle-stroke-color'] = color
     layer.paint['circle-stroke-width'] = expFunc(baseWidth)
   } else {
-      // DotElementType
+    // DotElementType
     layer.paint['circle-color'] = color
   }
 
@@ -297,9 +297,9 @@ const textLayer = (id, source, sourceLayer, scaleFactor, filter, element, colors
 }
 
 const expFunc = base => ({
-  'type': 'exponential',
-  'base': 2,
-  'stops': [
+  type: 'exponential',
+  base: 2,
+  stops: [
     [0, base * Math.pow(2, (0 - 15))],
     [24, base * Math.pow(2, (24 - 15))]
   ]

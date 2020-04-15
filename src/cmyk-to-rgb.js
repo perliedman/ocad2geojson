@@ -8,10 +8,10 @@ module.exports = function convertToRgb (src) {
   const toFraction = 1 / 100
   const rgb = new Uint8ClampedArray(3)
 
-  let c = src[0] * toFraction
-  let m = src[1] * toFraction
-  let y = src[2] * toFraction
-  let k = src[3] * toFraction
+  const c = src[0] * toFraction
+  const m = src[1] * toFraction
+  const y = src[2] * toFraction
+  const k = src[3] * toFraction
 
   rgb[0] = 255 +
     c * (-4.387332384609988 * c + 54.48615194189176 * m +

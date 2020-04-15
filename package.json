@@ -30,7 +30,7 @@
     "@turf/meta": "^6.0.2",
     "bezier-js": "^2.4.0",
     "geojson-vt": "^3.2.0",
-    "minimist": "^1.2.0",
+    "minimist": "^1.2.5",
     "mkdirp": "^0.5.1",
     "reproject": "^1.2.3",
     "vt-pbf": "^3.1.1"

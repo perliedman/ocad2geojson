@@ -4,7 +4,8 @@ const { toWgs84 } = require('reproject')
 const geojsonvt = require('geojson-vt')
 const vtpbf = require('vt-pbf')
 const argv = require('minimist')(process.argv.slice(2));
-const { readOcad, ocadToGeoJson, ocadToMapboxGlStyle } = require('./')
+const { readOcad, ocadToGeoJson, ocadToMapboxGlStyle, ocadToQml } = require('./')
+const { XMLSerializer } = require('xmldom')
 const filePath = argv._[0]
 var outStream
 
@@ -31,6 +32,8 @@ readOcad(filePath)
 
     if (argv.p) {
       mode = 'params'
+    } if (argv.qml) {
+      mode = 'qml'
     } else if (argv.s) {
       mode = 'symbols'
       if (argv.s !== true) {
@@ -51,6 +54,9 @@ readOcad(filePath)
     switch (mode) {
       case 'geojson':
         outStream.write(JSON.stringify(ocadToGeoJson(ocadFile), null, 2))
+        break
+      case 'qml':
+        outStream.write(new XMLSerializer().serializeToString(ocadToQml(ocadFile)))
         break
       case 'params':
         outStream.write(JSON.stringify(ocadFile.parameterStrings, null, 2))

@@ -6,6 +6,9 @@
   "scripts": {
     "test": "ava"
   },
+  "bin": {
+    "ocad-export": "./cli.js"
+  },
   "keywords": [
     "ocad",
     "geojson",
@@ -33,6 +36,8 @@
     "minimist": "^1.2.5",
     "mkdirp": "^0.5.1",
     "reproject": "^1.2.3",
-    "vt-pbf": "^3.1.1"
+    "uuid": "^3.4.0",
+    "vt-pbf": "^3.1.1",
+    "xmldom": "^0.2.1"
   }
 }

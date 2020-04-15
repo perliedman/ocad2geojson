@@ -7,6 +7,7 @@ Export [OCAD](https://www.ocad.com/) files to open formats:
 * [Mapbox Style Spec](https://www.mapbox.com/mapbox-gl-js/style-spec/)
 * SVG
 * PDF
+* [QGIS](https://qgis.org/en/site/) / QML (very rough and incomplete)
 
 ![Example Map Output](example-map-2.png)
 ![Example Map Output](example-map-3.png)
@@ -38,6 +39,37 @@ Have you built something with this module, or want to help out improving it? I'd
 
 ## Usage
 
+### Command line
+
+Installing the `ocad2geojson` package will also install the binary `ocad-export` in
+your path. The state of this tool is a bit ad hoc, it will hopefully be reworked
+into something more general/easy to use at some point in the future.
+
+It can be used to get data out of an OCAD file in various formats:
+
+```sh
+ocad-export [-p|-s|--qml|--vector-tiles] [--symbol-elements] [-v] [-o PATH] OCAD_FILE_PATH
+```
+
+The different export modes:
+
+* Default is GeoJSON: will output a GeoJSON `FeatureCollection` of all visible
+features in the OCAD file, with extra features added for symbol elements unless
+`--symbol-elements=false` is specified
+* `-p` exports the OCAD parameter strings in the file
+* `-s` exports symbol definitions
+* `-qml` exports in QGIS's QML style format; together with a GeoJSON export (with `--symbol-elements=false`), you can use this to load the OCAD map into QGIS
+* `--vector-tiles` exports the objects of the file into [Mapbox Vector Tiles](https://docs.mapbox.com/vector-tiles/specification/); the `-o` option should be used to specify a *directory* where the tiles and their Mapbox styling JSON will be saved
+
+Additional options:
+
+* `--symbol-elements=[true|false]` to control if additional vector features should
+be added for symbol elements along lines; default is `true`. These additional features are required for Mapbox styling and SVG exports to work, but should be disabled for use with QGIS/QML
+* `-v` for verbose file information to be output
+
+(The code for `ocad-export` is found in [`cli.js`]())
+### API
+
 ```js
 const { readOcad, ocadToGeoJson, ocadToMapboxGlStyle } = require('../')
 
@@ -54,9 +86,6 @@ The argument to `readOcad` can either be a file path (string) or a `Buffer` obje
 
 I will try to write some docs, in the meantime, check out the [demo directory](demo) for some examples of how to use this module.
 
-## Command line
-
-There is also a command line utility in `cli.js` which you can look at and use, but docs will have to wait.
 
 ## License
 

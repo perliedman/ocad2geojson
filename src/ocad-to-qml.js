@@ -1,8 +1,13 @@
 const { LineSymbolType, AreaSymbolType } = require('./ocad-reader/symbol-types')
+const { patternToSvg, createSvgNode } = require('./ocad-to-svg')
+const flatten = require('arr-flatten')
 const uuidv4 = require('uuid/v4')
 const DOMImplementation = global.DOMImplementation
   ? global.DOMImplementation
   : new (require('xmldom').DOMImplementation)()
+const XMLSerializer = global.XMLSerializer
+  ? global.XMLSerializer
+  : require('xmldom').XMLSerializer
 
 const defaultOptions = {
   generateSymbolElements: true,
@@ -139,7 +144,31 @@ const symbolToQml = (scale, colors, sym) => {
     }
     case AreaSymbolType: {
       const fillColor = colors[sym.fillColor]
-      if (fillColor) {
+      if (fillColor && (sym.hatchMode || sym.structMode)) {
+        const patterns = patternToSvg(colors, sym)
+        const { width, height } = patterns[0].attrs
+        const svgDoc = DOMImplementation.createDocument('http://www.w3.org/2000/svg', 'svg', null)
+        svgDoc.firstChild.setAttribute('width', width)
+        svgDoc.firstChild.setAttribute('height', height)
+        flatten(patterns.map(p => p.children)).forEach(c => svgDoc.firstChild.appendChild(createSvgNode(svgDoc, c)))
+        const patternBase64 = 'base64:' + Buffer.from(new XMLSerializer().serializeToString(svgDoc)).toString('base64')
+
+        children = [{
+          type: 'layer',
+          attrs: {
+            class: 'SVGFill',
+            pass: 1000 - fillColor.renderOrder,
+            enabled: 1,
+            locked: 0
+          },
+          children: [
+            prop('pattern_width_unit', 'MapUnit'),
+            prop('outline_style', 'no'),
+            prop('svgFile', patternBase64),
+            prop('width', toMapUnit(scale, 10))
+          ]
+        }]
+      } else if (fillColor) {
         children = [{
           type: 'layer',
           attrs: {

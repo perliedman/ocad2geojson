@@ -143,11 +143,10 @@ const symbolToQml = (scale, colors, sym) => {
     }
     case AreaSymbolType: {
       const fillColor = colors[sym.fillColor]
-      if (fillColor && (sym.hatchMode || sym.structMode)) {
-        const patterns = patternToSvg(colors, sym)
-        children = patterns.map(p => svgPatternToFill(scale, fillColor, p))
-      } else if (fillColor) {
-        children = [{
+      const hasPatternFill = sym.hatchMode || sym.structMode
+      children = []
+      if (fillColor && (!hasPatternFill || sym.fillOn)) {
+        children.push({
           type: 'layer',
           attrs: {
             class: 'SimpleFill',
@@ -160,7 +159,11 @@ const symbolToQml = (scale, colors, sym) => {
             prop('outline_style', 'no'),
             prop('style', 'solid')
           ]
-        }]
+        })
+      }
+      if (fillColor && hasPatternFill) {
+        const patterns = patternToSvg(colors, sym)
+        children = children.concat(patterns.map(p => svgPatternToFill(scale, fillColor, p)))
       }
       break
     }

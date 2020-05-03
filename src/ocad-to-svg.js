@@ -43,7 +43,7 @@ const patternToSvg = (colors, s) => {
 
   if (s.structMode) {
     const width = s.structWidth
-    const height = s.structHeight * 2
+    const height = s.structHeight * (s.structMode === 2 ? 2 : 1)
 
     patterns.push({
       id: `struct-fill-${s.symNum}`,
@@ -58,8 +58,6 @@ const patternToSvg = (colors, s) => {
           : [])
     })
   }
-
-  console.log(s.symNum, s.structMode, s.structDraw, s.structWidth, s.structHeight, s.structAngle, s.structRes)
 
   return patterns
 }

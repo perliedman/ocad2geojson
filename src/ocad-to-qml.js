@@ -151,7 +151,9 @@ const symbolToQml = (scale, colors, sym) => {
         svgDoc.firstChild.setAttribute('width', width)
         svgDoc.firstChild.setAttribute('height', height)
         flatten(patterns.map(p => p.children)).forEach(c => svgDoc.firstChild.appendChild(createSvgNode(svgDoc, c)))
-        const patternBase64 = 'base64:' + Buffer.from(new XMLSerializer().serializeToString(svgDoc)).toString('base64')
+        const serializedSvg = new XMLSerializer().serializeToString(svgDoc)
+        console.log(sym.symNum, patterns.length, serializedSvg)
+        const patternBase64 = 'base64:' + Buffer.from(serializedSvg).toString('base64')
 
         children = [{
           type: 'layer',
@@ -165,7 +167,36 @@ const symbolToQml = (scale, colors, sym) => {
             prop('pattern_width_unit', 'MapUnit'),
             prop('outline_style', 'no'),
             prop('svgFile', patternBase64),
-            prop('width', toMapUnit(scale, 10))
+            prop('width', toMapUnit(scale, width)),
+            prop('height', toMapUnit(scale, height)),
+            {
+              type: 'symbol',
+              attrs: {
+                clip_to_extent: 1,
+                alpha: 1,
+                type: 'line',
+                force_rhr: 0
+              },
+              children: [
+                {
+                  type: 'layer',
+                  attrs: {
+                    class: 'SimpleLine',
+                    locked: 0,
+                    enabled: 1,
+                    pass: 0
+                  },
+                  children: [
+                    prop('line_color', '0,0,0,0'),
+                    prop('line_style', 'solid'),
+                    prop('line_width', 0),
+                    prop('line_width_unit', 'MapUnit'),
+                    prop('joinstyle', 'bevel'),
+                    prop('capstyle', 'flat')
+                  ]
+                }
+              ]
+            }
           ]
         }]
       } else if (fillColor) {

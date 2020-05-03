@@ -50,7 +50,7 @@ const patternToSvg = (colors, s) => {
       'data-symbol-name': s.name,
       type: 'pattern',
       // , viewbox: `${-width / 2} ${-height / 2} ${width * 1.5} ${height * 1.5}`
-      attrs: { patternUnits: 'userSpaceOnUse', width, height: height },
+      attrs: { patternUnits: 'userSpaceOnUse', patternTransform: `rotate(${s.structAngle / 10})`, width, height: height },
       children: s.elements.map((e, i) => elementToSvg(s, '', i, e, [s.structWidth * 0.5, -s.structHeight * 0.5], 0, { colors }))
         .concat(s.structMode === 2
           ? s.elements.map((e, i) => elementToSvg(s, '', i, e, [s.structWidth, -s.structHeight * 1.5], 0, { colors }))
@@ -58,6 +58,8 @@ const patternToSvg = (colors, s) => {
           : [])
     })
   }
+
+  console.log(s.symNum, s.structMode, s.structDraw, s.structWidth, s.structHeight, s.structAngle, s.structRes)
 
   return patterns
 }

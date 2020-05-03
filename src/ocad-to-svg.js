@@ -130,17 +130,21 @@ const objectToSvg = (options, symbols, object) => {
         : symbol.color
       const fillPattern = (symbol.hatchMode && `url(#hatch-fill-${symbol.symNum}-1)`) ||
         (symbol.structMode && `url(#struct-fill-${symbol.symNum})`)
-      node = areaToPath(object.coordinates, fillPattern, options.colors[fillColorIndex])
+      node = {
+        type: 'g',
+        children: [
+        ],
+        order: options.colors[fillColorIndex].renderOrder
+      }
+
+      if (fillColorIndex && symbol.fillOn) {
+        node.children.push(areaToPath(object.coordinates, null, options.colors[fillColorIndex]))
+      }
+
+      node.children.push(areaToPath(object.coordinates, fillPattern, options.colors[fillColorIndex]))
 
       if (symbol.hatchMode === 2) {
-        node = {
-          type: 'g',
-          children: [
-            node,
-            areaToPath(object.coordinates, `url(#hatch-fill-${symbol.symNum}-2)`, options.colors[fillColorIndex])
-          ],
-          order: options.colors[fillColorIndex].renderOrder
-        }
+        node.children.push(areaToPath(object.coordinates, `url(#hatch-fill-${symbol.symNum}-2)`, options.colors[fillColorIndex]))
       }
 
       break

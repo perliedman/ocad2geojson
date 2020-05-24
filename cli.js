@@ -23,7 +23,7 @@ const deleteBuffer = x => {
 
 readOcad(filePath)
   .then(ocadFile => {
-    if (argv.v) {
+    if (argv.v || argv.info) {
       writeInfo(filePath, ocadFile, process.stderr)
     }
 
@@ -41,6 +41,8 @@ readOcad(filePath)
         const t = Math.trunc(n)
         symNum = (t + (n - t) / 100) * 1000
       }
+    } else if (argv.info) {
+      mode = 'info'
     } else if (argv['vector-tiles']) {
       mode = 'vectortiles'
     }
@@ -102,6 +104,8 @@ readOcad(filePath)
           sourceLayer: 'ocad'
         }), null, 2))
         break
+      case 'info':
+        break
       default:
         console.error(`Unknown mode ${mode}.`)
         process.exit(1)
@@ -118,14 +122,15 @@ const writeInfo = (path, map, stream) => {
     `Total number objects: ${map.objects.length}`,
   ]
 
-  if (map.parameterStrings[1039]) {
-    const scalePar = map.parameterStrings[1039][0]
-    infos = infos.concat([
-      `Scale: 1:${scalePar.m}`,
-      `Northing: ${scalePar.y}`,
-      `Easting: ${scalePar.x}`
-    ])
-  }
+  const crs = map.getCrs()
+  infos = infos.concat([
+    `Scale: 1:${crs.scale}`,
+    `Northing: ${crs.northing}`,
+    `Easting: ${crs.easting}`,
+    `Grid ID: ${crs.gridId}`,
+    `CRS Name: ${crs.name}`,
+    `CRS identifier: ${crs.catalog}:${crs.code}`
+  ])
 
   stream.write(infos.join('\n'))
   stream.write('\n')

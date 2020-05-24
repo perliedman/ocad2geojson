@@ -6,6 +6,7 @@ const FileHeader = require('./file-header')
 const SymbolIndex = require('./symbol-index')
 const ObjectIndex = require('./object-index')
 const StringIndex = require('./string-index')
+const crsGrids = require('./crs-grids')
 
 module.exports = async (path, options) => {
   options = options || {}
@@ -114,16 +115,24 @@ class OcadFile {
     const scalePar = this.parameterStrings['1039']
       ? this.parameterStrings['1039'][0]
       : { x: 0, y: 0, m: 1 }
-    let { x, y, m } = scalePar
+    let { x: easting, y: northing, m: scale, i: gridId } = scalePar
 
-    x = Number(x)
-    y = Number(y)
-    m = Number(m)
+    easting = Number(easting)
+    northing = Number(northing)
+    scale = Number(scale)
+    gridId = Number(gridId)
+
+    const grid = crsGrids.find(g => g[0] === gridId)
+    const [, code, catalog, name] = grid || [gridId, 0, null, null]
 
     return {
-      easting: x,
-      northing: y,
-      scale: m
+      easting,
+      northing,
+      scale,
+      gridId,
+      code,
+      catalog,
+      name
     }
   }
 }

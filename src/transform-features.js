@@ -45,7 +45,7 @@ const generateSymbolElements = (createElement, options, symbols, object, objectI
       break
     }
     case LineSymbolType:
-      if (symbol.primSymElements.length > 0 && symbol.spotDist > 0 && symbol.mainLength > 0) {
+      if (symbol.primSymElements.length > 0 && symbol.mainLength > 0) {
         const coords = object.coordinates
         const endLength = symbol.endLength
         const mainLength = symbol.mainLength

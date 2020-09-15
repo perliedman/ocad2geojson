@@ -235,7 +235,7 @@ function formatNum(num, digits) {
 	return Math.round(num * pow) / pow;
 }
 
-},{"@turf/bbox":7,"@turf/meta":9,"b64-to-blob":15,"blob-to-buffer":23,"file-saver":56,"geojson-vt":57,"jszip":72,"ocad2geojson":100,"reproject":155,"shp-write":157,"vt-pbf":211}],2:[function(require,module,exports){
+},{"@turf/bbox":7,"@turf/meta":9,"b64-to-blob":15,"blob-to-buffer":23,"file-saver":56,"geojson-vt":57,"jszip":72,"ocad2geojson":104,"reproject":161,"shp-write":163,"vt-pbf":220}],2:[function(require,module,exports){
 'use strict';
 
 module.exports = Point;
@@ -3918,7 +3918,7 @@ function hasOwnProperty(obj, prop) {
 }
 
 }).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./support/isBuffer":13,"_process":143,"inherits":12}],15:[function(require,module,exports){
+},{"./support/isBuffer":13,"_process":149,"inherits":12}],15:[function(require,module,exports){
 (function(root, globalName, factory) {
   if (typeof define === 'function' && define.amd) {
     // AMD:
@@ -6615,7 +6615,7 @@ function simpleWrite(buf) {
 function simpleEnd(buf) {
   return buf && buf.length ? this.write(buf) : '';
 }
-},{"safe-buffer":156}],27:[function(require,module,exports){
+},{"safe-buffer":162}],27:[function(require,module,exports){
 /*!
  * The buffer module from node.js, for the browser.
  *
@@ -11038,7 +11038,7 @@ exports.uncompressWorker = function () {
     return new FlateWorker("Inflate", {});
 };
 
-},{"./stream/GenericWorker":90,"./utils":94,"pako":125}],70:[function(require,module,exports){
+},{"./stream/GenericWorker":90,"./utils":94,"pako":131}],70:[function(require,module,exports){
 'use strict';
 
 var utils = require('../utils');
@@ -12355,7 +12355,7 @@ module.exports = out;
  */
 module.exports = require("stream");
 
-},{"stream":207}],79:[function(require,module,exports){
+},{"stream":213}],79:[function(require,module,exports){
 'use strict';
 var DataReader = require('./DataReader');
 var utils = require('../utils');
@@ -15086,6 +15086,2365 @@ function race(iterable) {
 }
 
 },{"immediate":59}],99:[function(require,module,exports){
+function DOMParser(options){
+	this.options = options ||{locator:{}};
+	
+}
+
+DOMParser.prototype.parseFromString = function(source,mimeType){
+	var options = this.options;
+	var sax =  new XMLReader();
+	var domBuilder = options.domBuilder || new DOMHandler();//contentHandler and LexicalHandler
+	var errorHandler = options.errorHandler;
+	var locator = options.locator;
+	var defaultNSMap = options.xmlns||{};
+	var isHTML = /\/x?html?$/.test(mimeType);//mimeType.toLowerCase().indexOf('html') > -1;
+  	var entityMap = isHTML?htmlEntity.entityMap:{'lt':'<','gt':'>','amp':'&','quot':'"','apos':"'"};
+	if(locator){
+		domBuilder.setDocumentLocator(locator)
+	}
+	
+	sax.errorHandler = buildErrorHandler(errorHandler,domBuilder,locator);
+	sax.domBuilder = options.domBuilder || domBuilder;
+	if(isHTML){
+		defaultNSMap['']= 'http://www.w3.org/1999/xhtml';
+	}
+	defaultNSMap.xml = defaultNSMap.xml || 'http://www.w3.org/XML/1998/namespace';
+	if(source){
+		sax.parse(source,defaultNSMap,entityMap);
+	}else{
+		sax.errorHandler.error("invalid doc source");
+	}
+	return domBuilder.doc;
+}
+function buildErrorHandler(errorImpl,domBuilder,locator){
+	if(!errorImpl){
+		if(domBuilder instanceof DOMHandler){
+			return domBuilder;
+		}
+		errorImpl = domBuilder ;
+	}
+	var errorHandler = {}
+	var isCallback = errorImpl instanceof Function;
+	locator = locator||{}
+	function build(key){
+		var fn = errorImpl[key];
+		if(!fn && isCallback){
+			fn = errorImpl.length == 2?function(msg){errorImpl(key,msg)}:errorImpl;
+		}
+		errorHandler[key] = fn && function(msg){
+			fn('[xmldom '+key+']\t'+msg+_locator(locator));
+		}||function(){};
+	}
+	build('warning');
+	build('error');
+	build('fatalError');
+	return errorHandler;
+}
+
+//console.log('#\n\n\n\n\n\n\n####')
+/**
+ * +ContentHandler+ErrorHandler
+ * +LexicalHandler+EntityResolver2
+ * -DeclHandler-DTDHandler 
+ * 
+ * DefaultHandler:EntityResolver, DTDHandler, ContentHandler, ErrorHandler
+ * DefaultHandler2:DefaultHandler,LexicalHandler, DeclHandler, EntityResolver2
+ * @link http://www.saxproject.org/apidoc/org/xml/sax/helpers/DefaultHandler.html
+ */
+function DOMHandler() {
+    this.cdata = false;
+}
+function position(locator,node){
+	node.lineNumber = locator.lineNumber;
+	node.columnNumber = locator.columnNumber;
+}
+/**
+ * @see org.xml.sax.ContentHandler#startDocument
+ * @link http://www.saxproject.org/apidoc/org/xml/sax/ContentHandler.html
+ */ 
+DOMHandler.prototype = {
+	startDocument : function() {
+    	this.doc = new DOMImplementation().createDocument(null, null, null);
+    	if (this.locator) {
+        	this.doc.documentURI = this.locator.systemId;
+    	}
+	},
+	startElement:function(namespaceURI, localName, qName, attrs) {
+		var doc = this.doc;
+	    var el = doc.createElementNS(namespaceURI, qName||localName);
+	    var len = attrs.length;
+	    appendElement(this, el);
+	    this.currentElement = el;
+	    
+		this.locator && position(this.locator,el)
+	    for (var i = 0 ; i < len; i++) {
+	        var namespaceURI = attrs.getURI(i);
+	        var value = attrs.getValue(i);
+	        var qName = attrs.getQName(i);
+			var attr = doc.createAttributeNS(namespaceURI, qName);
+			this.locator &&position(attrs.getLocator(i),attr);
+			attr.value = attr.nodeValue = value;
+			el.setAttributeNode(attr)
+	    }
+	},
+	endElement:function(namespaceURI, localName, qName) {
+		var current = this.currentElement
+		var tagName = current.tagName;
+		this.currentElement = current.parentNode;
+	},
+	startPrefixMapping:function(prefix, uri) {
+	},
+	endPrefixMapping:function(prefix) {
+	},
+	processingInstruction:function(target, data) {
+	    var ins = this.doc.createProcessingInstruction(target, data);
+	    this.locator && position(this.locator,ins)
+	    appendElement(this, ins);
+	},
+	ignorableWhitespace:function(ch, start, length) {
+	},
+	characters:function(chars, start, length) {
+		chars = _toString.apply(this,arguments)
+		//console.log(chars)
+		if(chars){
+			if (this.cdata) {
+				var charNode = this.doc.createCDATASection(chars);
+			} else {
+				var charNode = this.doc.createTextNode(chars);
+			}
+			if(this.currentElement){
+				this.currentElement.appendChild(charNode);
+			}else if(/^\s*$/.test(chars)){
+				this.doc.appendChild(charNode);
+				//process xml
+			}
+			this.locator && position(this.locator,charNode)
+		}
+	},
+	skippedEntity:function(name) {
+	},
+	endDocument:function() {
+		this.doc.normalize();
+	},
+	setDocumentLocator:function (locator) {
+	    if(this.locator = locator){// && !('lineNumber' in locator)){
+	    	locator.lineNumber = 0;
+	    }
+	},
+	//LexicalHandler
+	comment:function(chars, start, length) {
+		chars = _toString.apply(this,arguments)
+	    var comm = this.doc.createComment(chars);
+	    this.locator && position(this.locator,comm)
+	    appendElement(this, comm);
+	},
+	
+	startCDATA:function() {
+	    //used in characters() methods
+	    this.cdata = true;
+	},
+	endCDATA:function() {
+	    this.cdata = false;
+	},
+	
+	startDTD:function(name, publicId, systemId) {
+		var impl = this.doc.implementation;
+	    if (impl && impl.createDocumentType) {
+	        var dt = impl.createDocumentType(name, publicId, systemId);
+	        this.locator && position(this.locator,dt)
+	        appendElement(this, dt);
+	    }
+	},
+	/**
+	 * @see org.xml.sax.ErrorHandler
+	 * @link http://www.saxproject.org/apidoc/org/xml/sax/ErrorHandler.html
+	 */
+	warning:function(error) {
+		console.warn('[xmldom warning]\t'+error,_locator(this.locator));
+	},
+	error:function(error) {
+		console.error('[xmldom error]\t'+error,_locator(this.locator));
+	},
+	fatalError:function(error) {
+		console.error('[xmldom fatalError]\t'+error,_locator(this.locator));
+	    throw error;
+	}
+}
+function _locator(l){
+	if(l){
+		return '\n@'+(l.systemId ||'')+'#[line:'+l.lineNumber+',col:'+l.columnNumber+']'
+	}
+}
+function _toString(chars,start,length){
+	if(typeof chars == 'string'){
+		return chars.substr(start,length)
+	}else{//java sax connect width xmldom on rhino(what about: "? && !(chars instanceof String)")
+		if(chars.length >= start+length || start){
+			return new java.lang.String(chars,start,length)+'';
+		}
+		return chars;
+	}
+}
+
+/*
+ * @link http://www.saxproject.org/apidoc/org/xml/sax/ext/LexicalHandler.html
+ * used method of org.xml.sax.ext.LexicalHandler:
+ *  #comment(chars, start, length)
+ *  #startCDATA()
+ *  #endCDATA()
+ *  #startDTD(name, publicId, systemId)
+ *
+ *
+ * IGNORED method of org.xml.sax.ext.LexicalHandler:
+ *  #endDTD()
+ *  #startEntity(name)
+ *  #endEntity(name)
+ *
+ *
+ * @link http://www.saxproject.org/apidoc/org/xml/sax/ext/DeclHandler.html
+ * IGNORED method of org.xml.sax.ext.DeclHandler
+ * 	#attributeDecl(eName, aName, type, mode, value)
+ *  #elementDecl(name, model)
+ *  #externalEntityDecl(name, publicId, systemId)
+ *  #internalEntityDecl(name, value)
+ * @link http://www.saxproject.org/apidoc/org/xml/sax/ext/EntityResolver2.html
+ * IGNORED method of org.xml.sax.EntityResolver2
+ *  #resolveEntity(String name,String publicId,String baseURI,String systemId)
+ *  #resolveEntity(publicId, systemId)
+ *  #getExternalSubset(name, baseURI)
+ * @link http://www.saxproject.org/apidoc/org/xml/sax/DTDHandler.html
+ * IGNORED method of org.xml.sax.DTDHandler
+ *  #notationDecl(name, publicId, systemId) {};
+ *  #unparsedEntityDecl(name, publicId, systemId, notationName) {};
+ */
+"endDTD,startEntity,endEntity,attributeDecl,elementDecl,externalEntityDecl,internalEntityDecl,resolveEntity,getExternalSubset,notationDecl,unparsedEntityDecl".replace(/\w+/g,function(key){
+	DOMHandler.prototype[key] = function(){return null}
+})
+
+/* Private static helpers treated below as private instance methods, so don't need to add these to the public API; we might use a Relator to also get rid of non-standard public properties */
+function appendElement (hander,node) {
+    if (!hander.currentElement) {
+        hander.doc.appendChild(node);
+    } else {
+        hander.currentElement.appendChild(node);
+    }
+}//appendChild and setAttributeNS are preformance key
+
+//if(typeof require == 'function'){
+var htmlEntity = require('./entities');
+var XMLReader = require('./sax').XMLReader;
+var DOMImplementation = exports.DOMImplementation = require('./dom').DOMImplementation;
+exports.XMLSerializer = require('./dom').XMLSerializer ;
+exports.DOMParser = DOMParser;
+//}
+
+},{"./dom":100,"./entities":101,"./sax":102}],100:[function(require,module,exports){
+/*
+ * DOM Level 2
+ * Object DOMException
+ * @see http://www.w3.org/TR/REC-DOM-Level-1/ecma-script-language-binding.html
+ * @see http://www.w3.org/TR/2000/REC-DOM-Level-2-Core-20001113/ecma-script-binding.html
+ */
+
+function copy(src,dest){
+	for(var p in src){
+		dest[p] = src[p];
+	}
+}
+/**
+^\w+\.prototype\.([_\w]+)\s*=\s*((?:.*\{\s*?[\r\n][\s\S]*?^})|\S.*?(?=[;\r\n]));?
+^\w+\.prototype\.([_\w]+)\s*=\s*(\S.*?(?=[;\r\n]));?
+ */
+function _extends(Class,Super){
+	var pt = Class.prototype;
+	if(!(pt instanceof Super)){
+		function t(){};
+		t.prototype = Super.prototype;
+		t = new t();
+		copy(pt,t);
+		Class.prototype = pt = t;
+	}
+	if(pt.constructor != Class){
+		if(typeof Class != 'function'){
+			console.error("unknow Class:"+Class)
+		}
+		pt.constructor = Class
+	}
+}
+var htmlns = 'http://www.w3.org/1999/xhtml' ;
+// Node Types
+var NodeType = {}
+var ELEMENT_NODE                = NodeType.ELEMENT_NODE                = 1;
+var ATTRIBUTE_NODE              = NodeType.ATTRIBUTE_NODE              = 2;
+var TEXT_NODE                   = NodeType.TEXT_NODE                   = 3;
+var CDATA_SECTION_NODE          = NodeType.CDATA_SECTION_NODE          = 4;
+var ENTITY_REFERENCE_NODE       = NodeType.ENTITY_REFERENCE_NODE       = 5;
+var ENTITY_NODE                 = NodeType.ENTITY_NODE                 = 6;
+var PROCESSING_INSTRUCTION_NODE = NodeType.PROCESSING_INSTRUCTION_NODE = 7;
+var COMMENT_NODE                = NodeType.COMMENT_NODE                = 8;
+var DOCUMENT_NODE               = NodeType.DOCUMENT_NODE               = 9;
+var DOCUMENT_TYPE_NODE          = NodeType.DOCUMENT_TYPE_NODE          = 10;
+var DOCUMENT_FRAGMENT_NODE      = NodeType.DOCUMENT_FRAGMENT_NODE      = 11;
+var NOTATION_NODE               = NodeType.NOTATION_NODE               = 12;
+
+// ExceptionCode
+var ExceptionCode = {}
+var ExceptionMessage = {};
+var INDEX_SIZE_ERR              = ExceptionCode.INDEX_SIZE_ERR              = ((ExceptionMessage[1]="Index size error"),1);
+var DOMSTRING_SIZE_ERR          = ExceptionCode.DOMSTRING_SIZE_ERR          = ((ExceptionMessage[2]="DOMString size error"),2);
+var HIERARCHY_REQUEST_ERR       = ExceptionCode.HIERARCHY_REQUEST_ERR       = ((ExceptionMessage[3]="Hierarchy request error"),3);
+var WRONG_DOCUMENT_ERR          = ExceptionCode.WRONG_DOCUMENT_ERR          = ((ExceptionMessage[4]="Wrong document"),4);
+var INVALID_CHARACTER_ERR       = ExceptionCode.INVALID_CHARACTER_ERR       = ((ExceptionMessage[5]="Invalid character"),5);
+var NO_DATA_ALLOWED_ERR         = ExceptionCode.NO_DATA_ALLOWED_ERR         = ((ExceptionMessage[6]="No data allowed"),6);
+var NO_MODIFICATION_ALLOWED_ERR = ExceptionCode.NO_MODIFICATION_ALLOWED_ERR = ((ExceptionMessage[7]="No modification allowed"),7);
+var NOT_FOUND_ERR               = ExceptionCode.NOT_FOUND_ERR               = ((ExceptionMessage[8]="Not found"),8);
+var NOT_SUPPORTED_ERR           = ExceptionCode.NOT_SUPPORTED_ERR           = ((ExceptionMessage[9]="Not supported"),9);
+var INUSE_ATTRIBUTE_ERR         = ExceptionCode.INUSE_ATTRIBUTE_ERR         = ((ExceptionMessage[10]="Attribute in use"),10);
+//level2
+var INVALID_STATE_ERR        	= ExceptionCode.INVALID_STATE_ERR        	= ((ExceptionMessage[11]="Invalid state"),11);
+var SYNTAX_ERR               	= ExceptionCode.SYNTAX_ERR               	= ((ExceptionMessage[12]="Syntax error"),12);
+var INVALID_MODIFICATION_ERR 	= ExceptionCode.INVALID_MODIFICATION_ERR 	= ((ExceptionMessage[13]="Invalid modification"),13);
+var NAMESPACE_ERR            	= ExceptionCode.NAMESPACE_ERR           	= ((ExceptionMessage[14]="Invalid namespace"),14);
+var INVALID_ACCESS_ERR       	= ExceptionCode.INVALID_ACCESS_ERR      	= ((ExceptionMessage[15]="Invalid access"),15);
+
+
+function DOMException(code, message) {
+	if(message instanceof Error){
+		var error = message;
+	}else{
+		error = this;
+		Error.call(this, ExceptionMessage[code]);
+		this.message = ExceptionMessage[code];
+		if(Error.captureStackTrace) Error.captureStackTrace(this, DOMException);
+	}
+	error.code = code;
+	if(message) this.message = this.message + ": " + message;
+	return error;
+};
+DOMException.prototype = Error.prototype;
+copy(ExceptionCode,DOMException)
+/**
+ * @see http://www.w3.org/TR/2000/REC-DOM-Level-2-Core-20001113/core.html#ID-536297177
+ * The NodeList interface provides the abstraction of an ordered collection of nodes, without defining or constraining how this collection is implemented. NodeList objects in the DOM are live.
+ * The items in the NodeList are accessible via an integral index, starting from 0.
+ */
+function NodeList() {
+};
+NodeList.prototype = {
+	/**
+	 * The number of nodes in the list. The range of valid child node indices is 0 to length-1 inclusive.
+	 * @standard level1
+	 */
+	length:0, 
+	/**
+	 * Returns the indexth item in the collection. If index is greater than or equal to the number of nodes in the list, this returns null.
+	 * @standard level1
+	 * @param index  unsigned long 
+	 *   Index into the collection.
+	 * @return Node
+	 * 	The node at the indexth position in the NodeList, or null if that is not a valid index. 
+	 */
+	item: function(index) {
+		return this[index] || null;
+	},
+	toString:function(isHTML,nodeFilter){
+		for(var buf = [], i = 0;i<this.length;i++){
+			serializeToString(this[i],buf,isHTML,nodeFilter);
+		}
+		return buf.join('');
+	}
+};
+function LiveNodeList(node,refresh){
+	this._node = node;
+	this._refresh = refresh
+	_updateLiveList(this);
+}
+function _updateLiveList(list){
+	var inc = list._node._inc || list._node.ownerDocument._inc;
+	if(list._inc != inc){
+		var ls = list._refresh(list._node);
+		//console.log(ls.length)
+		__set__(list,'length',ls.length);
+		copy(ls,list);
+		list._inc = inc;
+	}
+}
+LiveNodeList.prototype.item = function(i){
+	_updateLiveList(this);
+	return this[i];
+}
+
+_extends(LiveNodeList,NodeList);
+/**
+ * 
+ * Objects implementing the NamedNodeMap interface are used to represent collections of nodes that can be accessed by name. Note that NamedNodeMap does not inherit from NodeList; NamedNodeMaps are not maintained in any particular order. Objects contained in an object implementing NamedNodeMap may also be accessed by an ordinal index, but this is simply to allow convenient enumeration of the contents of a NamedNodeMap, and does not imply that the DOM specifies an order to these Nodes.
+ * NamedNodeMap objects in the DOM are live.
+ * used for attributes or DocumentType entities 
+ */
+function NamedNodeMap() {
+};
+
+function _findNodeIndex(list,node){
+	var i = list.length;
+	while(i--){
+		if(list[i] === node){return i}
+	}
+}
+
+function _addNamedNode(el,list,newAttr,oldAttr){
+	if(oldAttr){
+		list[_findNodeIndex(list,oldAttr)] = newAttr;
+	}else{
+		list[list.length++] = newAttr;
+	}
+	if(el){
+		newAttr.ownerElement = el;
+		var doc = el.ownerDocument;
+		if(doc){
+			oldAttr && _onRemoveAttribute(doc,el,oldAttr);
+			_onAddAttribute(doc,el,newAttr);
+		}
+	}
+}
+function _removeNamedNode(el,list,attr){
+	//console.log('remove attr:'+attr)
+	var i = _findNodeIndex(list,attr);
+	if(i>=0){
+		var lastIndex = list.length-1
+		while(i<lastIndex){
+			list[i] = list[++i]
+		}
+		list.length = lastIndex;
+		if(el){
+			var doc = el.ownerDocument;
+			if(doc){
+				_onRemoveAttribute(doc,el,attr);
+				attr.ownerElement = null;
+			}
+		}
+	}else{
+		throw DOMException(NOT_FOUND_ERR,new Error(el.tagName+'@'+attr))
+	}
+}
+NamedNodeMap.prototype = {
+	length:0,
+	item:NodeList.prototype.item,
+	getNamedItem: function(key) {
+//		if(key.indexOf(':')>0 || key == 'xmlns'){
+//			return null;
+//		}
+		//console.log()
+		var i = this.length;
+		while(i--){
+			var attr = this[i];
+			//console.log(attr.nodeName,key)
+			if(attr.nodeName == key){
+				return attr;
+			}
+		}
+	},
+	setNamedItem: function(attr) {
+		var el = attr.ownerElement;
+		if(el && el!=this._ownerElement){
+			throw new DOMException(INUSE_ATTRIBUTE_ERR);
+		}
+		var oldAttr = this.getNamedItem(attr.nodeName);
+		_addNamedNode(this._ownerElement,this,attr,oldAttr);
+		return oldAttr;
+	},
+	/* returns Node */
+	setNamedItemNS: function(attr) {// raises: WRONG_DOCUMENT_ERR,NO_MODIFICATION_ALLOWED_ERR,INUSE_ATTRIBUTE_ERR
+		var el = attr.ownerElement, oldAttr;
+		if(el && el!=this._ownerElement){
+			throw new DOMException(INUSE_ATTRIBUTE_ERR);
+		}
+		oldAttr = this.getNamedItemNS(attr.namespaceURI,attr.localName);
+		_addNamedNode(this._ownerElement,this,attr,oldAttr);
+		return oldAttr;
+	},
+
+	/* returns Node */
+	removeNamedItem: function(key) {
+		var attr = this.getNamedItem(key);
+		_removeNamedNode(this._ownerElement,this,attr);
+		return attr;
+		
+		
+	},// raises: NOT_FOUND_ERR,NO_MODIFICATION_ALLOWED_ERR
+	
+	//for level2
+	removeNamedItemNS:function(namespaceURI,localName){
+		var attr = this.getNamedItemNS(namespaceURI,localName);
+		_removeNamedNode(this._ownerElement,this,attr);
+		return attr;
+	},
+	getNamedItemNS: function(namespaceURI, localName) {
+		var i = this.length;
+		while(i--){
+			var node = this[i];
+			if(node.localName == localName && node.namespaceURI == namespaceURI){
+				return node;
+			}
+		}
+		return null;
+	}
+};
+/**
+ * @see http://www.w3.org/TR/REC-DOM-Level-1/level-one-core.html#ID-102161490
+ */
+function DOMImplementation(/* Object */ features) {
+	this._features = {};
+	if (features) {
+		for (var feature in features) {
+			 this._features = features[feature];
+		}
+	}
+};
+
+DOMImplementation.prototype = {
+	hasFeature: function(/* string */ feature, /* string */ version) {
+		var versions = this._features[feature.toLowerCase()];
+		if (versions && (!version || version in versions)) {
+			return true;
+		} else {
+			return false;
+		}
+	},
+	// Introduced in DOM Level 2:
+	createDocument:function(namespaceURI,  qualifiedName, doctype){// raises:INVALID_CHARACTER_ERR,NAMESPACE_ERR,WRONG_DOCUMENT_ERR
+		var doc = new Document();
+		doc.implementation = this;
+		doc.childNodes = new NodeList();
+		doc.doctype = doctype;
+		if(doctype){
+			doc.appendChild(doctype);
+		}
+		if(qualifiedName){
+			var root = doc.createElementNS(namespaceURI,qualifiedName);
+			doc.appendChild(root);
+		}
+		return doc;
+	},
+	// Introduced in DOM Level 2:
+	createDocumentType:function(qualifiedName, publicId, systemId){// raises:INVALID_CHARACTER_ERR,NAMESPACE_ERR
+		var node = new DocumentType();
+		node.name = qualifiedName;
+		node.nodeName = qualifiedName;
+		node.publicId = publicId;
+		node.systemId = systemId;
+		// Introduced in DOM Level 2:
+		//readonly attribute DOMString        internalSubset;
+		
+		//TODO:..
+		//  readonly attribute NamedNodeMap     entities;
+		//  readonly attribute NamedNodeMap     notations;
+		return node;
+	}
+};
+
+
+/**
+ * @see http://www.w3.org/TR/2000/REC-DOM-Level-2-Core-20001113/core.html#ID-1950641247
+ */
+
+function Node() {
+};
+
+Node.prototype = {
+	firstChild : null,
+	lastChild : null,
+	previousSibling : null,
+	nextSibling : null,
+	attributes : null,
+	parentNode : null,
+	childNodes : null,
+	ownerDocument : null,
+	nodeValue : null,
+	namespaceURI : null,
+	prefix : null,
+	localName : null,
+	// Modified in DOM Level 2:
+	insertBefore:function(newChild, refChild){//raises 
+		return _insertBefore(this,newChild,refChild);
+	},
+	replaceChild:function(newChild, oldChild){//raises 
+		this.insertBefore(newChild,oldChild);
+		if(oldChild){
+			this.removeChild(oldChild);
+		}
+	},
+	removeChild:function(oldChild){
+		return _removeChild(this,oldChild);
+	},
+	appendChild:function(newChild){
+		return this.insertBefore(newChild,null);
+	},
+	hasChildNodes:function(){
+		return this.firstChild != null;
+	},
+	cloneNode:function(deep){
+		return cloneNode(this.ownerDocument||this,this,deep);
+	},
+	// Modified in DOM Level 2:
+	normalize:function(){
+		var child = this.firstChild;
+		while(child){
+			var next = child.nextSibling;
+			if(next && next.nodeType == TEXT_NODE && child.nodeType == TEXT_NODE){
+				this.removeChild(next);
+				child.appendData(next.data);
+			}else{
+				child.normalize();
+				child = next;
+			}
+		}
+	},
+  	// Introduced in DOM Level 2:
+	isSupported:function(feature, version){
+		return this.ownerDocument.implementation.hasFeature(feature,version);
+	},
+    // Introduced in DOM Level 2:
+    hasAttributes:function(){
+    	return this.attributes.length>0;
+    },
+    lookupPrefix:function(namespaceURI){
+    	var el = this;
+    	while(el){
+    		var map = el._nsMap;
+    		//console.dir(map)
+    		if(map){
+    			for(var n in map){
+    				if(map[n] == namespaceURI){
+    					return n;
+    				}
+    			}
+    		}
+    		el = el.nodeType == ATTRIBUTE_NODE?el.ownerDocument : el.parentNode;
+    	}
+    	return null;
+    },
+    // Introduced in DOM Level 3:
+    lookupNamespaceURI:function(prefix){
+    	var el = this;
+    	while(el){
+    		var map = el._nsMap;
+    		//console.dir(map)
+    		if(map){
+    			if(prefix in map){
+    				return map[prefix] ;
+    			}
+    		}
+    		el = el.nodeType == ATTRIBUTE_NODE?el.ownerDocument : el.parentNode;
+    	}
+    	return null;
+    },
+    // Introduced in DOM Level 3:
+    isDefaultNamespace:function(namespaceURI){
+    	var prefix = this.lookupPrefix(namespaceURI);
+    	return prefix == null;
+    }
+};
+
+
+function _xmlEncoder(c){
+	return c == '<' && '&lt;' ||
+         c == '>' && '&gt;' ||
+         c == '&' && '&amp;' ||
+         c == '"' && '&quot;' ||
+         '&#'+c.charCodeAt()+';'
+}
+
+
+copy(NodeType,Node);
+copy(NodeType,Node.prototype);
+
+/**
+ * @param callback return true for continue,false for break
+ * @return boolean true: break visit;
+ */
+function _visitNode(node,callback){
+	if(callback(node)){
+		return true;
+	}
+	if(node = node.firstChild){
+		do{
+			if(_visitNode(node,callback)){return true}
+        }while(node=node.nextSibling)
+    }
+}
+
+
+
+function Document(){
+}
+function _onAddAttribute(doc,el,newAttr){
+	doc && doc._inc++;
+	var ns = newAttr.namespaceURI ;
+	if(ns == 'http://www.w3.org/2000/xmlns/'){
+		//update namespace
+		el._nsMap[newAttr.prefix?newAttr.localName:''] = newAttr.value
+	}
+}
+function _onRemoveAttribute(doc,el,newAttr,remove){
+	doc && doc._inc++;
+	var ns = newAttr.namespaceURI ;
+	if(ns == 'http://www.w3.org/2000/xmlns/'){
+		//update namespace
+		delete el._nsMap[newAttr.prefix?newAttr.localName:'']
+	}
+}
+function _onUpdateChild(doc,el,newChild){
+	if(doc && doc._inc){
+		doc._inc++;
+		//update childNodes
+		var cs = el.childNodes;
+		if(newChild){
+			cs[cs.length++] = newChild;
+		}else{
+			//console.log(1)
+			var child = el.firstChild;
+			var i = 0;
+			while(child){
+				cs[i++] = child;
+				child =child.nextSibling;
+			}
+			cs.length = i;
+		}
+	}
+}
+
+/**
+ * attributes;
+ * children;
+ * 
+ * writeable properties:
+ * nodeValue,Attr:value,CharacterData:data
+ * prefix
+ */
+function _removeChild(parentNode,child){
+	var previous = child.previousSibling;
+	var next = child.nextSibling;
+	if(previous){
+		previous.nextSibling = next;
+	}else{
+		parentNode.firstChild = next
+	}
+	if(next){
+		next.previousSibling = previous;
+	}else{
+		parentNode.lastChild = previous;
+	}
+	_onUpdateChild(parentNode.ownerDocument,parentNode);
+	return child;
+}
+/**
+ * preformance key(refChild == null)
+ */
+function _insertBefore(parentNode,newChild,nextChild){
+	var cp = newChild.parentNode;
+	if(cp){
+		cp.removeChild(newChild);//remove and update
+	}
+	if(newChild.nodeType === DOCUMENT_FRAGMENT_NODE){
+		var newFirst = newChild.firstChild;
+		if (newFirst == null) {
+			return newChild;
+		}
+		var newLast = newChild.lastChild;
+	}else{
+		newFirst = newLast = newChild;
+	}
+	var pre = nextChild ? nextChild.previousSibling : parentNode.lastChild;
+
+	newFirst.previousSibling = pre;
+	newLast.nextSibling = nextChild;
+	
+	
+	if(pre){
+		pre.nextSibling = newFirst;
+	}else{
+		parentNode.firstChild = newFirst;
+	}
+	if(nextChild == null){
+		parentNode.lastChild = newLast;
+	}else{
+		nextChild.previousSibling = newLast;
+	}
+	do{
+		newFirst.parentNode = parentNode;
+	}while(newFirst !== newLast && (newFirst= newFirst.nextSibling))
+	_onUpdateChild(parentNode.ownerDocument||parentNode,parentNode);
+	//console.log(parentNode.lastChild.nextSibling == null)
+	if (newChild.nodeType == DOCUMENT_FRAGMENT_NODE) {
+		newChild.firstChild = newChild.lastChild = null;
+	}
+	return newChild;
+}
+function _appendSingleChild(parentNode,newChild){
+	var cp = newChild.parentNode;
+	if(cp){
+		var pre = parentNode.lastChild;
+		cp.removeChild(newChild);//remove and update
+		var pre = parentNode.lastChild;
+	}
+	var pre = parentNode.lastChild;
+	newChild.parentNode = parentNode;
+	newChild.previousSibling = pre;
+	newChild.nextSibling = null;
+	if(pre){
+		pre.nextSibling = newChild;
+	}else{
+		parentNode.firstChild = newChild;
+	}
+	parentNode.lastChild = newChild;
+	_onUpdateChild(parentNode.ownerDocument,parentNode,newChild);
+	return newChild;
+	//console.log("__aa",parentNode.lastChild.nextSibling == null)
+}
+Document.prototype = {
+	//implementation : null,
+	nodeName :  '#document',
+	nodeType :  DOCUMENT_NODE,
+	doctype :  null,
+	documentElement :  null,
+	_inc : 1,
+	
+	insertBefore :  function(newChild, refChild){//raises 
+		if(newChild.nodeType == DOCUMENT_FRAGMENT_NODE){
+			var child = newChild.firstChild;
+			while(child){
+				var next = child.nextSibling;
+				this.insertBefore(child,refChild);
+				child = next;
+			}
+			return newChild;
+		}
+		if(this.documentElement == null && newChild.nodeType == ELEMENT_NODE){
+			this.documentElement = newChild;
+		}
+		
+		return _insertBefore(this,newChild,refChild),(newChild.ownerDocument = this),newChild;
+	},
+	removeChild :  function(oldChild){
+		if(this.documentElement == oldChild){
+			this.documentElement = null;
+		}
+		return _removeChild(this,oldChild);
+	},
+	// Introduced in DOM Level 2:
+	importNode : function(importedNode,deep){
+		return importNode(this,importedNode,deep);
+	},
+	// Introduced in DOM Level 2:
+	getElementById :	function(id){
+		var rtv = null;
+		_visitNode(this.documentElement,function(node){
+			if(node.nodeType == ELEMENT_NODE){
+				if(node.getAttribute('id') == id){
+					rtv = node;
+					return true;
+				}
+			}
+		})
+		return rtv;
+	},
+	
+	//document factory method:
+	createElement :	function(tagName){
+		var node = new Element();
+		node.ownerDocument = this;
+		node.nodeName = tagName;
+		node.tagName = tagName;
+		node.childNodes = new NodeList();
+		var attrs	= node.attributes = new NamedNodeMap();
+		attrs._ownerElement = node;
+		return node;
+	},
+	createDocumentFragment :	function(){
+		var node = new DocumentFragment();
+		node.ownerDocument = this;
+		node.childNodes = new NodeList();
+		return node;
+	},
+	createTextNode :	function(data){
+		var node = new Text();
+		node.ownerDocument = this;
+		node.appendData(data)
+		return node;
+	},
+	createComment :	function(data){
+		var node = new Comment();
+		node.ownerDocument = this;
+		node.appendData(data)
+		return node;
+	},
+	createCDATASection :	function(data){
+		var node = new CDATASection();
+		node.ownerDocument = this;
+		node.appendData(data)
+		return node;
+	},
+	createProcessingInstruction :	function(target,data){
+		var node = new ProcessingInstruction();
+		node.ownerDocument = this;
+		node.tagName = node.target = target;
+		node.nodeValue= node.data = data;
+		return node;
+	},
+	createAttribute :	function(name){
+		var node = new Attr();
+		node.ownerDocument	= this;
+		node.name = name;
+		node.nodeName	= name;
+		node.localName = name;
+		node.specified = true;
+		return node;
+	},
+	createEntityReference :	function(name){
+		var node = new EntityReference();
+		node.ownerDocument	= this;
+		node.nodeName	= name;
+		return node;
+	},
+	// Introduced in DOM Level 2:
+	createElementNS :	function(namespaceURI,qualifiedName){
+		var node = new Element();
+		var pl = qualifiedName.split(':');
+		var attrs	= node.attributes = new NamedNodeMap();
+		node.childNodes = new NodeList();
+		node.ownerDocument = this;
+		node.nodeName = qualifiedName;
+		node.tagName = qualifiedName;
+		node.namespaceURI = namespaceURI;
+		if(pl.length == 2){
+			node.prefix = pl[0];
+			node.localName = pl[1];
+		}else{
+			//el.prefix = null;
+			node.localName = qualifiedName;
+		}
+		attrs._ownerElement = node;
+		return node;
+	},
+	// Introduced in DOM Level 2:
+	createAttributeNS :	function(namespaceURI,qualifiedName){
+		var node = new Attr();
+		var pl = qualifiedName.split(':');
+		node.ownerDocument = this;
+		node.nodeName = qualifiedName;
+		node.name = qualifiedName;
+		node.namespaceURI = namespaceURI;
+		node.specified = true;
+		if(pl.length == 2){
+			node.prefix = pl[0];
+			node.localName = pl[1];
+		}else{
+			//el.prefix = null;
+			node.localName = qualifiedName;
+		}
+		return node;
+	}
+};
+_extends(Document,Node);
+
+
+function Element() {
+	this._nsMap = {};
+};
+Element.prototype = {
+	nodeType : ELEMENT_NODE,
+	hasAttribute : function(name){
+		return this.getAttributeNode(name)!=null;
+	},
+	getAttribute : function(name){
+		var attr = this.getAttributeNode(name);
+		return attr && attr.value || '';
+	},
+	getAttributeNode : function(name){
+		return this.attributes.getNamedItem(name);
+	},
+	setAttribute : function(name, value){
+		var attr = this.ownerDocument.createAttribute(name);
+		attr.value = attr.nodeValue = "" + value;
+		this.setAttributeNode(attr)
+	},
+	removeAttribute : function(name){
+		var attr = this.getAttributeNode(name)
+		attr && this.removeAttributeNode(attr);
+	},
+	
+	//four real opeartion method
+	appendChild:function(newChild){
+		if(newChild.nodeType === DOCUMENT_FRAGMENT_NODE){
+			return this.insertBefore(newChild,null);
+		}else{
+			return _appendSingleChild(this,newChild);
+		}
+	},
+	setAttributeNode : function(newAttr){
+		return this.attributes.setNamedItem(newAttr);
+	},
+	setAttributeNodeNS : function(newAttr){
+		return this.attributes.setNamedItemNS(newAttr);
+	},
+	removeAttributeNode : function(oldAttr){
+		//console.log(this == oldAttr.ownerElement)
+		return this.attributes.removeNamedItem(oldAttr.nodeName);
+	},
+	//get real attribute name,and remove it by removeAttributeNode
+	removeAttributeNS : function(namespaceURI, localName){
+		var old = this.getAttributeNodeNS(namespaceURI, localName);
+		old && this.removeAttributeNode(old);
+	},
+	
+	hasAttributeNS : function(namespaceURI, localName){
+		return this.getAttributeNodeNS(namespaceURI, localName)!=null;
+	},
+	getAttributeNS : function(namespaceURI, localName){
+		var attr = this.getAttributeNodeNS(namespaceURI, localName);
+		return attr && attr.value || '';
+	},
+	setAttributeNS : function(namespaceURI, qualifiedName, value){
+		var attr = this.ownerDocument.createAttributeNS(namespaceURI, qualifiedName);
+		attr.value = attr.nodeValue = "" + value;
+		this.setAttributeNode(attr)
+	},
+	getAttributeNodeNS : function(namespaceURI, localName){
+		return this.attributes.getNamedItemNS(namespaceURI, localName);
+	},
+	
+	getElementsByTagName : function(tagName){
+		return new LiveNodeList(this,function(base){
+			var ls = [];
+			_visitNode(base,function(node){
+				if(node !== base && node.nodeType == ELEMENT_NODE && (tagName === '*' || node.tagName == tagName)){
+					ls.push(node);
+				}
+			});
+			return ls;
+		});
+	},
+	getElementsByTagNameNS : function(namespaceURI, localName){
+		return new LiveNodeList(this,function(base){
+			var ls = [];
+			_visitNode(base,function(node){
+				if(node !== base && node.nodeType === ELEMENT_NODE && (namespaceURI === '*' || node.namespaceURI === namespaceURI) && (localName === '*' || node.localName == localName)){
+					ls.push(node);
+				}
+			});
+			return ls;
+			
+		});
+	}
+};
+Document.prototype.getElementsByTagName = Element.prototype.getElementsByTagName;
+Document.prototype.getElementsByTagNameNS = Element.prototype.getElementsByTagNameNS;
+
+
+_extends(Element,Node);
+function Attr() {
+};
+Attr.prototype.nodeType = ATTRIBUTE_NODE;
+_extends(Attr,Node);
+
+
+function CharacterData() {
+};
+CharacterData.prototype = {
+	data : '',
+	substringData : function(offset, count) {
+		return this.data.substring(offset, offset+count);
+	},
+	appendData: function(text) {
+		text = this.data+text;
+		this.nodeValue = this.data = text;
+		this.length = text.length;
+	},
+	insertData: function(offset,text) {
+		this.replaceData(offset,0,text);
+	
+	},
+	appendChild:function(newChild){
+		throw new Error(ExceptionMessage[HIERARCHY_REQUEST_ERR])
+	},
+	deleteData: function(offset, count) {
+		this.replaceData(offset,count,"");
+	},
+	replaceData: function(offset, count, text) {
+		var start = this.data.substring(0,offset);
+		var end = this.data.substring(offset+count);
+		text = start + text + end;
+		this.nodeValue = this.data = text;
+		this.length = text.length;
+	}
+}
+_extends(CharacterData,Node);
+function Text() {
+};
+Text.prototype = {
+	nodeName : "#text",
+	nodeType : TEXT_NODE,
+	splitText : function(offset) {
+		var text = this.data;
+		var newText = text.substring(offset);
+		text = text.substring(0, offset);
+		this.data = this.nodeValue = text;
+		this.length = text.length;
+		var newNode = this.ownerDocument.createTextNode(newText);
+		if(this.parentNode){
+			this.parentNode.insertBefore(newNode, this.nextSibling);
+		}
+		return newNode;
+	}
+}
+_extends(Text,CharacterData);
+function Comment() {
+};
+Comment.prototype = {
+	nodeName : "#comment",
+	nodeType : COMMENT_NODE
+}
+_extends(Comment,CharacterData);
+
+function CDATASection() {
+};
+CDATASection.prototype = {
+	nodeName : "#cdata-section",
+	nodeType : CDATA_SECTION_NODE
+}
+_extends(CDATASection,CharacterData);
+
+
+function DocumentType() {
+};
+DocumentType.prototype.nodeType = DOCUMENT_TYPE_NODE;
+_extends(DocumentType,Node);
+
+function Notation() {
+};
+Notation.prototype.nodeType = NOTATION_NODE;
+_extends(Notation,Node);
+
+function Entity() {
+};
+Entity.prototype.nodeType = ENTITY_NODE;
+_extends(Entity,Node);
+
+function EntityReference() {
+};
+EntityReference.prototype.nodeType = ENTITY_REFERENCE_NODE;
+_extends(EntityReference,Node);
+
+function DocumentFragment() {
+};
+DocumentFragment.prototype.nodeName =	"#document-fragment";
+DocumentFragment.prototype.nodeType =	DOCUMENT_FRAGMENT_NODE;
+_extends(DocumentFragment,Node);
+
+
+function ProcessingInstruction() {
+}
+ProcessingInstruction.prototype.nodeType = PROCESSING_INSTRUCTION_NODE;
+_extends(ProcessingInstruction,Node);
+function XMLSerializer(){}
+XMLSerializer.prototype.serializeToString = function(node,isHtml,nodeFilter){
+	return nodeSerializeToString.call(node,isHtml,nodeFilter);
+}
+Node.prototype.toString = nodeSerializeToString;
+function nodeSerializeToString(isHtml,nodeFilter){
+	var buf = [];
+	var refNode = this.nodeType == 9 && this.documentElement || this;
+	var prefix = refNode.prefix;
+	var uri = refNode.namespaceURI;
+	
+	if(uri && prefix == null){
+		//console.log(prefix)
+		var prefix = refNode.lookupPrefix(uri);
+		if(prefix == null){
+			//isHTML = true;
+			var visibleNamespaces=[
+			{namespace:uri,prefix:null}
+			//{namespace:uri,prefix:''}
+			]
+		}
+	}
+	serializeToString(this,buf,isHtml,nodeFilter,visibleNamespaces);
+	//console.log('###',this.nodeType,uri,prefix,buf.join(''))
+	return buf.join('');
+}
+function needNamespaceDefine(node,isHTML, visibleNamespaces) {
+	var prefix = node.prefix||'';
+	var uri = node.namespaceURI;
+	if (!prefix && !uri){
+		return false;
+	}
+	if (prefix === "xml" && uri === "http://www.w3.org/XML/1998/namespace" 
+		|| uri == 'http://www.w3.org/2000/xmlns/'){
+		return false;
+	}
+	
+	var i = visibleNamespaces.length 
+	//console.log('@@@@',node.tagName,prefix,uri,visibleNamespaces)
+	while (i--) {
+		var ns = visibleNamespaces[i];
+		// get namespace prefix
+		//console.log(node.nodeType,node.tagName,ns.prefix,prefix)
+		if (ns.prefix == prefix){
+			return ns.namespace != uri;
+		}
+	}
+	//console.log(isHTML,uri,prefix=='')
+	//if(isHTML && prefix ==null && uri == 'http://www.w3.org/1999/xhtml'){
+	//	return false;
+	//}
+	//node.flag = '11111'
+	//console.error(3,true,node.flag,node.prefix,node.namespaceURI)
+	return true;
+}
+function serializeToString(node,buf,isHTML,nodeFilter,visibleNamespaces){
+	if(nodeFilter){
+		node = nodeFilter(node);
+		if(node){
+			if(typeof node == 'string'){
+				buf.push(node);
+				return;
+			}
+		}else{
+			return;
+		}
+		//buf.sort.apply(attrs, attributeSorter);
+	}
+	switch(node.nodeType){
+	case ELEMENT_NODE:
+		if (!visibleNamespaces) visibleNamespaces = [];
+		var startVisibleNamespaces = visibleNamespaces.length;
+		var attrs = node.attributes;
+		var len = attrs.length;
+		var child = node.firstChild;
+		var nodeName = node.tagName;
+		
+		isHTML =  (htmlns === node.namespaceURI) ||isHTML 
+		buf.push('<',nodeName);
+		
+		
+		
+		for(var i=0;i<len;i++){
+			// add namespaces for attributes
+			var attr = attrs.item(i);
+			if (attr.prefix == 'xmlns') {
+				visibleNamespaces.push({ prefix: attr.localName, namespace: attr.value });
+			}else if(attr.nodeName == 'xmlns'){
+				visibleNamespaces.push({ prefix: '', namespace: attr.value });
+			}
+		}
+		for(var i=0;i<len;i++){
+			var attr = attrs.item(i);
+			if (needNamespaceDefine(attr,isHTML, visibleNamespaces)) {
+				var prefix = attr.prefix||'';
+				var uri = attr.namespaceURI;
+				var ns = prefix ? ' xmlns:' + prefix : " xmlns";
+				buf.push(ns, '="' , uri , '"');
+				visibleNamespaces.push({ prefix: prefix, namespace:uri });
+			}
+			serializeToString(attr,buf,isHTML,nodeFilter,visibleNamespaces);
+		}
+		// add namespace for current node		
+		if (needNamespaceDefine(node,isHTML, visibleNamespaces)) {
+			var prefix = node.prefix||'';
+			var uri = node.namespaceURI;
+			var ns = prefix ? ' xmlns:' + prefix : " xmlns";
+			buf.push(ns, '="' , uri , '"');
+			visibleNamespaces.push({ prefix: prefix, namespace:uri });
+		}
+		
+		if(child || isHTML && !/^(?:meta|link|img|br|hr|input)$/i.test(nodeName)){
+			buf.push('>');
+			//if is cdata child node
+			if(isHTML && /^script$/i.test(nodeName)){
+				while(child){
+					if(child.data){
+						buf.push(child.data);
+					}else{
+						serializeToString(child,buf,isHTML,nodeFilter,visibleNamespaces);
+					}
+					child = child.nextSibling;
+				}
+			}else
+			{
+				while(child){
+					serializeToString(child,buf,isHTML,nodeFilter,visibleNamespaces);
+					child = child.nextSibling;
+				}
+			}
+			buf.push('</',nodeName,'>');
+		}else{
+			buf.push('/>');
+		}
+		// remove added visible namespaces
+		//visibleNamespaces.length = startVisibleNamespaces;
+		return;
+	case DOCUMENT_NODE:
+	case DOCUMENT_FRAGMENT_NODE:
+		var child = node.firstChild;
+		while(child){
+			serializeToString(child,buf,isHTML,nodeFilter,visibleNamespaces);
+			child = child.nextSibling;
+		}
+		return;
+	case ATTRIBUTE_NODE:
+		return buf.push(' ',node.name,'="',node.value.replace(/[<&"]/g,_xmlEncoder),'"');
+	case TEXT_NODE:
+		return buf.push(node.data.replace(/[<&]/g,_xmlEncoder));
+	case CDATA_SECTION_NODE:
+		return buf.push( '<![CDATA[',node.data,']]>');
+	case COMMENT_NODE:
+		return buf.push( "<!--",node.data,"-->");
+	case DOCUMENT_TYPE_NODE:
+		var pubid = node.publicId;
+		var sysid = node.systemId;
+		buf.push('<!DOCTYPE ',node.name);
+		if(pubid){
+			buf.push(' PUBLIC "',pubid);
+			if (sysid && sysid!='.') {
+				buf.push( '" "',sysid);
+			}
+			buf.push('">');
+		}else if(sysid && sysid!='.'){
+			buf.push(' SYSTEM "',sysid,'">');
+		}else{
+			var sub = node.internalSubset;
+			if(sub){
+				buf.push(" [",sub,"]");
+			}
+			buf.push(">");
+		}
+		return;
+	case PROCESSING_INSTRUCTION_NODE:
+		return buf.push( "<?",node.target," ",node.data,"?>");
+	case ENTITY_REFERENCE_NODE:
+		return buf.push( '&',node.nodeName,';');
+	//case ENTITY_NODE:
+	//case NOTATION_NODE:
+	default:
+		buf.push('??',node.nodeName);
+	}
+}
+function importNode(doc,node,deep){
+	var node2;
+	switch (node.nodeType) {
+	case ELEMENT_NODE:
+		node2 = node.cloneNode(false);
+		node2.ownerDocument = doc;
+		//var attrs = node2.attributes;
+		//var len = attrs.length;
+		//for(var i=0;i<len;i++){
+			//node2.setAttributeNodeNS(importNode(doc,attrs.item(i),deep));
+		//}
+	case DOCUMENT_FRAGMENT_NODE:
+		break;
+	case ATTRIBUTE_NODE:
+		deep = true;
+		break;
+	//case ENTITY_REFERENCE_NODE:
+	//case PROCESSING_INSTRUCTION_NODE:
+	////case TEXT_NODE:
+	//case CDATA_SECTION_NODE:
+	//case COMMENT_NODE:
+	//	deep = false;
+	//	break;
+	//case DOCUMENT_NODE:
+	//case DOCUMENT_TYPE_NODE:
+	//cannot be imported.
+	//case ENTITY_NODE:
+	//case NOTATION_NODE：
+	//can not hit in level3
+	//default:throw e;
+	}
+	if(!node2){
+		node2 = node.cloneNode(false);//false
+	}
+	node2.ownerDocument = doc;
+	node2.parentNode = null;
+	if(deep){
+		var child = node.firstChild;
+		while(child){
+			node2.appendChild(importNode(doc,child,deep));
+			child = child.nextSibling;
+		}
+	}
+	return node2;
+}
+//
+//var _relationMap = {firstChild:1,lastChild:1,previousSibling:1,nextSibling:1,
+//					attributes:1,childNodes:1,parentNode:1,documentElement:1,doctype,};
+function cloneNode(doc,node,deep){
+	var node2 = new node.constructor();
+	for(var n in node){
+		var v = node[n];
+		if(typeof v != 'object' ){
+			if(v != node2[n]){
+				node2[n] = v;
+			}
+		}
+	}
+	if(node.childNodes){
+		node2.childNodes = new NodeList();
+	}
+	node2.ownerDocument = doc;
+	switch (node2.nodeType) {
+	case ELEMENT_NODE:
+		var attrs	= node.attributes;
+		var attrs2	= node2.attributes = new NamedNodeMap();
+		var len = attrs.length
+		attrs2._ownerElement = node2;
+		for(var i=0;i<len;i++){
+			node2.setAttributeNode(cloneNode(doc,attrs.item(i),true));
+		}
+		break;;
+	case ATTRIBUTE_NODE:
+		deep = true;
+	}
+	if(deep){
+		var child = node.firstChild;
+		while(child){
+			node2.appendChild(cloneNode(doc,child,deep));
+			child = child.nextSibling;
+		}
+	}
+	return node2;
+}
+
+function __set__(object,key,value){
+	object[key] = value
+}
+//do dynamic
+try{
+	if(Object.defineProperty){
+		Object.defineProperty(LiveNodeList.prototype,'length',{
+			get:function(){
+				_updateLiveList(this);
+				return this.$$length;
+			}
+		});
+		Object.defineProperty(Node.prototype,'textContent',{
+			get:function(){
+				return getTextContent(this);
+			},
+			set:function(data){
+				switch(this.nodeType){
+				case ELEMENT_NODE:
+				case DOCUMENT_FRAGMENT_NODE:
+					while(this.firstChild){
+						this.removeChild(this.firstChild);
+					}
+					if(data || String(data)){
+						this.appendChild(this.ownerDocument.createTextNode(data));
+					}
+					break;
+				default:
+					//TODO:
+					this.data = data;
+					this.value = data;
+					this.nodeValue = data;
+				}
+			}
+		})
+		
+		function getTextContent(node){
+			switch(node.nodeType){
+			case ELEMENT_NODE:
+			case DOCUMENT_FRAGMENT_NODE:
+				var buf = [];
+				node = node.firstChild;
+				while(node){
+					if(node.nodeType!==7 && node.nodeType !==8){
+						buf.push(getTextContent(node));
+					}
+					node = node.nextSibling;
+				}
+				return buf.join('');
+			default:
+				return node.nodeValue;
+			}
+		}
+		__set__ = function(object,key,value){
+			//console.log(value)
+			object['$$'+key] = value
+		}
+	}
+}catch(e){//ie8
+}
+
+//if(typeof require == 'function'){
+	exports.DOMImplementation = DOMImplementation;
+	exports.XMLSerializer = XMLSerializer;
+//}
+
+},{}],101:[function(require,module,exports){
+exports.entityMap = {
+       lt: '<',
+       gt: '>',
+       amp: '&',
+       quot: '"',
+       apos: "'",
+       Agrave: "À",
+       Aacute: "Á",
+       Acirc: "Â",
+       Atilde: "Ã",
+       Auml: "Ä",
+       Aring: "Å",
+       AElig: "Æ",
+       Ccedil: "Ç",
+       Egrave: "È",
+       Eacute: "É",
+       Ecirc: "Ê",
+       Euml: "Ë",
+       Igrave: "Ì",
+       Iacute: "Í",
+       Icirc: "Î",
+       Iuml: "Ï",
+       ETH: "Ð",
+       Ntilde: "Ñ",
+       Ograve: "Ò",
+       Oacute: "Ó",
+       Ocirc: "Ô",
+       Otilde: "Õ",
+       Ouml: "Ö",
+       Oslash: "Ø",
+       Ugrave: "Ù",
+       Uacute: "Ú",
+       Ucirc: "Û",
+       Uuml: "Ü",
+       Yacute: "Ý",
+       THORN: "Þ",
+       szlig: "ß",
+       agrave: "à",
+       aacute: "á",
+       acirc: "â",
+       atilde: "ã",
+       auml: "ä",
+       aring: "å",
+       aelig: "æ",
+       ccedil: "ç",
+       egrave: "è",
+       eacute: "é",
+       ecirc: "ê",
+       euml: "ë",
+       igrave: "ì",
+       iacute: "í",
+       icirc: "î",
+       iuml: "ï",
+       eth: "ð",
+       ntilde: "ñ",
+       ograve: "ò",
+       oacute: "ó",
+       ocirc: "ô",
+       otilde: "õ",
+       ouml: "ö",
+       oslash: "ø",
+       ugrave: "ù",
+       uacute: "ú",
+       ucirc: "û",
+       uuml: "ü",
+       yacute: "ý",
+       thorn: "þ",
+       yuml: "ÿ",
+       nbsp: " ",
+       iexcl: "¡",
+       cent: "¢",
+       pound: "£",
+       curren: "¤",
+       yen: "¥",
+       brvbar: "¦",
+       sect: "§",
+       uml: "¨",
+       copy: "©",
+       ordf: "ª",
+       laquo: "«",
+       not: "¬",
+       shy: "­­",
+       reg: "®",
+       macr: "¯",
+       deg: "°",
+       plusmn: "±",
+       sup2: "²",
+       sup3: "³",
+       acute: "´",
+       micro: "µ",
+       para: "¶",
+       middot: "·",
+       cedil: "¸",
+       sup1: "¹",
+       ordm: "º",
+       raquo: "»",
+       frac14: "¼",
+       frac12: "½",
+       frac34: "¾",
+       iquest: "¿",
+       times: "×",
+       divide: "÷",
+       forall: "∀",
+       part: "∂",
+       exist: "∃",
+       empty: "∅",
+       nabla: "∇",
+       isin: "∈",
+       notin: "∉",
+       ni: "∋",
+       prod: "∏",
+       sum: "∑",
+       minus: "−",
+       lowast: "∗",
+       radic: "√",
+       prop: "∝",
+       infin: "∞",
+       ang: "∠",
+       and: "∧",
+       or: "∨",
+       cap: "∩",
+       cup: "∪",
+       'int': "∫",
+       there4: "∴",
+       sim: "∼",
+       cong: "≅",
+       asymp: "≈",
+       ne: "≠",
+       equiv: "≡",
+       le: "≤",
+       ge: "≥",
+       sub: "⊂",
+       sup: "⊃",
+       nsub: "⊄",
+       sube: "⊆",
+       supe: "⊇",
+       oplus: "⊕",
+       otimes: "⊗",
+       perp: "⊥",
+       sdot: "⋅",
+       Alpha: "Α",
+       Beta: "Β",
+       Gamma: "Γ",
+       Delta: "Δ",
+       Epsilon: "Ε",
+       Zeta: "Ζ",
+       Eta: "Η",
+       Theta: "Θ",
+       Iota: "Ι",
+       Kappa: "Κ",
+       Lambda: "Λ",
+       Mu: "Μ",
+       Nu: "Ν",
+       Xi: "Ξ",
+       Omicron: "Ο",
+       Pi: "Π",
+       Rho: "Ρ",
+       Sigma: "Σ",
+       Tau: "Τ",
+       Upsilon: "Υ",
+       Phi: "Φ",
+       Chi: "Χ",
+       Psi: "Ψ",
+       Omega: "Ω",
+       alpha: "α",
+       beta: "β",
+       gamma: "γ",
+       delta: "δ",
+       epsilon: "ε",
+       zeta: "ζ",
+       eta: "η",
+       theta: "θ",
+       iota: "ι",
+       kappa: "κ",
+       lambda: "λ",
+       mu: "μ",
+       nu: "ν",
+       xi: "ξ",
+       omicron: "ο",
+       pi: "π",
+       rho: "ρ",
+       sigmaf: "ς",
+       sigma: "σ",
+       tau: "τ",
+       upsilon: "υ",
+       phi: "φ",
+       chi: "χ",
+       psi: "ψ",
+       omega: "ω",
+       thetasym: "ϑ",
+       upsih: "ϒ",
+       piv: "ϖ",
+       OElig: "Œ",
+       oelig: "œ",
+       Scaron: "Š",
+       scaron: "š",
+       Yuml: "Ÿ",
+       fnof: "ƒ",
+       circ: "ˆ",
+       tilde: "˜",
+       ensp: " ",
+       emsp: " ",
+       thinsp: " ",
+       zwnj: "‌",
+       zwj: "‍",
+       lrm: "‎",
+       rlm: "‏",
+       ndash: "–",
+       mdash: "—",
+       lsquo: "‘",
+       rsquo: "’",
+       sbquo: "‚",
+       ldquo: "“",
+       rdquo: "”",
+       bdquo: "„",
+       dagger: "†",
+       Dagger: "‡",
+       bull: "•",
+       hellip: "…",
+       permil: "‰",
+       prime: "′",
+       Prime: "″",
+       lsaquo: "‹",
+       rsaquo: "›",
+       oline: "‾",
+       euro: "€",
+       trade: "™",
+       larr: "←",
+       uarr: "↑",
+       rarr: "→",
+       darr: "↓",
+       harr: "↔",
+       crarr: "↵",
+       lceil: "⌈",
+       rceil: "⌉",
+       lfloor: "⌊",
+       rfloor: "⌋",
+       loz: "◊",
+       spades: "♠",
+       clubs: "♣",
+       hearts: "♥",
+       diams: "♦"
+};
+//for(var  n in exports.entityMap){console.log(exports.entityMap[n].charCodeAt())}
+},{}],102:[function(require,module,exports){
+//[4]   	NameStartChar	   ::=   	":" | [A-Z] | "_" | [a-z] | [#xC0-#xD6] | [#xD8-#xF6] | [#xF8-#x2FF] | [#x370-#x37D] | [#x37F-#x1FFF] | [#x200C-#x200D] | [#x2070-#x218F] | [#x2C00-#x2FEF] | [#x3001-#xD7FF] | [#xF900-#xFDCF] | [#xFDF0-#xFFFD] | [#x10000-#xEFFFF]
+//[4a]   	NameChar	   ::=   	NameStartChar | "-" | "." | [0-9] | #xB7 | [#x0300-#x036F] | [#x203F-#x2040]
+//[5]   	Name	   ::=   	NameStartChar (NameChar)*
+var nameStartChar = /[A-Z_a-z\xC0-\xD6\xD8-\xF6\u00F8-\u02FF\u0370-\u037D\u037F-\u1FFF\u200C-\u200D\u2070-\u218F\u2C00-\u2FEF\u3001-\uD7FF\uF900-\uFDCF\uFDF0-\uFFFD]///\u10000-\uEFFFF
+var nameChar = new RegExp("[\\-\\.0-9"+nameStartChar.source.slice(1,-1)+"\\u00B7\\u0300-\\u036F\\u203F-\\u2040]");
+var tagNamePattern = new RegExp('^'+nameStartChar.source+nameChar.source+'*(?:\:'+nameStartChar.source+nameChar.source+'*)?$');
+//var tagNamePattern = /^[a-zA-Z_][\w\-\.]*(?:\:[a-zA-Z_][\w\-\.]*)?$/
+//var handlers = 'resolveEntity,getExternalSubset,characters,endDocument,endElement,endPrefixMapping,ignorableWhitespace,processingInstruction,setDocumentLocator,skippedEntity,startDocument,startElement,startPrefixMapping,notationDecl,unparsedEntityDecl,error,fatalError,warning,attributeDecl,elementDecl,externalEntityDecl,internalEntityDecl,comment,endCDATA,endDTD,endEntity,startCDATA,startDTD,startEntity'.split(',')
+
+//S_TAG,	S_ATTR,	S_EQ,	S_ATTR_NOQUOT_VALUE
+//S_ATTR_SPACE,	S_ATTR_END,	S_TAG_SPACE, S_TAG_CLOSE
+var S_TAG = 0;//tag name offerring
+var S_ATTR = 1;//attr name offerring 
+var S_ATTR_SPACE=2;//attr name end and space offer
+var S_EQ = 3;//=space?
+var S_ATTR_NOQUOT_VALUE = 4;//attr value(no quot value only)
+var S_ATTR_END = 5;//attr value end and no space(quot end)
+var S_TAG_SPACE = 6;//(attr value end || tag end ) && (space offer)
+var S_TAG_CLOSE = 7;//closed el<el />
+
+function XMLReader(){
+	
+}
+
+XMLReader.prototype = {
+	parse:function(source,defaultNSMap,entityMap){
+		var domBuilder = this.domBuilder;
+		domBuilder.startDocument();
+		_copy(defaultNSMap ,defaultNSMap = {})
+		parse(source,defaultNSMap,entityMap,
+				domBuilder,this.errorHandler);
+		domBuilder.endDocument();
+	}
+}
+function parse(source,defaultNSMapCopy,entityMap,domBuilder,errorHandler){
+	function fixedFromCharCode(code) {
+		// String.prototype.fromCharCode does not supports
+		// > 2 bytes unicode chars directly
+		if (code > 0xffff) {
+			code -= 0x10000;
+			var surrogate1 = 0xd800 + (code >> 10)
+				, surrogate2 = 0xdc00 + (code & 0x3ff);
+
+			return String.fromCharCode(surrogate1, surrogate2);
+		} else {
+			return String.fromCharCode(code);
+		}
+	}
+	function entityReplacer(a){
+		var k = a.slice(1,-1);
+		if(k in entityMap){
+			return entityMap[k]; 
+		}else if(k.charAt(0) === '#'){
+			return fixedFromCharCode(parseInt(k.substr(1).replace('x','0x')))
+		}else{
+			errorHandler.error('entity not found:'+a);
+			return a;
+		}
+	}
+	function appendText(end){//has some bugs
+		if(end>start){
+			var xt = source.substring(start,end).replace(/&#?\w+;/g,entityReplacer);
+			locator&&position(start);
+			domBuilder.characters(xt,0,end-start);
+			start = end
+		}
+	}
+	function position(p,m){
+		while(p>=lineEnd && (m = linePattern.exec(source))){
+			lineStart = m.index;
+			lineEnd = lineStart + m[0].length;
+			locator.lineNumber++;
+			//console.log('line++:',locator,startPos,endPos)
+		}
+		locator.columnNumber = p-lineStart+1;
+	}
+	var lineStart = 0;
+	var lineEnd = 0;
+	var linePattern = /.*(?:\r\n?|\n)|.*$/g
+	var locator = domBuilder.locator;
+	
+	var parseStack = [{currentNSMap:defaultNSMapCopy}]
+	var closeMap = {};
+	var start = 0;
+	while(true){
+		try{
+			var tagStart = source.indexOf('<',start);
+			if(tagStart<0){
+				if(!source.substr(start).match(/^\s*$/)){
+					var doc = domBuilder.doc;
+	    			var text = doc.createTextNode(source.substr(start));
+	    			doc.appendChild(text);
+	    			domBuilder.currentElement = text;
+				}
+				return;
+			}
+			if(tagStart>start){
+				appendText(tagStart);
+			}
+			switch(source.charAt(tagStart+1)){
+			case '/':
+				var end = source.indexOf('>',tagStart+3);
+				var tagName = source.substring(tagStart+2,end);
+				var config = parseStack.pop();
+				if(end<0){
+					
+	        		tagName = source.substring(tagStart+2).replace(/[\s<].*/,'');
+	        		//console.error('#@@@@@@'+tagName)
+	        		errorHandler.error("end tag name: "+tagName+' is not complete:'+config.tagName);
+	        		end = tagStart+1+tagName.length;
+	        	}else if(tagName.match(/\s</)){
+	        		tagName = tagName.replace(/[\s<].*/,'');
+	        		errorHandler.error("end tag name: "+tagName+' maybe not complete');
+	        		end = tagStart+1+tagName.length;
+				}
+				//console.error(parseStack.length,parseStack)
+				//console.error(config);
+				var localNSMap = config.localNSMap;
+				var endMatch = config.tagName == tagName;
+				var endIgnoreCaseMach = endMatch || config.tagName&&config.tagName.toLowerCase() == tagName.toLowerCase()
+		        if(endIgnoreCaseMach){
+		        	domBuilder.endElement(config.uri,config.localName,tagName);
+					if(localNSMap){
+						for(var prefix in localNSMap){
+							domBuilder.endPrefixMapping(prefix) ;
+						}
+					}
+					if(!endMatch){
+		            	errorHandler.fatalError("end tag name: "+tagName+' is not match the current start tagName:'+config.tagName );
+					}
+		        }else{
+		        	parseStack.push(config)
+		        }
+				
+				end++;
+				break;
+				// end elment
+			case '?':// <?...?>
+				locator&&position(tagStart);
+				end = parseInstruction(source,tagStart,domBuilder);
+				break;
+			case '!':// <!doctype,<![CDATA,<!--
+				locator&&position(tagStart);
+				end = parseDCC(source,tagStart,domBuilder,errorHandler);
+				break;
+			default:
+				locator&&position(tagStart);
+				var el = new ElementAttributes();
+				var currentNSMap = parseStack[parseStack.length-1].currentNSMap;
+				//elStartEnd
+				var end = parseElementStartPart(source,tagStart,el,currentNSMap,entityReplacer,errorHandler);
+				var len = el.length;
+				
+				
+				if(!el.closed && fixSelfClosed(source,end,el.tagName,closeMap)){
+					el.closed = true;
+					if(!entityMap.nbsp){
+						errorHandler.warning('unclosed xml attribute');
+					}
+				}
+				if(locator && len){
+					var locator2 = copyLocator(locator,{});
+					//try{//attribute position fixed
+					for(var i = 0;i<len;i++){
+						var a = el[i];
+						position(a.offset);
+						a.locator = copyLocator(locator,{});
+					}
+					//}catch(e){console.error('@@@@@'+e)}
+					domBuilder.locator = locator2
+					if(appendElement(el,domBuilder,currentNSMap)){
+						parseStack.push(el)
+					}
+					domBuilder.locator = locator;
+				}else{
+					if(appendElement(el,domBuilder,currentNSMap)){
+						parseStack.push(el)
+					}
+				}
+				
+				
+				
+				if(el.uri === 'http://www.w3.org/1999/xhtml' && !el.closed){
+					end = parseHtmlSpecialContent(source,end,el.tagName,entityReplacer,domBuilder)
+				}else{
+					end++;
+				}
+			}
+		}catch(e){
+			errorHandler.error('element parse error: '+e)
+			//errorHandler.error('element parse error: '+e);
+			end = -1;
+			//throw e;
+		}
+		if(end>start){
+			start = end;
+		}else{
+			//TODO: 这里有可能sax回退，有位置错误风险
+			appendText(Math.max(tagStart,start)+1);
+		}
+	}
+}
+function copyLocator(f,t){
+	t.lineNumber = f.lineNumber;
+	t.columnNumber = f.columnNumber;
+	return t;
+}
+
+/**
+ * @see #appendElement(source,elStartEnd,el,selfClosed,entityReplacer,domBuilder,parseStack);
+ * @return end of the elementStartPart(end of elementEndPart for selfClosed el)
+ */
+function parseElementStartPart(source,start,el,currentNSMap,entityReplacer,errorHandler){
+	var attrName;
+	var value;
+	var p = ++start;
+	var s = S_TAG;//status
+	while(true){
+		var c = source.charAt(p);
+		switch(c){
+		case '=':
+			if(s === S_ATTR){//attrName
+				attrName = source.slice(start,p);
+				s = S_EQ;
+			}else if(s === S_ATTR_SPACE){
+				s = S_EQ;
+			}else{
+				//fatalError: equal must after attrName or space after attrName
+				throw new Error('attribute equal must after attrName');
+			}
+			break;
+		case '\'':
+		case '"':
+			if(s === S_EQ || s === S_ATTR //|| s == S_ATTR_SPACE
+				){//equal
+				if(s === S_ATTR){
+					errorHandler.warning('attribute value must after "="')
+					attrName = source.slice(start,p)
+				}
+				start = p+1;
+				p = source.indexOf(c,start)
+				if(p>0){
+					value = source.slice(start,p).replace(/&#?\w+;/g,entityReplacer);
+					el.add(attrName,value,start-1);
+					s = S_ATTR_END;
+				}else{
+					//fatalError: no end quot match
+					throw new Error('attribute value no end \''+c+'\' match');
+				}
+			}else if(s == S_ATTR_NOQUOT_VALUE){
+				value = source.slice(start,p).replace(/&#?\w+;/g,entityReplacer);
+				//console.log(attrName,value,start,p)
+				el.add(attrName,value,start);
+				//console.dir(el)
+				errorHandler.warning('attribute "'+attrName+'" missed start quot('+c+')!!');
+				start = p+1;
+				s = S_ATTR_END
+			}else{
+				//fatalError: no equal before
+				throw new Error('attribute value must after "="');
+			}
+			break;
+		case '/':
+			switch(s){
+			case S_TAG:
+				el.setTagName(source.slice(start,p));
+			case S_ATTR_END:
+			case S_TAG_SPACE:
+			case S_TAG_CLOSE:
+				s =S_TAG_CLOSE;
+				el.closed = true;
+			case S_ATTR_NOQUOT_VALUE:
+			case S_ATTR:
+			case S_ATTR_SPACE:
+				break;
+			//case S_EQ:
+			default:
+				throw new Error("attribute invalid close char('/')")
+			}
+			break;
+		case ''://end document
+			//throw new Error('unexpected end of input')
+			errorHandler.error('unexpected end of input');
+			if(s == S_TAG){
+				el.setTagName(source.slice(start,p));
+			}
+			return p;
+		case '>':
+			switch(s){
+			case S_TAG:
+				el.setTagName(source.slice(start,p));
+			case S_ATTR_END:
+			case S_TAG_SPACE:
+			case S_TAG_CLOSE:
+				break;//normal
+			case S_ATTR_NOQUOT_VALUE://Compatible state
+			case S_ATTR:
+				value = source.slice(start,p);
+				if(value.slice(-1) === '/'){
+					el.closed  = true;
+					value = value.slice(0,-1)
+				}
+			case S_ATTR_SPACE:
+				if(s === S_ATTR_SPACE){
+					value = attrName;
+				}
+				if(s == S_ATTR_NOQUOT_VALUE){
+					errorHandler.warning('attribute "'+value+'" missed quot(")!!');
+					el.add(attrName,value.replace(/&#?\w+;/g,entityReplacer),start)
+				}else{
+					if(currentNSMap[''] !== 'http://www.w3.org/1999/xhtml' || !value.match(/^(?:disabled|checked|selected)$/i)){
+						errorHandler.warning('attribute "'+value+'" missed value!! "'+value+'" instead!!')
+					}
+					el.add(value,value,start)
+				}
+				break;
+			case S_EQ:
+				throw new Error('attribute value missed!!');
+			}
+//			console.log(tagName,tagNamePattern,tagNamePattern.test(tagName))
+			return p;
+		/*xml space '\x20' | #x9 | #xD | #xA; */
+		case '\u0080':
+			c = ' ';
+		default:
+			if(c<= ' '){//space
+				switch(s){
+				case S_TAG:
+					el.setTagName(source.slice(start,p));//tagName
+					s = S_TAG_SPACE;
+					break;
+				case S_ATTR:
+					attrName = source.slice(start,p)
+					s = S_ATTR_SPACE;
+					break;
+				case S_ATTR_NOQUOT_VALUE:
+					var value = source.slice(start,p).replace(/&#?\w+;/g,entityReplacer);
+					errorHandler.warning('attribute "'+value+'" missed quot(")!!');
+					el.add(attrName,value,start)
+				case S_ATTR_END:
+					s = S_TAG_SPACE;
+					break;
+				//case S_TAG_SPACE:
+				//case S_EQ:
+				//case S_ATTR_SPACE:
+				//	void();break;
+				//case S_TAG_CLOSE:
+					//ignore warning
+				}
+			}else{//not space
+//S_TAG,	S_ATTR,	S_EQ,	S_ATTR_NOQUOT_VALUE
+//S_ATTR_SPACE,	S_ATTR_END,	S_TAG_SPACE, S_TAG_CLOSE
+				switch(s){
+				//case S_TAG:void();break;
+				//case S_ATTR:void();break;
+				//case S_ATTR_NOQUOT_VALUE:void();break;
+				case S_ATTR_SPACE:
+					var tagName =  el.tagName;
+					if(currentNSMap[''] !== 'http://www.w3.org/1999/xhtml' || !attrName.match(/^(?:disabled|checked|selected)$/i)){
+						errorHandler.warning('attribute "'+attrName+'" missed value!! "'+attrName+'" instead2!!')
+					}
+					el.add(attrName,attrName,start);
+					start = p;
+					s = S_ATTR;
+					break;
+				case S_ATTR_END:
+					errorHandler.warning('attribute space is required"'+attrName+'"!!')
+				case S_TAG_SPACE:
+					s = S_ATTR;
+					start = p;
+					break;
+				case S_EQ:
+					s = S_ATTR_NOQUOT_VALUE;
+					start = p;
+					break;
+				case S_TAG_CLOSE:
+					throw new Error("elements closed character '/' and '>' must be connected to");
+				}
+			}
+		}//end outer switch
+		//console.log('p++',p)
+		p++;
+	}
+}
+/**
+ * @return true if has new namespace define
+ */
+function appendElement(el,domBuilder,currentNSMap){
+	var tagName = el.tagName;
+	var localNSMap = null;
+	//var currentNSMap = parseStack[parseStack.length-1].currentNSMap;
+	var i = el.length;
+	while(i--){
+		var a = el[i];
+		var qName = a.qName;
+		var value = a.value;
+		var nsp = qName.indexOf(':');
+		if(nsp>0){
+			var prefix = a.prefix = qName.slice(0,nsp);
+			var localName = qName.slice(nsp+1);
+			var nsPrefix = prefix === 'xmlns' && localName
+		}else{
+			localName = qName;
+			prefix = null
+			nsPrefix = qName === 'xmlns' && ''
+		}
+		//can not set prefix,because prefix !== ''
+		a.localName = localName ;
+		//prefix == null for no ns prefix attribute 
+		if(nsPrefix !== false){//hack!!
+			if(localNSMap == null){
+				localNSMap = {}
+				//console.log(currentNSMap,0)
+				_copy(currentNSMap,currentNSMap={})
+				//console.log(currentNSMap,1)
+			}
+			currentNSMap[nsPrefix] = localNSMap[nsPrefix] = value;
+			a.uri = 'http://www.w3.org/2000/xmlns/'
+			domBuilder.startPrefixMapping(nsPrefix, value) 
+		}
+	}
+	var i = el.length;
+	while(i--){
+		a = el[i];
+		var prefix = a.prefix;
+		if(prefix){//no prefix attribute has no namespace
+			if(prefix === 'xml'){
+				a.uri = 'http://www.w3.org/XML/1998/namespace';
+			}if(prefix !== 'xmlns'){
+				a.uri = currentNSMap[prefix || '']
+				
+				//{console.log('###'+a.qName,domBuilder.locator.systemId+'',currentNSMap,a.uri)}
+			}
+		}
+	}
+	var nsp = tagName.indexOf(':');
+	if(nsp>0){
+		prefix = el.prefix = tagName.slice(0,nsp);
+		localName = el.localName = tagName.slice(nsp+1);
+	}else{
+		prefix = null;//important!!
+		localName = el.localName = tagName;
+	}
+	//no prefix element has default namespace
+	var ns = el.uri = currentNSMap[prefix || ''];
+	domBuilder.startElement(ns,localName,tagName,el);
+	//endPrefixMapping and startPrefixMapping have not any help for dom builder
+	//localNSMap = null
+	if(el.closed){
+		domBuilder.endElement(ns,localName,tagName);
+		if(localNSMap){
+			for(prefix in localNSMap){
+				domBuilder.endPrefixMapping(prefix) 
+			}
+		}
+	}else{
+		el.currentNSMap = currentNSMap;
+		el.localNSMap = localNSMap;
+		//parseStack.push(el);
+		return true;
+	}
+}
+function parseHtmlSpecialContent(source,elStartEnd,tagName,entityReplacer,domBuilder){
+	if(/^(?:script|textarea)$/i.test(tagName)){
+		var elEndStart =  source.indexOf('</'+tagName+'>',elStartEnd);
+		var text = source.substring(elStartEnd+1,elEndStart);
+		if(/[&<]/.test(text)){
+			if(/^script$/i.test(tagName)){
+				//if(!/\]\]>/.test(text)){
+					//lexHandler.startCDATA();
+					domBuilder.characters(text,0,text.length);
+					//lexHandler.endCDATA();
+					return elEndStart;
+				//}
+			}//}else{//text area
+				text = text.replace(/&#?\w+;/g,entityReplacer);
+				domBuilder.characters(text,0,text.length);
+				return elEndStart;
+			//}
+			
+		}
+	}
+	return elStartEnd+1;
+}
+function fixSelfClosed(source,elStartEnd,tagName,closeMap){
+	//if(tagName in closeMap){
+	var pos = closeMap[tagName];
+	if(pos == null){
+		//console.log(tagName)
+		pos =  source.lastIndexOf('</'+tagName+'>')
+		if(pos<elStartEnd){//忘记闭合
+			pos = source.lastIndexOf('</'+tagName)
+		}
+		closeMap[tagName] =pos
+	}
+	return pos<elStartEnd;
+	//} 
+}
+function _copy(source,target){
+	for(var n in source){target[n] = source[n]}
+}
+function parseDCC(source,start,domBuilder,errorHandler){//sure start with '<!'
+	var next= source.charAt(start+2)
+	switch(next){
+	case '-':
+		if(source.charAt(start + 3) === '-'){
+			var end = source.indexOf('-->',start+4);
+			//append comment source.substring(4,end)//<!--
+			if(end>start){
+				domBuilder.comment(source,start+4,end-start-4);
+				return end+3;
+			}else{
+				errorHandler.error("Unclosed comment");
+				return -1;
+			}
+		}else{
+			//error
+			return -1;
+		}
+	default:
+		if(source.substr(start+3,6) == 'CDATA['){
+			var end = source.indexOf(']]>',start+9);
+			domBuilder.startCDATA();
+			domBuilder.characters(source,start+9,end-start-9);
+			domBuilder.endCDATA() 
+			return end+3;
+		}
+		//<!DOCTYPE
+		//startDTD(java.lang.String name, java.lang.String publicId, java.lang.String systemId) 
+		var matchs = split(source,start);
+		var len = matchs.length;
+		if(len>1 && /!doctype/i.test(matchs[0][0])){
+			var name = matchs[1][0];
+			var pubid = len>3 && /^public$/i.test(matchs[2][0]) && matchs[3][0]
+			var sysid = len>4 && matchs[4][0];
+			var lastMatch = matchs[len-1]
+			domBuilder.startDTD(name,pubid && pubid.replace(/^(['"])(.*?)\1$/,'$2'),
+					sysid && sysid.replace(/^(['"])(.*?)\1$/,'$2'));
+			domBuilder.endDTD();
+			
+			return lastMatch.index+lastMatch[0].length
+		}
+	}
+	return -1;
+}
+
+
+
+function parseInstruction(source,start,domBuilder){
+	var end = source.indexOf('?>',start);
+	if(end){
+		var match = source.substring(start,end).match(/^<\?(\S*)\s*([\s\S]*?)\s*$/);
+		if(match){
+			var len = match[0].length;
+			domBuilder.processingInstruction(match[1], match[2]) ;
+			return end+2;
+		}else{//error
+			return -1;
+		}
+	}
+	return -1;
+}
+
+/**
+ * @param source
+ */
+function ElementAttributes(source){
+	
+}
+ElementAttributes.prototype = {
+	setTagName:function(tagName){
+		if(!tagNamePattern.test(tagName)){
+			throw new Error('invalid tagName:'+tagName)
+		}
+		this.tagName = tagName
+	},
+	add:function(qName,value,offset){
+		if(!tagNamePattern.test(qName)){
+			throw new Error('invalid attribute:'+qName)
+		}
+		this[this.length++] = {qName:qName,value:value,offset:offset}
+	},
+	length:0,
+	getLocalName:function(i){return this[i].localName},
+	getLocator:function(i){return this[i].locator},
+	getQName:function(i){return this[i].qName},
+	getURI:function(i){return this[i].uri},
+	getValue:function(i){return this[i].value}
+//	,getIndex:function(uri, localName)){
+//		if(localName){
+//			
+//		}else{
+//			var qName = uri
+//		}
+//	},
+//	getValue:function(){return this.getValue(this.getIndex.apply(this,arguments))},
+//	getType:function(uri,localName){}
+//	getType:function(i){},
+}
+
+
+
+function split(source,start){
+	var match;
+	var buf = [];
+	var reg = /'[^']+'|"[^"]+"|[^\s<>\/=]+=?|(\/?\s*>|<)/g;
+	reg.lastIndex = start;
+	reg.exec(source);//skip <
+	while(match = reg.exec(source)){
+		buf.push(match);
+		if(match[1])return buf;
+	}
+}
+
+exports.XMLReader = XMLReader;
+
+
+},{}],103:[function(require,module,exports){
 /*  Adapted from pdf.js's colorspace module
     (https://github.com/mozilla/pdf.js/blob/a18290759227c894f8f97f58c8da8ce942f5a38f/src/core/colorspace.js)
 
@@ -15096,10 +17455,10 @@ module.exports = function convertToRgb (src) {
   const toFraction = 1 / 100
   const rgb = new Uint8ClampedArray(3)
 
-  let c = src[0] * toFraction
-  let m = src[1] * toFraction
-  let y = src[2] * toFraction
-  let k = src[3] * toFraction
+  const c = src[0] * toFraction
+  const m = src[1] * toFraction
+  const y = src[2] * toFraction
+  const k = src[3] * toFraction
 
   rgb[0] = 255 +
     c * (-4.387332384609988 * c + 54.48615194189176 * m +
@@ -15133,20 +17492,22 @@ module.exports = function convertToRgb (src) {
   return rgb
 }
 
-},{}],100:[function(require,module,exports){
+},{}],104:[function(require,module,exports){
 const readOcad = require('./ocad-reader')
 const ocadToGeoJson = require('./ocad-to-geojson')
 const { ocadToSvg } = require('./ocad-to-svg')
+const ocadToQml = require('./ocad-to-qml')
 const ocadToMapboxGlStyle = require('./ocad-to-mapbox-gl-style')
 
 module.exports = {
   readOcad,
   ocadToGeoJson,
   ocadToSvg,
-  ocadToMapboxGlStyle
+  ocadToMapboxGlStyle,
+  ocadToQml
 }
 
-},{"./ocad-reader":104,"./ocad-to-geojson":121,"./ocad-to-mapbox-gl-style":122,"./ocad-to-svg":123}],101:[function(require,module,exports){
+},{"./ocad-reader":109,"./ocad-to-geojson":126,"./ocad-to-mapbox-gl-style":127,"./ocad-to-qml":128,"./ocad-to-svg":129}],105:[function(require,module,exports){
 const { Symbol10, Symbol11 } = require('./symbol')
 
 class AreaSymbol10 extends Symbol10 {
@@ -15214,7 +17575,7 @@ module.exports = {
   2018: AreaSymbol11
 }
 
-},{"./symbol":117}],102:[function(require,module,exports){
+},{"./symbol":122}],106:[function(require,module,exports){
 module.exports = class Block {
   constructor (buffer, offset) {
     this.buffer = buffer
@@ -15266,7 +17627,694 @@ module.exports = class Block {
   }
 }
 
-},{}],103:[function(require,module,exports){
+},{}],107:[function(require,module,exports){
+// Copied and adapted from
+// https://github.com/doppelmeter/OCAD-Grid-ID_to_EPSG
+//
+// OCAD-Grid-ID;CRS-Code;CRS-Catalog;Name;Comment
+
+module.exports = [
+  [-2060, 32760, 'EPSG', 'WGS 84 / UTM zone 60S'],
+  [-2059, 32759, 'EPSG', 'WGS 84 / UTM zone 59S'],
+  [-2058, 32758, 'EPSG', 'WGS 84 / UTM zone 58S'],
+  [-2057, 32757, 'EPSG', 'WGS 84 / UTM zone 57S'],
+  [-2056, 32756, 'EPSG', 'WGS 84 / UTM zone 56S'],
+  [-2055, 32755, 'EPSG', 'WGS 84 / UTM zone 55S'],
+  [-2054, 32754, 'EPSG', 'WGS 84 / UTM zone 54S'],
+  [-2053, 32753, 'EPSG', 'WGS 84 / UTM zone 53S'],
+  [-2052, 32752, 'EPSG', 'WGS 84 / UTM zone 52S'],
+  [-2051, 32751, 'EPSG', 'WGS 84 / UTM zone 51S'],
+  [-2050, 32750, 'EPSG', 'WGS 84 / UTM zone 50S'],
+  [-2049, 32749, 'EPSG', 'WGS 84 / UTM zone 49S'],
+  [-2048, 32748, 'EPSG', 'WGS 84 / UTM zone 48S'],
+  [-2047, 32747, 'EPSG', 'WGS 84 / UTM zone 47S'],
+  [-2046, 32746, 'EPSG', 'WGS 84 / UTM zone 46S'],
+  [-2045, 32745, 'EPSG', 'WGS 84 / UTM zone 45S'],
+  [-2044, 32744, 'EPSG', 'WGS 84 / UTM zone 44S'],
+  [-2043, 32743, 'EPSG', 'WGS 84 / UTM zone 43S'],
+  [-2042, 32742, 'EPSG', 'WGS 84 / UTM zone 42S'],
+  [-2041, 32741, 'EPSG', 'WGS 84 / UTM zone 41S'],
+  [-2040, 32740, 'EPSG', 'WGS 84 / UTM zone 40S'],
+  [-2039, 32739, 'EPSG', 'WGS 84 / UTM zone 39S'],
+  [-2038, 32738, 'EPSG', 'WGS 84 / UTM zone 38S'],
+  [-2037, 32737, 'EPSG', 'WGS 84 / UTM zone 37S'],
+  [-2036, 32736, 'EPSG', 'WGS 84 / UTM zone 36S'],
+  [-2035, 32735, 'EPSG', 'WGS 84 / UTM zone 35S'],
+  [-2034, 32734, 'EPSG', 'WGS 84 / UTM zone 34S'],
+  [-2033, 32733, 'EPSG', 'WGS 84 / UTM zone 33S'],
+  [-2032, 32732, 'EPSG', 'WGS 84 / UTM zone 32S'],
+  [-2031, 32731, 'EPSG', 'WGS 84 / UTM zone 31S'],
+  [-2030, 32730, 'EPSG', 'WGS 84 / UTM zone 30S'],
+  [-2029, 32729, 'EPSG', 'WGS 84 / UTM zone 29S'],
+  [-2028, 32728, 'EPSG', 'WGS 84 / UTM zone 28S'],
+  [-2027, 32727, 'EPSG', 'WGS 84 / UTM zone 27S'],
+  [-2026, 32726, 'EPSG', 'WGS 84 / UTM zone 26S'],
+  [-2025, 32725, 'EPSG', 'WGS 84 / UTM zone 25S'],
+  [-2024, 32724, 'EPSG', 'WGS 84 / UTM zone 24S'],
+  [-2023, 32723, 'EPSG', 'WGS 84 / UTM zone 23S'],
+  [-2022, 32722, 'EPSG', 'WGS 84 / UTM zone 22S'],
+  [-2021, 32721, 'EPSG', 'WGS 84 / UTM zone 21S'],
+  [-2020, 32720, 'EPSG', 'WGS 84 / UTM zone 20S'],
+  [-2019, 32719, 'EPSG', 'WGS 84 / UTM zone 19S'],
+  [-2018, 32718, 'EPSG', 'WGS 84 / UTM zone 18S'],
+  [-2017, 32717, 'EPSG', 'WGS 84 / UTM zone 17S'],
+  [-2016, 32716, 'EPSG', 'WGS 84 / UTM zone 16S'],
+  [-2015, 32715, 'EPSG', 'WGS 84 / UTM zone 15S'],
+  [-2014, 32714, 'EPSG', 'WGS 84 / UTM zone 14S'],
+  [-2013, 32713, 'EPSG', 'WGS 84 / UTM zone 13S'],
+  [-2012, 32712, 'EPSG', 'WGS 84 / UTM zone 12S'],
+  [-2011, 32711, 'EPSG', 'WGS 84 / UTM zone 11S'],
+  [-2010, 32710, 'EPSG', 'WGS 84 / UTM zone 10S'],
+  [-2009, 32709, 'EPSG', 'WGS 84 / UTM zone 9S'],
+  [-2008, 32708, 'EPSG', 'WGS 84 / UTM zone 8S'],
+  [-2007, 32707, 'EPSG', 'WGS 84 / UTM zone 7S'],
+  [-2006, 32706, 'EPSG', 'WGS 84 / UTM zone 6S'],
+  [-2005, 32705, 'EPSG', 'WGS 84 / UTM zone 5S'],
+  [-2004, 32704, 'EPSG', 'WGS 84 / UTM zone 4S'],
+  [-2003, 32703, 'EPSG', 'WGS 84 / UTM zone 3S'],
+  [-2002, 32702, 'EPSG', 'WGS 84 / UTM zone 2S'],
+  [-2001, 32701, 'EPSG', 'WGS 84 / UTM zone 1S'],
+  [2001, 32601, 'EPSG', 'WGS 84 / UTM zone 1N'],
+  [2002, 32602, 'EPSG', 'WGS 84 / UTM zone 2N'],
+  [2003, 32603, 'EPSG', 'WGS 84 / UTM zone 3N'],
+  [2004, 32604, 'EPSG', 'WGS 84 / UTM zone 4N'],
+  [2005, 32605, 'EPSG', 'WGS 84 / UTM zone 5N'],
+  [2006, 32606, 'EPSG', 'WGS 84 / UTM zone 6N'],
+  [2007, 32607, 'EPSG', 'WGS 84 / UTM zone 7N'],
+  [2008, 32608, 'EPSG', 'WGS 84 / UTM zone 8N'],
+  [2009, 32609, 'EPSG', 'WGS 84 / UTM zone 9N'],
+  [2010, 32610, 'EPSG', 'WGS 84 / UTM zone 10N'],
+  [2011, 32611, 'EPSG', 'WGS 84 / UTM zone 11N'],
+  [2012, 32612, 'EPSG', 'WGS 84 / UTM zone 12N'],
+  [2013, 32613, 'EPSG', 'WGS 84 / UTM zone 13N'],
+  [2014, 32614, 'EPSG', 'WGS 84 / UTM zone 14N'],
+  [2015, 32615, 'EPSG', 'WGS 84 / UTM zone 15N'],
+  [2016, 32616, 'EPSG', 'WGS 84 / UTM zone 16N'],
+  [2017, 32617, 'EPSG', 'WGS 84 / UTM zone 17N'],
+  [2018, 32618, 'EPSG', 'WGS 84 / UTM zone 18N'],
+  [2019, 32619, 'EPSG', 'WGS 84 / UTM zone 19N'],
+  [2020, 32620, 'EPSG', 'WGS 84 / UTM zone 20N'],
+  [2021, 32621, 'EPSG', 'WGS 84 / UTM zone 21N'],
+  [2022, 32622, 'EPSG', 'WGS 84 / UTM zone 22N'],
+  [2023, 32623, 'EPSG', 'WGS 84 / UTM zone 23N'],
+  [2024, 32624, 'EPSG', 'WGS 84 / UTM zone 24N'],
+  [2025, 32625, 'EPSG', 'WGS 84 / UTM zone 25N'],
+  [2026, 32626, 'EPSG', 'WGS 84 / UTM zone 26N'],
+  [2027, 32627, 'EPSG', 'WGS 84 / UTM zone 27N'],
+  [2028, 32628, 'EPSG', 'WGS 84 / UTM zone 28N'],
+  [2029, 32629, 'EPSG', 'WGS 84 / UTM zone 29N'],
+  [2030, 32630, 'EPSG', 'WGS 84 / UTM zone 30N'],
+  [2031, 32631, 'EPSG', 'WGS 84 / UTM zone 31N'],
+  [2032, 32632, 'EPSG', 'WGS 84 / UTM zone 32N'],
+  [2033, 32633, 'EPSG', 'WGS 84 / UTM zone 33N'],
+  [2034, 32634, 'EPSG', 'WGS 84 / UTM zone 34N'],
+  [2035, 32635, 'EPSG', 'WGS 84 / UTM zone 35N'],
+  [2036, 32636, 'EPSG', 'WGS 84 / UTM zone 36N'],
+  [2037, 32637, 'EPSG', 'WGS 84 / UTM zone 37N'],
+  [2038, 32638, 'EPSG', 'WGS 84 / UTM zone 38N'],
+  [2039, 32639, 'EPSG', 'WGS 84 / UTM zone 39N'],
+  [2040, 32640, 'EPSG', 'WGS 84 / UTM zone 40N'],
+  [2041, 32641, 'EPSG', 'WGS 84 / UTM zone 41N'],
+  [2042, 32642, 'EPSG', 'WGS 84 / UTM zone 42N'],
+  [2043, 32643, 'EPSG', 'WGS 84 / UTM zone 43N'],
+  [2044, 32644, 'EPSG', 'WGS 84 / UTM zone 44N'],
+  [2045, 32645, 'EPSG', 'WGS 84 / UTM zone 45N'],
+  [2046, 32646, 'EPSG', 'WGS 84 / UTM zone 46N'],
+  [2047, 32647, 'EPSG', 'WGS 84 / UTM zone 47N'],
+  [2048, 32648, 'EPSG', 'WGS 84 / UTM zone 48N'],
+  [2049, 32649, 'EPSG', 'WGS 84 / UTM zone 49N'],
+  [2050, 32650, 'EPSG', 'WGS 84 / UTM zone 50N'],
+  [2051, 32651, 'EPSG', 'WGS 84 / UTM zone 51N'],
+  [2052, 32652, 'EPSG', 'WGS 84 / UTM zone 52N'],
+  [2053, 32653, 'EPSG', 'WGS 84 / UTM zone 53N'],
+  [2054, 32654, 'EPSG', 'WGS 84 / UTM zone 54N'],
+  [2055, 32655, 'EPSG', 'WGS 84 / UTM zone 55N'],
+  [2056, 32656, 'EPSG', 'WGS 84 / UTM zone 56N'],
+  [2057, 32657, 'EPSG', 'WGS 84 / UTM zone 57N'],
+  [2058, 32658, 'EPSG', 'WGS 84 / UTM zone 58N'],
+  [2059, 32659, 'EPSG', 'WGS 84 / UTM zone 59N'],
+  [2060, 32660, 'EPSG', 'WGS 84 / UTM zone 60N'],
+  [3028, 31257, 'EPSG', 'MGI / Austria GK M28'],
+  [3031, 31258, 'EPSG', 'MGI / Austria GK M31'],
+  [3034, 31259, 'EPSG', 'MGI / Austria GK M34'],
+  [3035, 31254, 'EPSG', 'MGI / Austria GK West'],
+  [3036, 31255, 'EPSG', 'MGI / Austria GK Central'],
+  [3038, 31256, 'EPSG', 'MGI / Austria GK East'],
+  [4001, 31300, 'EPSG', 'Belge 1972 / Belge Lambert 72'],
+  [4002, 3447, 'EPSG', 'ETRS89 / Belgian Lambert 2005'],
+  [4003, 3812, 'EPSG', 'ETRS89 / Belgian Lambert 2008'],
+  [5000, 27700, 'EPSG', 'OSGB 1936 / British National Grid'],
+  [6001, 2391, 'EPSG', 'KKJ / Finland zone 1'],
+  [6002, 2392, 'EPSG', 'KKJ / Finland zone 2'],
+  [6003, 2393, 'EPSG', 'KKJ / Finland Uniform Coordinate System'],
+  [6004, 2394, 'EPSG', 'KKJ / Finland zone 4'],
+  [6005, 3067, 'EPSG', 'ETRS89 / TM35FIN(E N)'],
+  [6006, 3873, 'EPSG', 'ETRS89 / GK19FIN'],
+  [6007, 3874, 'EPSG', 'ETRS89 / GK20FIN'],
+  [6008, 3875, 'EPSG', 'ETRS89 / GK21FIN'],
+  [6009, 3876, 'EPSG', 'ETRS89 / GK22FIN'],
+  [6010, 3877, 'EPSG', 'ETRS89 / GK23FIN'],
+  [6011, 3878, 'EPSG', 'ETRS89 / GK24FIN'],
+  [6012, 3879, 'EPSG', 'ETRS89 / GK25FIN'],
+  [6013, 3880, 'EPSG', 'ETRS89 / GK26FIN'],
+  [6014, 3881, 'EPSG', 'ETRS89 / GK27FIN'],
+  [6015, 3882, 'EPSG', 'ETRS89 / GK28FIN'],
+  [6016, 3883, 'EPSG', 'ETRS89 / GK29FIN'],
+  [6017, 3884, 'EPSG', 'ETRS89 / GK30FIN'],
+  [6018, 3885, 'EPSG', 'ETRS89 / GK31FIN'],
+  [6019, 3126, 'EPSG', 'ETRS89 / ETRS-GK19FIN'],
+  [6020, 3127, 'EPSG', 'ETRS89 / ETRS-GK20FIN'],
+  [6021, 3128, 'EPSG', 'ETRS89 / ETRS-GK21FIN'],
+  [6022, 3129, 'EPSG', 'ETRS89 / ETRS-GK22FIN'],
+  [6023, 3130, 'EPSG', 'ETRS89 / ETRS-GK23FIN'],
+  [6024, 3131, 'EPSG', 'ETRS89 / ETRS-GK24FIN'],
+  [6025, 3132, 'EPSG', 'ETRS89 / ETRS-GK25FIN'],
+  [6026, 3133, 'EPSG', 'ETRS89 / ETRS-GK26FIN'],
+  [6027, 3134, 'EPSG', 'ETRS89 / ETRS-GK27FIN'],
+  [6028, 3135, 'EPSG', 'ETRS89 / ETRS-GK28FIN'],
+  [6029, 3136, 'EPSG', 'ETRS89 / ETRS-GK29FIN'],
+  [6030, 3137, 'EPSG', 'ETRS89 / ETRS-GK30FIN'],
+  [6031, 3138, 'EPSG', 'ETRS89 / ETRS-GK31FIN'],
+  [6032, 3387, 'EPSG', 'KKJ / Finland zone 5'],
+  [7001, 27591, 'EPSG', 'NTF (Paris) / Nord France;#Deprecated: Changed projCRS name. Use EPSG:27561 instead'],
+  [7002, 27581, 'EPSG', 'NTF (Paris) / France I;#Deprecated: Changed projCRS name. Use EPSG:27571 instead'],
+  [7003, 27592, 'EPSG', 'NTF (Paris) / Centre France;#Deprecated: Changed projCRS name. Use EPSG:27562 instead'],
+  [7004, 27572, 'EPSG', 'NTF (Paris) / Lambert zone II'],
+  [7005, 27593, 'EPSG', 'NTF (Paris) / Sud France;#Deprecated: Changed projCRS name. Use EPSG:27563 instead'],
+  [7006, 27583, 'EPSG', 'NTF (Paris) / France III;#Deprecated: Changed projCRS name. Use EPSG:27573 instead'],
+  [7007, 27594, 'EPSG', 'NTF (Paris) / Corse;#Deprecated: Changed projCRS name. Use EPSG:27564 instead'],
+  [7008, 27584, 'EPSG', 'NTF (Paris) / France IV;#Deprecated: Changed projCRS name. Use EPSG:27574 instead'],
+  [7009, 2154, 'EPSG', 'RGF93 / Lambert-93'],
+  [7010, 3942, 'EPSG', 'RGF93 / CC42'],
+  [7011, 3943, 'EPSG', 'RGF93 / CC43'],
+  [7012, 3944, 'EPSG', 'RGF93 / CC44'],
+  [7013, 3945, 'EPSG', 'RGF93 / CC45'],
+  [7014, 3946, 'EPSG', 'RGF93 / CC46'],
+  [7015, 3947, 'EPSG', 'RGF93 / CC47'],
+  [7016, 3948, 'EPSG', 'RGF93 / CC48'],
+  [7017, 3949, 'EPSG', 'RGF93 / CC49'],
+  [7018, 3950, 'EPSG', 'RGF93 / CC50'],
+  [8002, 31466, 'EPSG', 'DHDN / 3-degree Gauss-Kruger zone 2'],
+  [8003, 31467, 'EPSG', 'DHDN / 3-degree Gauss-Kruger zone 3'],
+  [8004, 31468, 'EPSG', 'DHDN / 3-degree Gauss-Kruger zone 4'],
+  [8005, 31469, 'EPSG', 'DHDN / 3-degree Gauss-Kruger zone 5'],
+  [8006, 25831, 'EPSG', 'ETRS89 / UTM zone 31N'],
+  [8007, 25832, 'EPSG', 'ETRS89 / UTM zone 32N'],
+  [8008, 25833, 'EPSG', 'ETRS89 / UTM zone 33N'],
+  [8009, 0, ';', 'TRS89 32N 7Stellen;#CRS-Code missing in OCA'],
+  [8010, 0, ';', 'TRS89 33N 7Stellen;#CRS-Code missing in OCA'],
+  [8011, 0, ';', 'TRS89 32N 8Stellen;#CRS-Code missing in OCA'],
+  [8012, 0, ';', 'TRS89 33N 8Stellen;#CRS-Code missing in OCA'],
+  [8013, 3068, 'EPSG', 'DHDN / Soldner Berlin'],
+  [8014, 3068, 'EPSG', 'DHDN / Soldner Berlin'],
+  [9001, 29902, 'EPSG', 'TM65 / Irish Grid'],
+  [9002, 29903, 'EPSG', 'TM75 / Irish Grid'],
+  [9003, 2157, 'EPSG', 'IRENET95 / Irish Transverse Mercator'],
+  [11001, 30161, 'EPSG', 'Tokyo / Japan Plane Rectangular CS I'],
+  [11002, 30162, 'EPSG', 'Tokyo / Japan Plane Rectangular CS II'],
+  [11003, 30163, 'EPSG', 'Tokyo / Japan Plane Rectangular CS III'],
+  [11004, 30164, 'EPSG', 'Tokyo / Japan Plane Rectangular CS IV'],
+  [11005, 30165, 'EPSG', 'Tokyo / Japan Plane Rectangular CS V'],
+  [11006, 30166, 'EPSG', 'Tokyo / Japan Plane Rectangular CS VI'],
+  [11007, 30167, 'EPSG', 'Tokyo / Japan Plane Rectangular CS VII'],
+  [11008, 30168, 'EPSG', 'Tokyo / Japan Plane Rectangular CS VIII'],
+  [11009, 30169, 'EPSG', 'Tokyo / Japan Plane Rectangular CS IX'],
+  [11010, 30170, 'EPSG', 'Tokyo / Japan Plane Rectangular CS X'],
+  [11011, 30171, 'EPSG', 'Tokyo / Japan Plane Rectangular CS XI'],
+  [11012, 30172, 'EPSG', 'Tokyo / Japan Plane Rectangular CS XII'],
+  [11013, 30173, 'EPSG', 'Tokyo / Japan Plane Rectangular CS XIII'],
+  [11014, 30174, 'EPSG', 'Tokyo / Japan Plane Rectangular CS XIV'],
+  [11015, 30175, 'EPSG', 'Tokyo / Japan Plane Rectangular CS XV'],
+  [11016, 30176, 'EPSG', 'Tokyo / Japan Plane Rectangular CS XVI'],
+  [11017, 30177, 'EPSG', 'Tokyo / Japan Plane Rectangular CS XVII'],
+  [11018, 30178, 'EPSG', 'Tokyo / Japan Plane Rectangular CS XVIII'],
+  [11019, 30179, 'EPSG', 'Tokyo / Japan Plane Rectangular CS XIX'],
+  [11020, 2443, 'EPSG', 'JGD2000 / Japan Plane Rectangular CS I'],
+  [11021, 2444, 'EPSG', 'JGD2000 / Japan Plane Rectangular CS II'],
+  [11022, 2445, 'EPSG', 'JGD2000 / Japan Plane Rectangular CS III'],
+  [11023, 2446, 'EPSG', 'JGD2000 / Japan Plane Rectangular CS IV'],
+  [11024, 2447, 'EPSG', 'JGD2000 / Japan Plane Rectangular CS V'],
+  [11025, 2448, 'EPSG', 'JGD2000 / Japan Plane Rectangular CS VI'],
+  [11026, 2449, 'EPSG', 'JGD2000 / Japan Plane Rectangular CS VII'],
+  [11027, 2450, 'EPSG', 'JGD2000 / Japan Plane Rectangular CS VIII'],
+  [11028, 2451, 'EPSG', 'JGD2000 / Japan Plane Rectangular CS IX'],
+  [11029, 2452, 'EPSG', 'JGD2000 / Japan Plane Rectangular CS X'],
+  [11030, 2453, 'EPSG', 'JGD2000 / Japan Plane Rectangular CS XI'],
+  [11031, 2454, 'EPSG', 'JGD2000 / Japan Plane Rectangular CS XII'],
+  [11032, 2455, 'EPSG', 'JGD2000 / Japan Plane Rectangular CS XIII'],
+  [11033, 2456, 'EPSG', 'JGD2000 / Japan Plane Rectangular CS XIV'],
+  [11034, 2457, 'EPSG', 'JGD2000 / Japan Plane Rectangular CS XV'],
+  [11035, 2458, 'EPSG', 'JGD2000 / Japan Plane Rectangular CS XVI'],
+  [11036, 2459, 'EPSG', 'JGD2000 / Japan Plane Rectangular CS XVII'],
+  [11037, 2460, 'EPSG', 'JGD2000 / Japan Plane Rectangular CS XVIII'],
+  [11039, 2461, 'EPSG', 'JGD2000 / Japan Plane Rectangular CS XIX'],
+  [12001, 27391, 'EPSG', 'NGO 1948 (Oslo) / NGO zone I'],
+  [12002, 27392, 'EPSG', 'NGO 1948 (Oslo) / NGO zone II'],
+  [12003, 27393, 'EPSG', 'NGO 1948 (Oslo) / NGO zone III'],
+  [12004, 27394, 'EPSG', 'NGO 1948 (Oslo) / NGO zone IV'],
+  [12005, 27395, 'EPSG', 'NGO 1948 (Oslo) / NGO zone V'],
+  [12006, 27396, 'EPSG', 'NGO 1948 (Oslo) / NGO zone VI'],
+  [12007, 27397, 'EPSG', 'NGO 1948 (Oslo) / NGO zone VII'],
+  [12008, 27398, 'EPSG', 'NGO 1948 (Oslo) / NGO zone VIII'],
+  [12009, 23031, 'EPSG', 'ED50 / UTM zone 31N'],
+  [12010, 23032, 'EPSG', 'ED50 / UTM zone 32N'],
+  [12011, 23033, 'EPSG', 'ED50 / UTM zone 33N'],
+  [12012, 23034, 'EPSG', 'ED50 / UTM zone 34N'],
+  [12013, 23035, 'EPSG', 'ED50 / UTM zone 35N'],
+  [12014, 23036, 'EPSG', 'ED50 / UTM zone 36N'],
+  [13001, 6124, 'EPSG', 'WGS 84 / EPSG Arctic zone 4-12'],
+  [13002, 3006, 'EPSG', 'SWEREF99 TM'],
+  [13003, 3007, 'EPSG', 'SWEREF99 12 00'],
+  [13004, 3008, 'EPSG', 'SWEREF99 13 30'],
+  [13005, 3009, 'EPSG', 'SWEREF99 15 00'],
+  [13006, 3010, 'EPSG', 'SWEREF99 16 30'],
+  [13007, 3011, 'EPSG', 'SWEREF99 18 00'],
+  [13008, 3012, 'EPSG', 'SWEREF99 14 15'],
+  [13009, 3013, 'EPSG', 'SWEREF99 15 45'],
+  [13010, 3014, 'EPSG', 'SWEREF99 17 15'],
+  [13011, 3015, 'EPSG', 'SWEREF99 18 45'],
+  [13012, 3016, 'EPSG', 'SWEREF99 20 15'],
+  [13013, 3017, 'EPSG', 'SWEREF99 21 45'],
+  [13014, 3018, 'EPSG', 'SWEREF99 23 15'],
+  [14001, 21781, 'EPSG', 'CH1903 / LV03'],
+  [14002, 2056, 'EPSG', 'CH1903+ / LV95'],
+  [15001, 3912, 'EPSG', 'MGI 1901 / Slovene National Grid'],
+  [15002, 3794, 'EPSG', 'Slovenia 1996 / Slovene National Grid'],
+  [16001, 4685, 'SR', 'ORG;Gauss Boaga Fuso Ovest'],
+  [16002, 4686, 'EPSG', 'MAGNA-SIRGAS'],
+  [16003, 23031, 'EPSG', 'ED50 / UTM zone 31N'],
+  [16004, 23032, 'EPSG', 'ED50 / UTM zone 32N'],
+  [16005, 23033, 'EPSG', 'ED50 / UTM zone 33N'],
+  [16006, 23034, 'EPSG', 'ED50 / UTM zone 34N'],
+  [16007, 25832, 'EPSG', 'ETRS89 / UTM zone 32N'],
+  [16008, 25833, 'EPSG', 'ETRS89 / UTM zone 33N'],
+  [16009, 6707, 'EPSG', 'RDN2008 / UTM zone 32N (N-E)'],
+  [16010, 6708, 'EPSG', 'RDN2008 / UTM zone 33N (N-E)'],
+  [16011, 6875, 'EPSG', 'RDN2008 / Italy zone (N-E)'],
+  [16012, 6876, 'EPSG', 'RDN2008 / Zone 12 (N-E)'],
+  [17001, 2206, 'EPSG', 'ED50 / 3-degree Gauss-Kruger zone 9'],
+  [17002, 2207, 'EPSG', 'ED50 / 3-degree Gauss-Kruger zone 10'],
+  [17003, 2208, 'EPSG', 'ED50 / 3-degree Gauss-Kruger zone 11'],
+  [17004, 2209, 'EPSG', 'ED50 / 3-degree Gauss-Kruger zone 12'],
+  [17005, 2210, 'EPSG', 'ED50 / 3-degree Gauss-Kruger zone 13'],
+  [17006, 2211, 'EPSG', 'ED50 / 3-degree Gauss-Kruger zone 14'],
+  [17007, 2212, 'EPSG', 'ED50 / 3-degree Gauss-Kruger zone 15'],
+  [17008, 7006, 'EPSG', 'Nahrwan 1934 / UTM zone 38N'],
+  [18001, 2046, 'EPSG', 'Hartebeesthoek94 / Lo15'],
+  [18002, 2047, 'EPSG', 'Hartebeesthoek94 / Lo17'],
+  [18003, 2048, 'EPSG', 'Hartebeesthoek94 / Lo19'],
+  [18004, 2049, 'EPSG', 'Hartebeesthoek94 / Lo21'],
+  [18005, 2050, 'EPSG', 'Hartebeesthoek94 / Lo23'],
+  [18006, 2051, 'EPSG', 'Hartebeesthoek94 / Lo25'],
+  [18007, 2052, 'EPSG', 'Hartebeesthoek94 / Lo27'],
+  [18008, 2053, 'EPSG', 'Hartebeesthoek94 / Lo29'],
+  [18009, 2054, 'EPSG', 'Hartebeesthoek94 / Lo31'],
+  [18010, 2055, 'EPSG', 'Hartebeesthoek94 / Lo33'],
+  [19000, 2193, 'EPSG', 'NZGD2000 / New Zealand Transverse Mercator 2000'],
+  [20001, 28348, 'EPSG', 'GDA94 / MGA zone 48'],
+  [20002, 28349, 'EPSG', 'GDA94 / MGA zone 49'],
+  [20003, 28350, 'EPSG', 'GDA94 / MGA zone 50'],
+  [20004, 28351, 'EPSG', 'GDA94 / MGA zone 51'],
+  [20005, 28352, 'EPSG', 'GDA94 / MGA zone 52'],
+  [20006, 28353, 'EPSG', 'GDA94 / MGA zone 53'],
+  [20007, 28354, 'EPSG', 'GDA94 / MGA zone 54'],
+  [20008, 28355, 'EPSG', 'GDA94 / MGA zone 55'],
+  [20009, 28356, 'EPSG', 'GDA94 / MGA zone 56'],
+  [20010, 28357, 'EPSG', 'GDA94 / MGA zone 57'],
+  [20011, 28358, 'EPSG', 'GDA94 / MGA zone 58'],
+  [20012, 3112, 'EPSG', 'GDA94 / Geoscience Australia Lambert'],
+  [21001, 23032, 'EPSG', 'ED50 / UTM zone 32N'],
+  [21002, 23033, 'EPSG', 'ED50 / UTM zone 33N'],
+  [21003, 25832, 'EPSG', 'ETRS89 / UTM zone 32N'],
+  [21004, 25833, 'EPSG', 'ETRS89 / UTM zone 33N'],
+  [23001, 0, ';', 'outh Africa rotated WG15;#CRS-Code missing in OCA'],
+  [23002, 0, ';', 'outh Africa rotated WG17;#CRS-Code missing in OCA'],
+  [23003, 0, ';', 'outh Africa rotated WG19;#CRS-Code missing in OCA'],
+  [23004, 0, ';', 'outh Africa rotated WG21;#CRS-Code missing in OCA'],
+  [23005, 0, ';', 'outh Africa rotated WG23;#CRS-Code missing in OCA'],
+  [23006, 0, ';', 'outh Africa rotated WG25;#CRS-Code missing in OCA'],
+  [23007, 0, ';', 'outh Africa rotated WG27;#CRS-Code missing in OCA'],
+  [23008, 0, ';', 'outh Africa rotated WG29;#CRS-Code missing in OCA'],
+  [23009, 0, ';', 'outh Africa rotated WG31;#CRS-Code missing in OCA'],
+  [23010, 0, ';', 'outh Africa rotated WG33;#CRS-Code missing in OCA'],
+  [24000, 4272, 'EPSG', 'NZGD49'],
+  [26000, 3346, 'EPSG', 'LKS94 / Lithuania TM'],
+  [27000, 3301, 'EPSG', 'Estonian Coordinate System of 1997'],
+  [28000, 3059, 'EPSG', 'LKS92 / Latvia TM'],
+  [29000, 2100, 'EPSG', 'GGRS87 / Greek Grid'],
+  [30001, 23028, 'EPSG', 'ED50 / UTM zone 28N'],
+  [30002, 23029, 'EPSG', 'ED50 / UTM zone 29N'],
+  [30003, 23030, 'EPSG', 'ED50 / UTM zone 30N'],
+  [30004, 23030, 'EPSG', 'ED50 / UTM zone 30N'],
+  [30005, 23031, 'EPSG', 'ED50 / UTM zone 31N'],
+  [30006, 23031, 'EPSG', 'ED50 / UTM zone 31N'],
+  [31005, 7009, 'SR', 'ORG;GK 5 Croatia'],
+  [31006, 7010, 'SR', 'ORG;GK 6 Croatia'],
+  [31007, 3765, 'EPSG', 'HTRS96 / Croatia TM'],
+  [32000, 23033, 'EPSG', 'ED50 / UTM zone 33N'],
+  [33001, 2169, 'EPSG', 'Luxembourg 1930 / Gauss'],
+  [33002, 23031, 'EPSG', 'ED50 / UTM zone 31N'],
+  [34000, 29902, 'EPSG', 'TM65 / Irish Grid'],
+  [35000, 2462, 'EPSG', 'Albanian 1987 / Gauss-Kruger zone 4'],
+  [36001, 25833, 'EPSG', 'ETRS89 / UTM zone 33N'],
+  [36002, 25834, 'EPSG', 'ETRS89 / UTM zone 34N'],
+  [37001, 25834, 'EPSG', 'ETRS89 / UTM zone 34N'],
+  [37002, 25835, 'EPSG', 'ETRS89 / UTM zone 35N'],
+  [38001, 0, ';', 'celand UTM HJ1955 26N;#CRS-Code missing in OCA'],
+  [38002, 0, ';', 'celand UTM HJ1955 27N;#CRS-Code missing in OCA'],
+  [38003, 0, ';', 'celand UTM HJ1955 28N;#CRS-Code missing in OCA'],
+  [38004, 3057, 'EPSG', 'ISN93 / Lambert 1993'],
+  [39000, 23033, 'EPSG', 'ED50 / UTM zone 33N'],
+  [40000, 23032, 'EPSG', 'ED50 / UTM zone 32N'],
+  [41001, 28991, 'EPSG', 'Amersfoort / RD Old'],
+  [41002, 23031, 'EPSG', 'ED50 / UTM zone 31N'],
+  [41003, 23032, 'EPSG', 'ED50 / UTM zone 32N'],
+  [41004, 28992, 'EPSG', 'Amersfoort / RD New'],
+  [42001, 27493, 'EPSG', 'Datum 73 / Modified Portuguese Grid'],
+  [42002, 23028, 'EPSG', 'ED50 / UTM zone 28N'],
+  [43001, 0, ';', 'omania S42 34N;#CRS-Code missing in OCA'],
+  [43002, 0, ';', 'omania S42 35N;#CRS-Code missing in OCA'],
+  [44000, 23033, 'EPSG', 'ED50 / UTM zone 33N'],
+  [46001, 5514, 'EPSG', 'S-JTSK / Krovak East North'],
+  [46002, 28403, 'EPSG', 'Pulkovo 1942 / Gauss-Kruger zone 3;#Deprecated: Change of base CRS. Use EPSG:3333 instead'],
+  [47001, 5514, 'EPSG', 'S-JTSK / Krovak East North'],
+  [47002, 28403, 'EPSG', 'Pulkovo 1942 / Gauss-Kruger zone 3;#Deprecated: Change of base CRS. Use EPSG:3333 instead'],
+  [47003, 28404, 'EPSG', 'Pulkovo 1942 / Gauss-Kruger zone 4'],
+  [48001, 2180, 'EPSG', 'ETRS89 / Poland CS92'],
+  [48002, 2176, 'EPSG', 'ETRS89 / Poland CS2000 zone 5'],
+  [48003, 2177, 'EPSG', 'ETRS89 / Poland CS2000 zone 6'],
+  [48004, 2178, 'EPSG', 'ETRS89 / Poland CS2000 zone 7'],
+  [48005, 2179, 'EPSG', 'ETRS89 / Poland CS2000 zone 8'],
+  [49000, 23700, 'EPSG', 'HD72 / EOV'],
+  [50001, 26929, 'EPSG', 'NAD83 / Alabama East'],
+  [50002, 26930, 'EPSG', 'NAD83 / Alabama West'],
+  [50004, 26932, 'EPSG', 'NAD83 / Alaska zone 2'],
+  [50005, 26933, 'EPSG', 'NAD83 / Alaska zone 3'],
+  [50006, 26934, 'EPSG', 'NAD83 / Alaska zone 4'],
+  [50007, 26935, 'EPSG', 'NAD83 / Alaska zone 5'],
+  [50008, 26936, 'EPSG', 'NAD83 / Alaska zone 6'],
+  [50009, 26937, 'EPSG', 'NAD83 / Alaska zone 7'],
+  [50010, 26938, 'EPSG', 'NAD83 / Alaska zone 8'],
+  [50011, 26939, 'EPSG', 'NAD83 / Alaska zone 9'],
+  [50012, 26940, 'EPSG', 'NAD83 / Alaska zone 10'],
+  [50013, 26948, 'EPSG', 'NAD83 / Arizona East'],
+  [50014, 26949, 'EPSG', 'NAD83 / Arizona Central'],
+  [50015, 26950, 'EPSG', 'NAD83 / Arizona West'],
+  [50016, 26951, 'EPSG', 'NAD83 / Arkansas North'],
+  [50017, 26952, 'EPSG', 'NAD83 / Arkansas South'],
+  [50018, 26941, 'EPSG', 'NAD83 / California zone 1'],
+  [50019, 26942, 'EPSG', 'NAD83 / California zone 2'],
+  [50020, 26943, 'EPSG', 'NAD83 / California zone 3'],
+  [50021, 26944, 'EPSG', 'NAD83 / California zone 4'],
+  [50022, 26945, 'EPSG', 'NAD83 / California zone 5'],
+  [50023, 26946, 'EPSG', 'NAD83 / California zone 6'],
+  [50024, 26953, 'EPSG', 'NAD83 / Colorado North'],
+  [50025, 26954, 'EPSG', 'NAD83 / Colorado Central'],
+  [50026, 26955, 'EPSG', 'NAD83 / Colorado South'],
+  [50027, 26956, 'EPSG', 'NAD83 / Connecticut'],
+  [50028, 26957, 'EPSG', 'NAD83 / Delaware'],
+  [50029, 26958, 'EPSG', 'NAD83 / Florida East'],
+  [50030, 26959, 'EPSG', 'NAD83 / Florida West'],
+  [50031, 26960, 'EPSG', 'NAD83 / Florida North'],
+  [50032, 26966, 'EPSG', 'NAD83 / Georgia East'],
+  [50033, 26967, 'EPSG', 'NAD83 / Georgia West'],
+  [50034, 26961, 'EPSG', 'NAD83 / Hawaii zone 1'],
+  [50035, 26962, 'EPSG', 'NAD83 / Hawaii zone 2'],
+  [50036, 26963, 'EPSG', 'NAD83 / Hawaii zone 3'],
+  [50037, 26964, 'EPSG', 'NAD83 / Hawaii zone 4'],
+  [50038, 26965, 'EPSG', 'NAD83 / Hawaii zone 5'],
+  [50039, 26968, 'EPSG', 'NAD83 / Idaho East'],
+  [50040, 26969, 'EPSG', 'NAD83 / Idaho Central'],
+  [50041, 26970, 'EPSG', 'NAD83 / Idaho West'],
+  [50042, 26971, 'EPSG', 'NAD83 / Illinois East'],
+  [50043, 26972, 'EPSG', 'NAD83 / Illinois West'],
+  [50044, 26973, 'EPSG', 'NAD83 / Indiana East'],
+  [50045, 26974, 'EPSG', 'NAD83 / Indiana West'],
+  [50046, 26975, 'EPSG', 'NAD83 / Iowa North'],
+  [50047, 26976, 'EPSG', 'NAD83 / Iowa South'],
+  [50048, 26977, 'EPSG', 'NAD83 / Kansas North'],
+  [50049, 26978, 'EPSG', 'NAD83 / Kansas South'],
+  [50050, 26979, 'EPSG', 'NAD83 / Kentucky North;#Deprecated: Deprecation of constituent map projection 14100 which was in error. Use EPSG:2205 instead'],
+  [50051, 26980, 'EPSG', 'NAD83 / Kentucky South'],
+  [50052, 26981, 'EPSG', 'NAD83 / Louisiana North'],
+  [50053, 26982, 'EPSG', 'NAD83 / Louisiana South'],
+  [50054, 32199, 'EPSG', 'NAD83 / Louisiana Offshore'],
+  [50055, 26983, 'EPSG', 'NAD83 / Maine East'],
+  [50056, 26984, 'EPSG', 'NAD83 / Maine West'],
+  [50057, 26985, 'EPSG', 'NAD83 / Maryland'],
+  [50058, 26986, 'EPSG', 'NAD83 / Massachusetts Mainland'],
+  [50059, 26987, 'EPSG', 'NAD83 / Massachusetts Island'],
+  [50060, 26988, 'EPSG', 'NAD83 / Michigan North'],
+  [50061, 26989, 'EPSG', 'NAD83 / Michigan Central'],
+  [50062, 26990, 'EPSG', 'NAD83 / Michigan South'],
+  [50063, 26991, 'EPSG', 'NAD83 / Minnesota North'],
+  [50064, 26992, 'EPSG', 'NAD83 / Minnesota Central'],
+  [50065, 26993, 'EPSG', 'NAD83 / Minnesota South'],
+  [50066, 26994, 'EPSG', 'NAD83 / Mississippi East'],
+  [50067, 26995, 'EPSG', 'NAD83 / Mississippi West'],
+  [50068, 26996, 'EPSG', 'NAD83 / Missouri East'],
+  [50069, 26997, 'EPSG', 'NAD83 / Missouri Central'],
+  [50070, 26998, 'EPSG', 'NAD83 / Missouri West'],
+  [50071, 32100, 'EPSG', 'NAD83 / Montana'],
+  [50072, 32104, 'EPSG', 'NAD83 / Nebraska'],
+  [50073, 32107, 'EPSG', 'NAD83 / Nevada East'],
+  [50074, 32108, 'EPSG', 'NAD83 / Nevada Central'],
+  [50075, 32109, 'EPSG', 'NAD83 / Nevada West'],
+  [50076, 32110, 'EPSG', 'NAD83 / New Hampshire'],
+  [50077, 32111, 'EPSG', 'NAD83 / New Jersey'],
+  [50078, 32112, 'EPSG', 'NAD83 / New Mexico East'],
+  [50079, 32113, 'EPSG', 'NAD83 / New Mexico Central'],
+  [50080, 32114, 'EPSG', 'NAD83 / New Mexico West'],
+  [50081, 32115, 'EPSG', 'NAD83 / New York East'],
+  [50082, 32116, 'EPSG', 'NAD83 / New York Central'],
+  [50083, 32117, 'EPSG', 'NAD83 / New York West'],
+  [50084, 32118, 'EPSG', 'NAD83 / New York Long Island'],
+  [50085, 32119, 'EPSG', 'NAD83 / North Carolina'],
+  [50086, 32120, 'EPSG', 'NAD83 / North Dakota North'],
+  [50087, 32121, 'EPSG', 'NAD83 / North Dakota South'],
+  [50088, 32122, 'EPSG', 'NAD83 / Ohio North'],
+  [50089, 32123, 'EPSG', 'NAD83 / Ohio South'],
+  [50090, 32124, 'EPSG', 'NAD83 / Oklahoma North'],
+  [50091, 32125, 'EPSG', 'NAD83 / Oklahoma South'],
+  [50092, 32126, 'EPSG', 'NAD83 / Oregon North'],
+  [50093, 32127, 'EPSG', 'NAD83 / Oregon South'],
+  [50094, 32128, 'EPSG', 'NAD83 / Pennsylvania North'],
+  [50095, 32129, 'EPSG', 'NAD83 / Pennsylvania South'],
+  [50096, 32130, 'EPSG', 'NAD83 / Rhode Island'],
+  [50097, 32133, 'EPSG', 'NAD83 / South Carolina'],
+  [50098, 32134, 'EPSG', 'NAD83 / South Dakota North'],
+  [50099, 32135, 'EPSG', 'NAD83 / South Dakota South'],
+  [50100, 32136, 'EPSG', 'NAD83 / Tennessee'],
+  [50101, 32137, 'EPSG', 'NAD83 / Texas North'],
+  [50102, 32138, 'EPSG', 'NAD83 / Texas North Central'],
+  [50103, 32139, 'EPSG', 'NAD83 / Texas Central'],
+  [50104, 32140, 'EPSG', 'NAD83 / Texas South Central'],
+  [50105, 32141, 'EPSG', 'NAD83 / Texas South'],
+  [50106, 32142, 'EPSG', 'NAD83 / Utah North'],
+  [50107, 32143, 'EPSG', 'NAD83 / Utah Central'],
+  [50108, 32144, 'EPSG', 'NAD83 / Utah South'],
+  [50109, 32145, 'EPSG', 'NAD83 / Vermont'],
+  [50110, 32146, 'EPSG', 'NAD83 / Virginia North'],
+  [50111, 32147, 'EPSG', 'NAD83 / Virginia South'],
+  [50112, 32148, 'EPSG', 'NAD83 / Washington North'],
+  [50113, 32149, 'EPSG', 'NAD83 / Washington South'],
+  [50114, 32150, 'EPSG', 'NAD83 / West Virginia North'],
+  [50115, 32151, 'EPSG', 'NAD83 / West Virginia South'],
+  [50116, 32152, 'EPSG', 'NAD83 / Wisconsin North'],
+  [50117, 32153, 'EPSG', 'NAD83 / Wisconsin Central'],
+  [50118, 32154, 'EPSG', 'NAD83 / Wisconsin South'],
+  [50119, 32155, 'EPSG', 'NAD83 / Wyoming East'],
+  [50120, 32156, 'EPSG', 'NAD83 / Wyoming East Central'],
+  [50121, 32157, 'EPSG', 'NAD83 / Wyoming West Central'],
+  [50122, 32158, 'EPSG', 'NAD83 / Wyoming West'],
+  [50123, 32158, 'EPSG', 'NAD83 / Wyoming West'],
+  [51000, 0, ';', 'abon Datum GRS_1980;#CRS-Code missing in OCA'],
+  [52001, 0, ';', 'razil UTM Corrego Alegre Fuso 18;#CRS-Code missing in OCA'],
+  [52002, 0, ';', 'razil UTM Corrego Alegre Fuso 19;#CRS-Code missing in OCA'],
+  [52003, 0, ';', 'razil UTM Corrego Alegre Fuso 20;#CRS-Code missing in OCA'],
+  [52004, 22521, 'EPSG', 'Corrego Alegre 1970-72 / UTM zone 21S'],
+  [52005, 22522, 'EPSG', 'Corrego Alegre 1970-72 / UTM zone 22S'],
+  [52006, 22523, 'EPSG', 'Corrego Alegre 1970-72 / UTM zone 23S'],
+  [52007, 22524, 'EPSG', 'Corrego Alegre 1970-72 / UTM zone 24S'],
+  [52008, 22525, 'EPSG', 'Corrego Alegre 1970-72 / UTM zone 25S'],
+  [52009, 0, ';', 'razil UTM SAD69 Fuso 18;#CRS-Code missing in OCA'],
+  [52010, 0, ';', 'razil UTM SAD69 Fuso 19;#CRS-Code missing in OCA'],
+  [52011, 0, ';', 'razil UTM SAD69 Fuso 20;#CRS-Code missing in OCA'],
+  [52012, 0, ';', 'razil UTM SAD69 Fuso 21;#CRS-Code missing in OCA'],
+  [52013, 0, ';', 'razil UTM SAD69 Fuso 22;#CRS-Code missing in OCA'],
+  [52014, 0, ';', 'razil UTM SAD69 Fuso 23;#CRS-Code missing in OCA'],
+  [52015, 0, ';', 'razil UTM SAD69 Fuso 24;#CRS-Code missing in OCA'],
+  [52016, 0, ';', 'razil UTM SAD69 Fuso 25;#CRS-Code missing in OCA'],
+  [52017, 31978, 'EPSG', 'SIRGAS 2000 / UTM zone 18S'],
+  [52018, 31979, 'EPSG', 'SIRGAS 2000 / UTM zone 19S'],
+  [52019, 31980, 'EPSG', 'SIRGAS 2000 / UTM zone 20S'],
+  [52020, 31981, 'EPSG', 'SIRGAS 2000 / UTM zone 21S'],
+  [52021, 31982, 'EPSG', 'SIRGAS 2000 / UTM zone 22S'],
+  [52022, 31983, 'EPSG', 'SIRGAS 2000 / UTM zone 23S'],
+  [52023, 31984, 'EPSG', 'SIRGAS 2000 / UTM zone 24S'],
+  [52024, 31985, 'EPSG', 'SIRGAS 2000 / UTM zone 25S'],
+  [53000, 2039, 'EPSG', 'Israel 1993 / Israeli TM Grid'],
+  [54001, 3375, 'EPSG', 'GDM2000 / Peninsula RSO'],
+  [54002, 3376, 'EPSG', 'GDM2000 / East Malaysia BRSO'],
+  [55000, 0, ';', 'serDefined Lambert;#CRS-Code missing in OCA'],
+  [56000, 3857, 'EPSG', 'WGS 84 / Pseudo-Mercator;#OpenLayers:90091'],
+  [57000, 2041, 'EPSG', 'Abidjan 1987 / UTM zone 30N'],
+  [58001, 0, ';', 'ri Lanka Datum 1999;#CRS-Code missing in OCA'],
+  [58002, 0, ';', 'ri Lanka Datum 1999;#CRS-Code missing in OCA'],
+  [60000, 0, ';', 'serDefined;#CRS-Code missing in OCA'],
+  [61000, 2326, 'EPSG', 'Hong Kong 1980 Grid System'],
+  [62001, 26901, 'EPSG', 'NAD83 / UTM zone 1N'],
+  [62002, 26902, 'EPSG', 'NAD83 / UTM zone 2N'],
+  [62004, 26903, 'EPSG', 'NAD83 / UTM zone 3N'],
+  [62005, 26904, 'EPSG', 'NAD83 / UTM zone 4N'],
+  [62006, 26905, 'EPSG', 'NAD83 / UTM zone 5N'],
+  [62007, 26906, 'EPSG', 'NAD83 / UTM zone 6N'],
+  [62008, 26907, 'EPSG', 'NAD83 / UTM zone 7N'],
+  [62009, 26908, 'EPSG', 'NAD83 / UTM zone 8N'],
+  [62010, 26909, 'EPSG', 'NAD83 / UTM zone 9N'],
+  [62011, 26910, 'EPSG', 'NAD83 / UTM zone 10N'],
+  [62012, 26911, 'EPSG', 'NAD83 / UTM zone 11N'],
+  [62013, 26912, 'EPSG', 'NAD83 / UTM zone 12N'],
+  [62014, 26913, 'EPSG', 'NAD83 / UTM zone 13N'],
+  [62015, 26914, 'EPSG', 'NAD83 / UTM zone 14N'],
+  [62016, 26915, 'EPSG', 'NAD83 / UTM zone 15N'],
+  [62017, 26916, 'EPSG', 'NAD83 / UTM zone 16N'],
+  [62018, 26917, 'EPSG', 'NAD83 / UTM zone 17N'],
+  [62019, 26918, 'EPSG', 'NAD83 / UTM zone 18N'],
+  [62020, 26919, 'EPSG', 'NAD83 / UTM zone 19N'],
+  [62021, 26920, 'EPSG', 'NAD83 / UTM zone 20N'],
+  [62022, 26921, 'EPSG', 'NAD83 / UTM zone 21N'],
+  [62023, 26922, 'EPSG', 'NAD83 / UTM zone 22N'],
+  [62024, 26923, 'EPSG', 'NAD83 / UTM zone 23N'],
+  [63001, 25828, 'EPSG', 'ETRS89 / UTM zone 28N'],
+  [63002, 25829, 'EPSG', 'ETRS89 / UTM zone 29N'],
+  [63003, 25830, 'EPSG', 'ETRS89 / UTM zone 30N'],
+  [63004, 25831, 'EPSG', 'ETRS89 / UTM zone 31N'],
+  [63005, 25832, 'EPSG', 'ETRS89 / UTM zone 32N'],
+  [63006, 25833, 'EPSG', 'ETRS89 / UTM zone 33N'],
+  [63007, 25834, 'EPSG', 'ETRS89 / UTM zone 34N'],
+  [63008, 25835, 'EPSG', 'ETRS89 / UTM zone 35N'],
+  [63009, 25836, 'EPSG', 'ETRS89 / UTM zone 36N'],
+  [63010, 25837, 'EPSG', 'ETRS89 / UTM zone 37N'],
+  [63011, 25838, 'EPSG', 'ETRS89 / UTM zone 38N'],
+  [64000, 3785, 'EPSG', 'Popular Visualisation CRS / Mercator'],
+  [65000, 3857, 'EPSG', 'WGS 84 / Pseudo-Mercator'],
+  [66001, 102629, 'ESRI', 'NAD 1983 StatePlane Alabama East FIPS 0101 Feet'],
+  [66002, 102630, 'ESRI', 'NAD 1983 StatePlane Alabama West FIPS 0102 Feet'],
+  [66013, 2222, 'EPSG', 'NAD83 / Arizona East (ft)'],
+  [66014, 2223, 'EPSG', 'NAD83 / Arizona Central (ft)'],
+  [66015, 2224, 'EPSG', 'NAD83 / Arizona West (ft)'],
+  [66016, 3433, 'EPSG', 'NAD83 / Arkansas North (ftUS)'],
+  [66017, 3434, 'EPSG', 'NAD83 / Arkansas South (ftUS)'],
+  [66018, 2225, 'EPSG', 'NAD83 / California zone 1 (ftUS)'],
+  [66019, 2226, 'EPSG', 'NAD83 / California zone 2 (ftUS)'],
+  [66020, 2227, 'EPSG', 'NAD83 / California zone 3 (ftUS)'],
+  [66021, 2228, 'EPSG', 'NAD83 / California zone 4 (ftUS)'],
+  [66022, 2229, 'EPSG', 'NAD83 / California zone 5 (ftUS)'],
+  [66023, 2230, 'EPSG', 'NAD83 / California zone 6 (ftUS)'],
+  [66024, 2231, 'EPSG', 'NAD83 / Colorado North (ftUS)'],
+  [66025, 2232, 'EPSG', 'NAD83 / Colorado Central (ftUS)'],
+  [66026, 2233, 'EPSG', 'NAD83 / Colorado South (ftUS)'],
+  [66027, 2234, 'EPSG', 'NAD83 / Connecticut (ftUS)'],
+  [66028, 2235, 'EPSG', 'NAD83 / Delaware (ftUS)'],
+  [66029, 2236, 'EPSG', 'NAD83 / Florida East (ftUS)'],
+  [66030, 2237, 'EPSG', 'NAD83 / Florida West (ftUS)'],
+  [66031, 2238, 'EPSG', 'NAD83 / Florida North (ftUS)'],
+  [66032, 2239, 'EPSG', 'NAD83 / Georgia East (ftUS)'],
+  [66033, 2240, 'EPSG', 'NAD83 / Georgia West (ftUS)'],
+  [66036, 3759, 'EPSG', 'NAD83 / Hawaii zone 3 (ftUS)'],
+  [66039, 2241, 'EPSG', 'NAD83 / Idaho East (ftUS)'],
+  [66040, 2242, 'EPSG', 'NAD83 / Idaho Central (ftUS)'],
+  [66041, 2243, 'EPSG', 'NAD83 / Idaho West (ftUS)'],
+  [66042, 3435, 'EPSG', 'NAD83 / Illinois East (ftUS)'],
+  [66043, 3436, 'EPSG', 'NAD83 / Illinois West (ftUS)'],
+  [66044, 2244, 'EPSG', 'NAD83 / Indiana East (ftUS);#Deprecated: Constituent projection deprecated. Use EPSG:2965 instead'],
+  [66045, 2245, 'EPSG', 'NAD83 / Indiana West (ftUS);#Deprecated: Constituent projection deprecated. Use EPSG:2966 instead'],
+  [66046, 3417, 'EPSG', 'NAD83 / Iowa North (ftUS)'],
+  [66047, 3418, 'EPSG', 'NAD83 / Iowa South (ftUS)'],
+  [66048, 3419, 'EPSG', 'NAD83 / Kansas North (ftUS)'],
+  [66049, 3420, 'EPSG', 'NAD83 / Kansas South (ftUS)'],
+  [66050, 2246, 'EPSG', 'NAD83 / Kentucky North (ftUS)'],
+  [66051, 2247, 'EPSG', 'NAD83 / Kentucky South (ftUS)'],
+  [66052, 3451, 'EPSG', 'NAD83 / Louisiana North (ftUS)'],
+  [66053, 3452, 'EPSG', 'NAD83 / Louisiana South (ftUS)'],
+  [66054, 3453, 'EPSG', 'NAD83 / Louisiana Offshore (ftUS)'],
+  [66055, 26847, 'EPSG', 'NAD83 / Maine East (ftUS)'],
+  [66056, 26848, 'EPSG', 'NAD83 / Maine West (ftUS)'],
+  [66057, 2248, 'EPSG', 'NAD83 / Maryland (ftUS)'],
+  [66058, 2249, 'EPSG', 'NAD83 / Massachusetts Mainland (ftUS)'],
+  [66059, 2250, 'EPSG', 'NAD83 / Massachusetts Island (ftUS)'],
+  [66060, 2251, 'EPSG', 'NAD83 / Michigan North (ft)'],
+  [66061, 2252, 'EPSG', 'NAD83 / Michigan Central (ft)'],
+  [66062, 2253, 'EPSG', 'NAD83 / Michigan South (ft)'],
+  [66063, 26849, 'EPSG', 'NAD83 / Minnesota North (ftUS)'],
+  [66064, 26850, 'EPSG', 'NAD83 / Minnesota Central (ftUS)'],
+  [66065, 26851, 'EPSG', 'NAD83 / Minnesota South (ftUS)'],
+  [66066, 2254, 'EPSG', 'NAD83 / Mississippi East (ftUS)'],
+  [66067, 2255, 'EPSG', 'NAD83 / Mississippi West (ftUS)'],
+  [66068, 102696, 'ESRI', 'NAD 1983 StatePlane Missouri East FIPS 2401 Feet'],
+  [66069, 102697, 'ESRI', 'NAD 1983 StatePlane Missouri Central FIPS 2402 Feet'],
+  [66070, 102698, 'ESRI', 'NAD 1983 StatePlane Missouri West FIPS 2403 Feet'],
+  [66071, 2256, 'EPSG', 'NAD83 / Montana (ft)'],
+  [66072, 26852, 'EPSG', 'NAD83 / Nebraska (ftUS)'],
+  [66073, 3421, 'EPSG', 'NAD83 / Nevada East (ftUS)'],
+  [66074, 3422, 'EPSG', 'NAD83 / Nevada Central (ftUS)'],
+  [66075, 3423, 'EPSG', 'NAD83 / Nevada West (ftUS)'],
+  [66076, 3437, 'EPSG', 'NAD83 / New Hampshire (ftUS)'],
+  [66077, 3424, 'EPSG', 'NAD83 / New Jersey (ftUS)'],
+  [66078, 2257, 'EPSG', 'NAD83 / New Mexico East (ftUS)'],
+  [66079, 2258, 'EPSG', 'NAD83 / New Mexico Central (ftUS)'],
+  [66080, 2259, 'EPSG', 'NAD83 / New Mexico West (ftUS)'],
+  [66081, 2260, 'EPSG', 'NAD83 / New York East (ftUS)'],
+  [66082, 2261, 'EPSG', 'NAD83 / New York Central (ftUS)'],
+  [66083, 2262, 'EPSG', 'NAD83 / New York West (ftUS)'],
+  [66084, 2263, 'EPSG', 'NAD83 / New York Long Island (ftUS)'],
+  [66085, 2264, 'EPSG', 'NAD83 / North Carolina (ftUS)'],
+  [66086, 2265, 'EPSG', 'NAD83 / North Dakota North (ft)'],
+  [66087, 2266, 'EPSG', 'NAD83 / North Dakota South (ft)'],
+  [66088, 3734, 'EPSG', 'NAD83 / Ohio North (ftUS)'],
+  [66089, 3735, 'EPSG', 'NAD83 / Ohio South (ftUS)'],
+  [66090, 2267, 'EPSG', 'NAD83 / Oklahoma North (ftUS)'],
+  [66091, 2268, 'EPSG', 'NAD83 / Oklahoma South (ftUS)'],
+  [66092, 2269, 'EPSG', 'NAD83 / Oregon North (ft)'],
+  [66093, 2270, 'EPSG', 'NAD83 / Oregon South (ft)'],
+  [66094, 2271, 'EPSG', 'NAD83 / Pennsylvania North (ftUS)'],
+  [66095, 2272, 'EPSG', 'NAD83 / Pennsylvania South (ftUS)'],
+  [66096, 3438, 'EPSG', 'NAD83 / Rhode Island (ftUS)'],
+  [66097, 2273, 'EPSG', 'NAD83 / South Carolina (ft)'],
+  [66098, 3454, 'EPSG', 'NAD83 / South Dakota North (ftUS)'],
+  [66099, 3455, 'EPSG', 'NAD83 / South Dakota South (ftUS)'],
+  [66100, 2274, 'EPSG', 'NAD83 / Tennessee (ftUS)'],
+  [66101, 2275, 'EPSG', 'NAD83 / Texas North (ftUS)'],
+  [66102, 2276, 'EPSG', 'NAD83 / Texas North Central (ftUS)'],
+  [66103, 2277, 'EPSG', 'NAD83 / Texas Central (ftUS)'],
+  [66104, 2278, 'EPSG', 'NAD83 / Texas South Central (ftUS)'],
+  [66105, 2279, 'EPSG', 'NAD83 / Texas South (ftUS)'],
+  [66106, 3560, 'EPSG', 'NAD83 / Utah North (ftUS)'],
+  [66107, 3566, 'EPSG', 'NAD83 / Utah Central (ftUS)'],
+  [66108, 3567, 'EPSG', 'NAD83 / Utah South (ftUS)'],
+  [66109, 102745, 'ESRI', 'NAD 1983 StatePlane Vermont FIPS 4400 Feet'],
+  [66110, 2283, 'EPSG', 'NAD83 / Virginia North (ftUS)'],
+  [66111, 2284, 'EPSG', 'NAD83 / Virginia South (ftUS)'],
+  [66112, 2285, 'EPSG', 'NAD83 / Washington North (ftUS)'],
+  [66113, 2286, 'EPSG', 'NAD83 / Washington South (ftUS)'],
+  [66114, 26853, 'EPSG', 'NAD83 / West Virginia North (ftUS)'],
+  [66115, 26854, 'EPSG', 'NAD83 / West Virginia South (ftUS)'],
+  [66116, 2287, 'EPSG', 'NAD83 / Wisconsin North (ftUS)'],
+  [66117, 2288, 'EPSG', 'NAD83 / Wisconsin Central (ftUS)'],
+  [66118, 2289, 'EPSG', 'NAD83 / Wisconsin South (ftUS)'],
+  [66119, 3736, 'EPSG', 'NAD83 / Wyoming East (ftUS)'],
+  [66120, 3737, 'EPSG', 'NAD83 / Wyoming East Central (ftUS)'],
+  [66121, 3738, 'EPSG', 'NAD83 / Wyoming West Central (ftUS)'],
+  [66122, 3739, 'EPSG', 'NAD83 / Wyoming West (ftUS)'],
+  [66123, 102761, 'ESRI', 'NAD 1983 StatePlane Puerto Rico Virgin Islands FIPS 5200 Feet'],
+  [67000, 7392, 'SR', 'ORG;KosovaRef01'],
+  [68000, 21037, 'EPSG', 'Arc 1960 / UTM zone 37S'],
+  [69000, 2586, 'EPSG', 'Pulkovo 1942 / 3-degree Gauss-Kruger CM 33E'],
+  [70000, 2019, 'EPSG', 'NAD27(76) / MTM zone 10']
+]
+
+},{}],108:[function(require,module,exports){
 const Block = require('./block')
 
 module.exports = class FileHeader extends Block {
@@ -15303,7 +18351,7 @@ module.exports = class FileHeader extends Block {
   }
 }
 
-},{"./block":102}],104:[function(require,module,exports){
+},{"./block":106}],109:[function(require,module,exports){
 const fs = require('fs')
 const { Buffer } = require('buffer')
 const getRgb = require('../cmyk-to-rgb')
@@ -15312,6 +18360,7 @@ const FileHeader = require('./file-header')
 const SymbolIndex = require('./symbol-index')
 const ObjectIndex = require('./object-index')
 const StringIndex = require('./string-index')
+const crsGrids = require('./crs-grids')
 
 module.exports = async (path, options) => {
   options = options || {}
@@ -15341,34 +18390,34 @@ const parseOcadBuffer = async (buffer, options) => new Promise((resolve, reject)
     throw new Error(`Unsupport OCAD file version (${header.version}), only >= 10 supported for now.`)
   }
 
-  let symbols = []
+  const symbols = []
   let symbolIndexOffset = header.symbolIndexBlock
   while (symbolIndexOffset) {
-    let symbolIndex = new SymbolIndex(buffer, symbolIndexOffset, header.version, options)
+    const symbolIndex = new SymbolIndex(buffer, symbolIndexOffset, header.version, options)
     Array.prototype.push.apply(symbols, symbolIndex.parseSymbols())
     warnings = warnings.concat(symbolIndex.warnings)
 
     symbolIndexOffset = symbolIndex.nextSymbolIndexBlock
   }
 
-  let objects = []
+  const objects = []
   let objectIndexOffset = header.objectIndexBlock
   while (objectIndexOffset) {
-    let objectIndex = new ObjectIndex(buffer, objectIndexOffset, header.version)
+    const objectIndex = new ObjectIndex(buffer, objectIndexOffset, header.version)
     Array.prototype.push.apply(objects, objectIndex.parseObjects())
 
     objectIndexOffset = objectIndex.nextObjectIndexBlock
   }
 
-  let parameterStrings = {}
+  const parameterStrings = {}
   let stringIndexOffset = header.stringIndexBlock
   while (stringIndexOffset) {
-    let stringIndex = new StringIndex(buffer, stringIndexOffset)
+    const stringIndex = new StringIndex(buffer, stringIndexOffset)
     const strings = stringIndex.getStrings()
 
     Object.keys(strings).reduce((a, recType) => {
       const typeStrings = strings[recType]
-      let concatStrings = a[recType] || []
+      const concatStrings = a[recType] || []
       a[recType] = concatStrings.concat(typeStrings.map(s => s.values))
       return a
     }, parameterStrings)
@@ -15420,21 +18469,29 @@ class OcadFile {
     const scalePar = this.parameterStrings['1039']
       ? this.parameterStrings['1039'][0]
       : { x: 0, y: 0, m: 1 }
-    let { x, y, m } = scalePar
+    let { x: easting, y: northing, m: scale, i: gridId } = scalePar
 
-    x = Number(x)
-    y = Number(y)
-    m = Number(m)
+    easting = Number(easting)
+    northing = Number(northing)
+    scale = Number(scale)
+    gridId = Number(gridId)
+
+    const grid = crsGrids.find(g => g[0] === gridId)
+    const [, code, catalog, name] = grid || [gridId, 0, null, null]
 
     return {
-      easting: x,
-      northing: y,
-      scale: m
+      easting,
+      northing,
+      scale,
+      gridId,
+      code,
+      catalog,
+      name
     }
   }
 }
 
-},{"../cmyk-to-rgb":99,"./file-header":103,"./object-index":108,"./string-index":112,"./symbol-index":115,"buffer":27,"fs":25}],105:[function(require,module,exports){
+},{"../cmyk-to-rgb":103,"./crs-grids":107,"./file-header":108,"./object-index":113,"./string-index":117,"./symbol-index":120,"buffer":27,"fs":25}],110:[function(require,module,exports){
 module.exports = class InvalidSymbolElementException extends Error {
   constructor (msg, symbolElement) {
     super(msg)
@@ -15442,7 +18499,7 @@ module.exports = class InvalidSymbolElementException extends Error {
   }
 }
 
-},{}],106:[function(require,module,exports){
+},{}],111:[function(require,module,exports){
 const Block = require('./block')
 const { Symbol10, Symbol11 } = require('./symbol')
 
@@ -15572,7 +18629,7 @@ module.exports = {
   2018: LineSymbol11
 }
 
-},{"./block":102,"./symbol":117}],107:[function(require,module,exports){
+},{"./block":106,"./symbol":122}],112:[function(require,module,exports){
 const Block = require('./block')
 
 module.exports = class LRect extends Block {
@@ -15593,7 +18650,7 @@ module.exports = class LRect extends Block {
   }
 }
 
-},{"./block":102}],108:[function(require,module,exports){
+},{"./block":106}],113:[function(require,module,exports){
 const Block = require('./block')
 const LRect = require('./lrect')
 const TObject = require('./tobject')
@@ -15641,7 +18698,7 @@ module.exports = class ObjectIndex extends Block {
   }
 }
 
-},{"./block":102,"./lrect":107,"./tobject":120}],109:[function(require,module,exports){
+},{"./block":106,"./lrect":112,"./tobject":125}],114:[function(require,module,exports){
 module.exports = {
   PointObjectType: 1,
   LineObjectType: 2,
@@ -15652,9 +18709,9 @@ module.exports = {
   RectangleObjectType: 7
 }
 
-},{}],110:[function(require,module,exports){
+},{}],115:[function(require,module,exports){
 const Block = require('./block')
-const { StringDecoder } = require('string_decoder');
+const { StringDecoder } = require('string_decoder')
 
 const decoder = new StringDecoder('utf8')
 
@@ -15688,7 +18745,7 @@ module.exports = class ParameterString extends Block {
   }
 }
 
-},{"./block":102,"string_decoder":26}],111:[function(require,module,exports){
+},{"./block":106,"string_decoder":26}],116:[function(require,module,exports){
 const { Symbol10, Symbol11 } = require('./symbol')
 
 class PointSymbol10 extends Symbol10 {
@@ -15726,7 +18783,7 @@ module.exports = {
   2018: PointSymbol11
 }
 
-},{"./symbol":117}],112:[function(require,module,exports){
+},{"./symbol":122}],117:[function(require,module,exports){
 const Block = require('./block')
 const ParameterString = require('./parameter-string')
 
@@ -15763,7 +18820,7 @@ module.exports = class StringIndex extends Block {
   }
 }
 
-},{"./block":102,"./parameter-string":110}],113:[function(require,module,exports){
+},{"./block":106,"./parameter-string":115}],118:[function(require,module,exports){
 module.exports = {
   LineElementType: 1,
   AreaElementType: 2,
@@ -15771,7 +18828,7 @@ module.exports = {
   DotElementType: 4
 }
 
-},{}],114:[function(require,module,exports){
+},{}],119:[function(require,module,exports){
 const Block = require('./block')
 const TdPoly = require('./td-poly')
 const InvalidSymbolElementException = require('./invalid-symbol-element-exception')
@@ -15800,7 +18857,7 @@ module.exports = class SymbolElement extends Block {
   }
 }
 
-},{"./block":102,"./invalid-symbol-element-exception":105,"./td-poly":118}],115:[function(require,module,exports){
+},{"./block":106,"./invalid-symbol-element-exception":110,"./td-poly":123}],120:[function(require,module,exports){
 const Block = require('./block')
 const PointSymbol = require('./point-symbol')
 const LineSymbol = require('./line-symbol')
@@ -15833,20 +18890,20 @@ module.exports = class SymbolIndex extends Block {
     if (!offset) return
 
     const type = this.buffer.readInt8(offset + 8)
-    let cls
+    let Cls
     try {
       switch (type) {
         case PointSymbolType:
-          cls = PointSymbol[this.version]
+          Cls = PointSymbol[this.version]
           break
         case LineSymbolType:
-          cls = LineSymbol[this.version]
+          Cls = LineSymbol[this.version]
           break
         case AreaSymbolType:
-          cls = AreaSymbol[this.version]
+          Cls = AreaSymbol[this.version]
           break
         case TextSymbolType:
-          cls = TextSymbol[this.version]
+          Cls = TextSymbol[this.version]
           break
         case RectangleSymbolType:
           this.warnings.push(`Ignoring rectangle symbol ${this.buffer.readInt32LE(offset + 4)}.`)
@@ -15855,7 +18912,7 @@ module.exports = class SymbolIndex extends Block {
           throw new Error(`Unknown symbol type ${type}`)
       }
 
-      const symbol = new cls(this.buffer, offset)
+      const symbol = new Cls(this.buffer, offset)
       this.warnings = this.warnings.concat(symbol.warnings)
       return symbol
     } catch (e) {
@@ -15870,17 +18927,17 @@ module.exports = class SymbolIndex extends Block {
   }
 }
 
-},{"./area-symbol":101,"./block":102,"./line-symbol":106,"./point-symbol":111,"./symbol-types":116,"./text-symbol":119}],116:[function(require,module,exports){
+},{"./area-symbol":105,"./block":106,"./line-symbol":111,"./point-symbol":116,"./symbol-types":121,"./text-symbol":124}],121:[function(require,module,exports){
 module.exports = {
   PointSymbolType: 1,
   LineSymbolType: 2,
   AreaSymbolType: 3,
   TextSymbolType: 4,
   RectangleSymbolType: 7,
-  DblFillColorOn: 1    // Line symbol dblFlag Line color on
+  DblFillColorOn: 1 // Line symbol dblFlag Line color on
 }
 
-},{}],117:[function(require,module,exports){
+},{}],122:[function(require,module,exports){
 const Block = require('./block')
 const SymbolElement = require('./symbol-element')
 const InvalidSymbolElementException = require('./invalid-symbol-element-exception')
@@ -15996,7 +19053,7 @@ module.exports = {
   Symbol11
 }
 
-},{"./block":102,"./invalid-symbol-element-exception":105,"./symbol-element":114}],118:[function(require,module,exports){
+},{"./block":106,"./invalid-symbol-element-exception":110,"./symbol-element":119}],123:[function(require,module,exports){
 class TdPoly extends Array {
   constructor (ocadX, ocadY, xFlags, yFlags) {
     super(xFlags === undefined ? ocadX >> 8 : ocadX, yFlags === undefined ? ocadY >> 8 : ocadY)
@@ -16070,7 +19127,7 @@ TdPoly.fromCoords = (x, y) => new TdPoly(x << 8, y << 8)
 
 module.exports = TdPoly
 
-},{}],119:[function(require,module,exports){
+},{}],124:[function(require,module,exports){
 const { TextSymbolType } = require('./symbol-types')
 const { Symbol10, Symbol11 } = require('./symbol')
 
@@ -16166,7 +19223,7 @@ module.exports = {
   HorizontalAlignAllLine: 3
 }
 
-},{"./symbol":117,"./symbol-types":116}],120:[function(require,module,exports){
+},{"./symbol":122,"./symbol-types":121}],125:[function(require,module,exports){
 const Block = require('./block')
 const TdPoly = require('./td-poly')
 
@@ -16316,7 +19373,7 @@ module.exports = {
   2018: TObject12
 }
 
-},{"./block":102,"./td-poly":118}],121:[function(require,module,exports){
+},{"./block":106,"./td-poly":123}],126:[function(require,module,exports){
 const { coordEach } = require('@turf/meta')
 const Bezier = require('bezier-js')
 const flatten = require('arr-flatten')
@@ -16336,7 +19393,7 @@ const defaultOptions = {
 module.exports = function (ocadFile, options) {
   options = { ...defaultOptions, ...options }
 
-  let features = transformFeatures(ocadFile, tObjectToGeoJson, createElement, options)
+  const features = transformFeatures(ocadFile, tObjectToGeoJson, createElement, options)
   const featureCollection = {
     type: 'FeatureCollection',
     features
@@ -16380,7 +19437,7 @@ const tObjectToGeoJson = (options, symbols, object, i) => {
       break
     case UnformattedTextObjectType:
     case FormattedTextObjectType:
-    case LineTextObjectType:
+    case LineTextObjectType: {
       const lineHeight = symbol.fontSize / 10 * 0.352778 * 100
       const anchorCoord = [object.coordinates[0][0], object.coordinates[0][1] + lineHeight]
 
@@ -16389,6 +19446,7 @@ const tObjectToGeoJson = (options, symbols, object, i) => {
         coordinates: anchorCoord
       }
       break
+    }
     default:
       return
   }
@@ -16507,10 +19565,10 @@ const coordinatesToRings = coordinates => {
   return rings
 }
 
-},{"./ocad-reader/object-types":109,"./ocad-reader/symbol-element-types":113,"./ocad-reader/td-poly":118,"./transform-features":124,"@turf/meta":9,"arr-flatten":10,"bezier-js":17}],122:[function(require,module,exports){
+},{"./ocad-reader/object-types":114,"./ocad-reader/symbol-element-types":118,"./ocad-reader/td-poly":123,"./transform-features":130,"@turf/meta":9,"arr-flatten":10,"bezier-js":17}],127:[function(require,module,exports){
 const { PointSymbolType, LineSymbolType, AreaSymbolType, TextSymbolType, DblFillColorOn } = require('./ocad-reader/symbol-types')
 const { LineElementType, AreaElementType, CircleElementType, DotElementType } = require('./ocad-reader/symbol-element-types')
-const { HorizontalAlignCenter, HorizontalAlignRight, VerticalAlignBottom, VerticalAlignMiddle, VerticalAlignTop } = require('./ocad-reader/text-symbol')
+const { HorizontalAlignCenter, HorizontalAlignRight, VerticalAlignMiddle } = require('./ocad-reader/text-symbol')
 
 module.exports = function ocadToMapboxGlStyle (ocadFile, options) {
   options = { scaleFactor: ocadFile.getCrs().scale / 15000, ...options }
@@ -16754,7 +19812,7 @@ const circleLayer = (id, source, sourceLayer, scaleFactor, filter, element, colo
     layer.paint['circle-stroke-color'] = color
     layer.paint['circle-stroke-width'] = expFunc(baseWidth)
   } else {
-      // DotElementType
+    // DotElementType
     layer.paint['circle-color'] = color
   }
 
@@ -16807,17 +19865,260 @@ const textLayer = (id, source, sourceLayer, scaleFactor, filter, element, colors
 }
 
 const expFunc = base => ({
-  'type': 'exponential',
-  'base': 2,
-  'stops': [
+  type: 'exponential',
+  base: 2,
+  stops: [
     [0, base * Math.pow(2, (0 - 15))],
     [24, base * Math.pow(2, (24 - 15))]
   ]
 })
 
-},{"./ocad-reader/symbol-element-types":113,"./ocad-reader/symbol-types":116,"./ocad-reader/text-symbol":119}],123:[function(require,module,exports){
+},{"./ocad-reader/symbol-element-types":118,"./ocad-reader/symbol-types":121,"./ocad-reader/text-symbol":124}],128:[function(require,module,exports){
+(function (global,Buffer){
+const { LineSymbolType, AreaSymbolType } = require('./ocad-reader/symbol-types')
+const { patternToSvg, createSvgNode } = require('./ocad-to-svg')
+const uuidv4 = require('uuid/v4')
+const DOMImplementation = global.DOMImplementation
+  ? global.DOMImplementation
+  : new (require('xmldom').DOMImplementation)()
+const XMLSerializer = global.XMLSerializer
+  ? global.XMLSerializer
+  : require('xmldom').XMLSerializer
+
+const defaultOptions = {
+  generateSymbolElements: true,
+  exportHidden: false
+}
+
+module.exports = function ocadToQml (ocadFile, options) {
+  options = { ...defaultOptions, ...options }
+
+  const usedSymbols = usedSymbolNumbers(ocadFile)
+    .map(symNum => ocadFile.symbols.find(s => symNum === s.symNum))
+    .filter(s => s)
+
+  const root = {
+    type: 'qgis',
+    attrs: {
+      simplifyMaxScale: 1,
+      minScale: 1e+08,
+      readOnly: 0,
+      simplifyDrawingTol: 1,
+      hasScaleBasedVisibilityFlag: 0,
+      simplifyAlgorithm: 0,
+      maxScale: 0,
+      labelsEnabled: 0,
+      styleCategories: 'AllStyleCategories',
+      simplifyDrawingHints: 1,
+      simplifyLocal: 1
+    },
+    children: [
+      {
+        type: 'renderer-v2',
+        attrs: {
+          forceraster: 0,
+          symbollevels: 0,
+          type: 'RuleRenderer',
+          enableorderby: 0
+        },
+        children: [
+          {
+            type: 'rules',
+            attrs: {
+              key: `{${uuidv4()}}`
+            },
+            children: usedSymbols.map((sym, i) => ({
+              type: 'rule',
+              attrs: {
+                key: `{${uuidv4()}}`,
+                symbol: i,
+                label: `${Math.floor(sym.symNum / 1000)}.${sym.symNum % 1000} ${sym.description}`,
+                filter: `sym=${sym.symNum}`
+              }
+            }))
+          },
+          {
+            type: 'symbols',
+            children: usedSymbols.map((sym, i) => ({
+              ...symbolToQml(ocadFile.getCrs().scale, ocadFile.colors, sym),
+              type: 'symbol',
+              attrs: {
+                name: i,
+                clip_to_extent: 1,
+                alpha: 1,
+                type: sym.type === LineSymbolType
+                  ? 'line'
+                  : sym.type === AreaSymbolType
+                    ? 'fill'
+                    : '',
+                force_rhr: 0
+              }
+            })).sort((a, b) => a.order - b.order)
+          }
+        ]
+      }
+    ]
+  }
+
+  const doc = DOMImplementation.createDocument(null, 'xml', null)
+  return createXmlNode(doc, root)
+}
+
+const createXmlNode = (document, n) => {
+  const node = document.createElement(n.type)
+  n.id && (node.id = n.id)
+  n.attrs && Object.keys(n.attrs).forEach(attrName => node.setAttribute(attrName, n.attrs[attrName]))
+  n.children && n.children.forEach(child => node.appendChild(createXmlNode(document, child)))
+
+  return node
+}
+
+const usedSymbolNumbers = ocadFile => ocadFile.objects.reduce((a, f) => {
+  const symbolNum = f.sym
+  if (!a.idSet.has(symbolNum)) {
+    a.symbolNums.push(symbolNum)
+    a.idSet.add(symbolNum)
+  }
+
+  return a
+}, { symbolNums: [], idSet: new Set() }).symbolNums
+
+const symbolToQml = (scale, colors, sym) => {
+  let children
+
+  switch (sym.type) {
+    case LineSymbolType: {
+      const lineColor = colors[sym.lineColor]
+      if (lineColor) {
+        const baseMainGap = sym.mainGap
+        const baseMainLength = sym.mainLength
+        children = [{
+          type: 'layer',
+          attrs: {
+            class: 'SimpleLine',
+            pass: 1000 - lineColor.renderOrder,
+            enabled: 1,
+            locked: 0
+          },
+          children: [
+            prop('line_color', Array.from(lineColor.rgbArray).concat([255]).join(',')),
+            prop('line_style', 'solid'),
+            prop('line_width', toMapUnit(scale, sym.lineWidth)),
+            prop('line_width_unit', 'MapUnit'),
+            prop('joinstyle', 'bevel'),
+            prop('capstyle', 'flat')
+          ].concat(baseMainGap && baseMainLength
+            ? [
+              prop('customdash', [baseMainLength, baseMainGap].map(x => toMapUnit(scale, x)).join(';')),
+              prop('customdash_unit', 'MapUnit'),
+              prop('use_custom_dash', 1)
+            ]
+            : [])
+        }]
+      }
+      break
+    }
+    case AreaSymbolType: {
+      const fillColor = colors[sym.fillColor]
+      const hasPatternFill = sym.hatchMode || sym.structMode
+      children = []
+      if (fillColor && (!hasPatternFill || sym.fillOn)) {
+        children.push({
+          type: 'layer',
+          attrs: {
+            class: 'SimpleFill',
+            pass: 1000 - fillColor.renderOrder,
+            enabled: 1,
+            locked: 0
+          },
+          children: [
+            prop('color', Array.from(fillColor.rgbArray).concat([255]).join(',')),
+            prop('outline_style', 'no'),
+            prop('style', 'solid')
+          ]
+        })
+      }
+      if (fillColor && hasPatternFill) {
+        const patterns = patternToSvg(colors, sym)
+        children = children.concat(patterns.map(p => svgPatternToFill(scale, fillColor, p)))
+      }
+      break
+    }
+  }
+
+  return {
+    children
+  }
+}
+
+const svgPatternToFill = (scale, fillColor, pattern) => {
+  const { width, height, patternTransform } = pattern.attrs
+  const angle = patternTransform ? Number(/rotate\((.*)\)/.exec(patternTransform)[1]) : 0
+  const svgDoc = DOMImplementation.createDocument('http://www.w3.org/2000/svg', 'svg', null)
+  svgDoc.firstChild.setAttribute('width', width)
+  svgDoc.firstChild.setAttribute('height', height)
+  pattern.children.forEach(c => svgDoc.firstChild.appendChild(createSvgNode(svgDoc, c)))
+  const serializedSvg = new XMLSerializer().serializeToString(svgDoc)
+  const patternBase64 = 'base64:' + Buffer.from(serializedSvg).toString('base64')
+
+  return {
+    type: 'layer',
+    attrs: {
+      class: 'SVGFill',
+      pass: 1000 - fillColor.renderOrder,
+      enabled: 1,
+      locked: 0
+    },
+    children: [
+      prop('pattern_width_unit', 'MapUnit'),
+      prop('outline_style', 'no'),
+      prop('svgFile', patternBase64),
+      prop('width', toMapUnit(scale, width)),
+      prop('height', toMapUnit(scale, height)),
+      prop('angle', angle),
+      {
+        type: 'symbol',
+        attrs: {
+          clip_to_extent: 1,
+          alpha: 1,
+          type: 'line',
+          force_rhr: 0
+        },
+        children: [
+          {
+            type: 'layer',
+            attrs: {
+              class: 'SimpleLine',
+              locked: 0,
+              enabled: 1,
+              pass: 0
+            },
+            children: [
+              prop('line_color', '0,0,0,0'),
+              prop('line_style', 'solid'),
+              prop('line_width', 0),
+              prop('line_width_unit', 'MapUnit'),
+              prop('joinstyle', 'bevel'),
+              prop('capstyle', 'flat')
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}
+
+const prop = (k, v) => ({
+  type: 'prop',
+  attrs: { k, v }
+})
+
+const toMapUnit = (scale, x) => x / (100 * 1000) * scale
+
+}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {},require("buffer").Buffer)
+},{"./ocad-reader/symbol-types":121,"./ocad-to-svg":129,"buffer":27,"uuid/v4":219,"xmldom":99}],129:[function(require,module,exports){
 const { AreaSymbolType } = require('./ocad-reader/symbol-types')
-const { PointObjectType, LineObjectType, AreaObjectType, UnformattedTextObjectType, FormattedTextObjectType } = require('./ocad-reader/object-types')
+const { LineObjectType, AreaObjectType } = require('./ocad-reader/object-types')
 const { LineElementType, AreaElementType, CircleElementType, DotElementType } = require('./ocad-reader/symbol-element-types')
 const transformFeatures = require('./transform-features')
 const flatten = require('arr-flatten')
@@ -16861,14 +20162,14 @@ const patternToSvg = (colors, s) => {
 
   if (s.structMode) {
     const width = s.structWidth
-    const height = s.structHeight * 2
+    const height = s.structHeight * (s.structMode === 2 ? 2 : 1)
 
     patterns.push({
       id: `struct-fill-${s.symNum}`,
       'data-symbol-name': s.name,
       type: 'pattern',
       // , viewbox: `${-width / 2} ${-height / 2} ${width * 1.5} ${height * 1.5}`
-      attrs: { patternUnits: 'userSpaceOnUse', width, height: height },
+      attrs: { patternUnits: 'userSpaceOnUse', patternTransform: `rotate(${s.structAngle / 10})`, width, height: height },
       children: s.elements.map((e, i) => elementToSvg(s, '', i, e, [s.structWidth * 0.5, -s.structHeight * 0.5], 0, { colors }))
         .concat(s.structMode === 2
           ? s.elements.map((e, i) => elementToSvg(s, '', i, e, [s.structWidth, -s.structHeight * 1.5], 0, { colors }))
@@ -16880,11 +20181,11 @@ const patternToSvg = (colors, s) => {
   return patterns
 }
 
-const createSvgNode = n => {
+const createSvgNode = (document, n) => {
   const node = document.createElementNS('http://www.w3.org/2000/svg', n.type)
   n.id && (node.id = n.id)
   n.attrs && Object.keys(n.attrs).forEach(attrName => node.setAttribute(attrName, n.attrs[attrName]))
-  n.children && n.children.forEach(child => node.appendChild(createSvgNode(child)))
+  n.children && n.children.forEach(child => node.appendChild(createSvgNode(document, child)))
 
   return node
 }
@@ -16916,7 +20217,8 @@ module.exports = {
       })
     }
 
-    return createSvgNode(root)
+    // TODO: make this possible to run outside the browser
+    return createSvgNode(window.document, root)
   },
   patternToSvg,
   createSvgNode
@@ -16941,36 +20243,31 @@ const objectToSvg = (options, symbols, object) => {
     case LineObjectType:
       node = symbol.lineWidth && lineToPath(object.coordinates, symbol.lineWidth, options.colors[symbol.lineColor], symbol.mainGap, symbol.mainLength)
       break
-    case AreaObjectType:
+    case AreaObjectType: {
       const fillColorIndex = symbol.fillOn !== undefined
         ? symbol.fillOn ? symbol.fillColor : symbol.colors[0]
         : symbol.color
       const fillPattern = (symbol.hatchMode && `url(#hatch-fill-${symbol.symNum}-1)`) ||
         (symbol.structMode && `url(#struct-fill-${symbol.symNum})`)
-      node = areaToPath(object.coordinates, fillPattern, options.colors[fillColorIndex])
+      node = {
+        type: 'g',
+        children: [
+        ],
+        order: options.colors[fillColorIndex].renderOrder
+      }
+
+      if (fillColorIndex && symbol.fillOn) {
+        node.children.push(areaToPath(object.coordinates, null, options.colors[fillColorIndex]))
+      }
+
+      node.children.push(areaToPath(object.coordinates, fillPattern, options.colors[fillColorIndex]))
 
       if (symbol.hatchMode === 2) {
-        node = {
-          type: 'g',
-          children: [
-            node,
-            areaToPath(object.coordinates, `url(#hatch-fill-${symbol.symNum}-2)`, options.colors[fillColorIndex])
-          ],
-          order: options.colors[fillColorIndex].renderOrder
-        }
+        node.children.push(areaToPath(object.coordinates, `url(#hatch-fill-${symbol.symNum}-2)`, options.colors[fillColorIndex]))
       }
 
       break
-      // case UnformattedTextObjectType:
-      // case FormattedTextObjectType:
-      //   const lineHeight = symbol.fontSize / 10 * 0.352778 * 100
-      //   const anchorCoord = [object.coordinates[0][0], object.coordinates[0][1] + lineHeight]
-
-    //   node = {
-    //     type: 'Point',
-    //     coordinates: anchorCoord
-    //   }
-    //   break
+    }
     default:
       return
   }
@@ -17037,7 +20334,7 @@ const areaToPath = (coordinates, fillPattern, color) => ({
 })
 
 const coordsToPath = coords => {
-  if (coords == []) { return [] }
+  if (coords === []) { return [] }
   const cs = []
   let cp1
   let cp2
@@ -17052,12 +20349,11 @@ const coordsToPath = coords => {
     } else if (c.isSecondBezier()) {
       cp2 = c
     } else if (c.isFirstHolePoint()) {
-      cs.push (`M ${c[0]} ${-c[1]}`)
+      cs.push(`M ${c[0]} ${-c[1]}`)
     } else if (cp1 && cp2) {
       const bezier = `C ${cp1[0]} ${-cp1[1]} ${cp2[0]} ${-cp2[1]} ${c[0]} ${-c[1]}`
       cp1 = cp2 = undefined
       cs.push(bezier)
-
     } else {
       cs.push(`L ${c[0]} ${-c[1]}`)
     }
@@ -17066,7 +20362,7 @@ const coordsToPath = coords => {
   return cs.join(' ')
 }
 
-},{"./ocad-reader/object-types":109,"./ocad-reader/symbol-element-types":113,"./ocad-reader/symbol-types":116,"./transform-features":124,"arr-flatten":10}],124:[function(require,module,exports){
+},{"./ocad-reader/object-types":114,"./ocad-reader/symbol-element-types":118,"./ocad-reader/symbol-types":121,"./transform-features":130,"arr-flatten":10}],130:[function(require,module,exports){
 const { PointSymbolType, LineSymbolType } = require('./ocad-reader/symbol-types')
 
 const defaultOptions = {
@@ -17107,13 +20403,14 @@ const generateSymbolElements = (createElement, options, symbols, object, objectI
   if (!options.exportHidden && (!symbol || symbol.isHidden())) return elements
 
   switch (symbol.type) {
-    case PointSymbolType:
+    case PointSymbolType: {
       const angle = object.ang ? object.ang / 10 / 180 * Math.PI : 0
       elements = symbol.elements
         .map((e, i) => createElement(symbol, 'element', i, e, object.coordinates[0], angle, options, object, objectIndex))
       break
+    }
     case LineSymbolType:
-      if (symbol.primSymElements.length > 0) {
+      if (symbol.primSymElements.length > 0 && symbol.mainLength > 0) {
         const coords = object.coordinates
         const endLength = symbol.endLength
         const mainLength = symbol.mainLength
@@ -17162,7 +20459,7 @@ const generateSymbolElements = (createElement, options, symbols, object, objectI
   return elements
 }
 
-},{"./ocad-reader/symbol-types":116}],125:[function(require,module,exports){
+},{"./ocad-reader/symbol-types":121}],131:[function(require,module,exports){
 // Top level file is just a mixin of submodules & constants
 'use strict';
 
@@ -17178,7 +20475,7 @@ assign(pako, deflate, inflate, constants);
 
 module.exports = pako;
 
-},{"./lib/deflate":126,"./lib/inflate":127,"./lib/utils/common":128,"./lib/zlib/constants":131}],126:[function(require,module,exports){
+},{"./lib/deflate":132,"./lib/inflate":133,"./lib/utils/common":134,"./lib/zlib/constants":137}],132:[function(require,module,exports){
 'use strict';
 
 
@@ -17580,7 +20877,7 @@ exports.deflate = deflate;
 exports.deflateRaw = deflateRaw;
 exports.gzip = gzip;
 
-},{"./utils/common":128,"./utils/strings":129,"./zlib/deflate":133,"./zlib/messages":138,"./zlib/zstream":140}],127:[function(require,module,exports){
+},{"./utils/common":134,"./utils/strings":135,"./zlib/deflate":139,"./zlib/messages":144,"./zlib/zstream":146}],133:[function(require,module,exports){
 'use strict';
 
 
@@ -18000,7 +21297,7 @@ exports.inflate = inflate;
 exports.inflateRaw = inflateRaw;
 exports.ungzip  = inflate;
 
-},{"./utils/common":128,"./utils/strings":129,"./zlib/constants":131,"./zlib/gzheader":134,"./zlib/inflate":136,"./zlib/messages":138,"./zlib/zstream":140}],128:[function(require,module,exports){
+},{"./utils/common":134,"./utils/strings":135,"./zlib/constants":137,"./zlib/gzheader":140,"./zlib/inflate":142,"./zlib/messages":144,"./zlib/zstream":146}],134:[function(require,module,exports){
 'use strict';
 
 
@@ -18107,7 +21404,7 @@ exports.setTyped = function (on) {
 
 exports.setTyped(TYPED_OK);
 
-},{}],129:[function(require,module,exports){
+},{}],135:[function(require,module,exports){
 // String encode/decode helpers
 'use strict';
 
@@ -18294,7 +21591,7 @@ exports.utf8border = function (buf, max) {
   return (pos + _utf8len[buf[pos]] > max) ? pos : max;
 };
 
-},{"./common":128}],130:[function(require,module,exports){
+},{"./common":134}],136:[function(require,module,exports){
 'use strict';
 
 // Note: adler32 takes 12% for level 0 and 2% for level 6.
@@ -18347,7 +21644,7 @@ function adler32(adler, buf, len, pos) {
 
 module.exports = adler32;
 
-},{}],131:[function(require,module,exports){
+},{}],137:[function(require,module,exports){
 'use strict';
 
 // (C) 1995-2013 Jean-loup Gailly and Mark Adler
@@ -18417,7 +21714,7 @@ module.exports = {
   //Z_NULL:                 null // Use -1 or null inline, depending on var type
 };
 
-},{}],132:[function(require,module,exports){
+},{}],138:[function(require,module,exports){
 'use strict';
 
 // Note: we can't get significant speed boost here.
@@ -18478,7 +21775,7 @@ function crc32(crc, buf, len, pos) {
 
 module.exports = crc32;
 
-},{}],133:[function(require,module,exports){
+},{}],139:[function(require,module,exports){
 'use strict';
 
 // (C) 1995-2013 Jean-loup Gailly and Mark Adler
@@ -20354,7 +23651,7 @@ exports.deflatePrime = deflatePrime;
 exports.deflateTune = deflateTune;
 */
 
-},{"../utils/common":128,"./adler32":130,"./crc32":132,"./messages":138,"./trees":139}],134:[function(require,module,exports){
+},{"../utils/common":134,"./adler32":136,"./crc32":138,"./messages":144,"./trees":145}],140:[function(require,module,exports){
 'use strict';
 
 // (C) 1995-2013 Jean-loup Gailly and Mark Adler
@@ -20414,7 +23711,7 @@ function GZheader() {
 
 module.exports = GZheader;
 
-},{}],135:[function(require,module,exports){
+},{}],141:[function(require,module,exports){
 'use strict';
 
 // (C) 1995-2013 Jean-loup Gailly and Mark Adler
@@ -20761,7 +24058,7 @@ module.exports = function inflate_fast(strm, start) {
   return;
 };
 
-},{}],136:[function(require,module,exports){
+},{}],142:[function(require,module,exports){
 'use strict';
 
 // (C) 1995-2013 Jean-loup Gailly and Mark Adler
@@ -22319,7 +25616,7 @@ exports.inflateSyncPoint = inflateSyncPoint;
 exports.inflateUndermine = inflateUndermine;
 */
 
-},{"../utils/common":128,"./adler32":130,"./crc32":132,"./inffast":135,"./inftrees":137}],137:[function(require,module,exports){
+},{"../utils/common":134,"./adler32":136,"./crc32":138,"./inffast":141,"./inftrees":143}],143:[function(require,module,exports){
 'use strict';
 
 // (C) 1995-2013 Jean-loup Gailly and Mark Adler
@@ -22664,7 +25961,7 @@ module.exports = function inflate_table(type, lens, lens_index, codes, table, ta
   return 0;
 };
 
-},{"../utils/common":128}],138:[function(require,module,exports){
+},{"../utils/common":134}],144:[function(require,module,exports){
 'use strict';
 
 // (C) 1995-2013 Jean-loup Gailly and Mark Adler
@@ -22698,7 +25995,7 @@ module.exports = {
   '-6':   'incompatible version' /* Z_VERSION_ERROR (-6) */
 };
 
-},{}],139:[function(require,module,exports){
+},{}],145:[function(require,module,exports){
 'use strict';
 
 // (C) 1995-2013 Jean-loup Gailly and Mark Adler
@@ -23920,7 +27217,7 @@ exports._tr_flush_block  = _tr_flush_block;
 exports._tr_tally = _tr_tally;
 exports._tr_align = _tr_align;
 
-},{"../utils/common":128}],140:[function(require,module,exports){
+},{"../utils/common":134}],146:[function(require,module,exports){
 'use strict';
 
 // (C) 1995-2013 Jean-loup Gailly and Mark Adler
@@ -23969,7 +27266,7 @@ function ZStream() {
 
 module.exports = ZStream;
 
-},{}],141:[function(require,module,exports){
+},{}],147:[function(require,module,exports){
 'use strict';
 
 module.exports = Pbf;
@@ -24589,7 +27886,7 @@ function writeUtf8(buf, str, pos) {
     return pos;
 }
 
-},{"ieee754":58}],142:[function(require,module,exports){
+},{"ieee754":58}],148:[function(require,module,exports){
 (function (process){
 'use strict';
 
@@ -24636,7 +27933,7 @@ function nextTick(fn, arg1, arg2, arg3) {
 }
 
 }).call(this,require('_process'))
-},{"_process":143}],143:[function(require,module,exports){
+},{"_process":149}],149:[function(require,module,exports){
 // shim for using process in browser
 var process = module.exports = {};
 
@@ -24822,7 +28119,7 @@ process.chdir = function (dir) {
 };
 process.umask = function() { return 0; };
 
-},{}],144:[function(require,module,exports){
+},{}],150:[function(require,module,exports){
 (function (global, factory) {
 	typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory() :
 	typeof define === 'function' && define.amd ? define(factory) :
@@ -31353,10 +34650,10 @@ process.umask = function() { return 0; };
 
 })));
 
-},{}],145:[function(require,module,exports){
+},{}],151:[function(require,module,exports){
 module.exports = require("./lib/_stream_duplex.js")
 
-},{"./lib/_stream_duplex.js":146}],146:[function(require,module,exports){
+},{"./lib/_stream_duplex.js":152}],152:[function(require,module,exports){
 // a duplex stream is just a stream that is both readable and writable.
 // Since JS doesn't have multiple prototypal inheritance, this class
 // prototypally inherits from Readable, and then parasitically from
@@ -31432,7 +34729,7 @@ function forEach(xs, f) {
     f(xs[i], i);
   }
 }
-},{"./_stream_readable":148,"./_stream_writable":150,"core-util-is":49,"inherits":60,"process-nextick-args":142}],147:[function(require,module,exports){
+},{"./_stream_readable":154,"./_stream_writable":156,"core-util-is":49,"inherits":60,"process-nextick-args":148}],153:[function(require,module,exports){
 // a passthrough stream.
 // basically just the most minimal sort of Transform stream.
 // Every written chunk gets output as-is.
@@ -31459,7 +34756,7 @@ function PassThrough(options) {
 PassThrough.prototype._transform = function (chunk, encoding, cb) {
   cb(null, chunk);
 };
-},{"./_stream_transform":149,"core-util-is":49,"inherits":60}],148:[function(require,module,exports){
+},{"./_stream_transform":155,"core-util-is":49,"inherits":60}],154:[function(require,module,exports){
 (function (process){
 'use strict';
 
@@ -32342,7 +35639,7 @@ function indexOf(xs, x) {
   return -1;
 }
 }).call(this,require('_process'))
-},{"./_stream_duplex":146,"_process":143,"buffer":27,"core-util-is":49,"events":55,"inherits":60,"isarray":62,"process-nextick-args":142,"string_decoder/":208,"util":24}],149:[function(require,module,exports){
+},{"./_stream_duplex":152,"_process":149,"buffer":27,"core-util-is":49,"events":55,"inherits":60,"isarray":62,"process-nextick-args":148,"string_decoder/":214,"util":24}],155:[function(require,module,exports){
 // a transform stream is a readable/writable stream where you do
 // something with the data.  Sometimes it's called a "filter",
 // but that's not a great name for it, since that implies a thing where
@@ -32523,7 +35820,7 @@ function done(stream, er) {
 
   return stream.push(null);
 }
-},{"./_stream_duplex":146,"core-util-is":49,"inherits":60}],150:[function(require,module,exports){
+},{"./_stream_duplex":152,"core-util-is":49,"inherits":60}],156:[function(require,module,exports){
 (function (process,setImmediate){
 // A bit simpler than readable streams.
 // Implement an async ._write(chunk, encoding, cb), and it'll handle all
@@ -33042,10 +36339,10 @@ function CorkedRequest(state) {
   };
 }
 }).call(this,require('_process'),require("timers").setImmediate)
-},{"./_stream_duplex":146,"_process":143,"buffer":27,"core-util-is":49,"events":55,"inherits":60,"process-nextick-args":142,"timers":209,"util-deprecate":210}],151:[function(require,module,exports){
+},{"./_stream_duplex":152,"_process":149,"buffer":27,"core-util-is":49,"events":55,"inherits":60,"process-nextick-args":148,"timers":215,"util-deprecate":216}],157:[function(require,module,exports){
 module.exports = require("./lib/_stream_passthrough.js")
 
-},{"./lib/_stream_passthrough.js":147}],152:[function(require,module,exports){
+},{"./lib/_stream_passthrough.js":153}],158:[function(require,module,exports){
 var Stream = (function (){
   try {
     return require('st' + 'ream'); // hack to fix a circular dependency issue when used with browserify
@@ -33059,13 +36356,13 @@ exports.Duplex = require('./lib/_stream_duplex.js');
 exports.Transform = require('./lib/_stream_transform.js');
 exports.PassThrough = require('./lib/_stream_passthrough.js');
 
-},{"./lib/_stream_duplex.js":146,"./lib/_stream_passthrough.js":147,"./lib/_stream_readable.js":148,"./lib/_stream_transform.js":149,"./lib/_stream_writable.js":150}],153:[function(require,module,exports){
+},{"./lib/_stream_duplex.js":152,"./lib/_stream_passthrough.js":153,"./lib/_stream_readable.js":154,"./lib/_stream_transform.js":155,"./lib/_stream_writable.js":156}],159:[function(require,module,exports){
 module.exports = require("./lib/_stream_transform.js")
 
-},{"./lib/_stream_transform.js":149}],154:[function(require,module,exports){
+},{"./lib/_stream_transform.js":155}],160:[function(require,module,exports){
 module.exports = require("./lib/_stream_writable.js")
 
-},{"./lib/_stream_writable.js":150}],155:[function(require,module,exports){
+},{"./lib/_stream_writable.js":156}],161:[function(require,module,exports){
 'use strict';
 
 var proj4 = require('proj4').hasOwnProperty('default') ? require('proj4').default : require('proj4');
@@ -33217,7 +36514,7 @@ module.exports = {
   }
 };
 
-},{"proj4":144}],156:[function(require,module,exports){
+},{"proj4":150}],162:[function(require,module,exports){
 /* eslint-disable node/no-deprecated-api */
 var buffer = require('buffer')
 var Buffer = buffer.Buffer
@@ -33281,12 +36578,12 @@ SafeBuffer.allocUnsafeSlow = function (size) {
   return buffer.SlowBuffer(size)
 }
 
-},{"buffer":27}],157:[function(require,module,exports){
+},{"buffer":27}],163:[function(require,module,exports){
 module.exports.download = require('./src/download')
 module.exports.write = require('./src/write')
 module.exports.zip = require('./src/zip')
 
-},{"./src/download":197,"./src/write":205,"./src/zip":206}],158:[function(require,module,exports){
+},{"./src/download":203,"./src/write":211,"./src/zip":212}],164:[function(require,module,exports){
 'use strict';
 // private property
 var _keyStr = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=";
@@ -33358,7 +36655,7 @@ exports.decode = function(input, utf8) {
 
 };
 
-},{}],159:[function(require,module,exports){
+},{}],165:[function(require,module,exports){
 'use strict';
 function CompressedObject() {
     this.compressedSize = 0;
@@ -33388,7 +36685,7 @@ CompressedObject.prototype = {
 };
 module.exports = CompressedObject;
 
-},{}],160:[function(require,module,exports){
+},{}],166:[function(require,module,exports){
 'use strict';
 exports.STORE = {
     magic: "\x00\x00",
@@ -33403,7 +36700,7 @@ exports.STORE = {
 };
 exports.DEFLATE = require('./flate');
 
-},{"./flate":165}],161:[function(require,module,exports){
+},{"./flate":171}],167:[function(require,module,exports){
 'use strict';
 
 var utils = require('./utils');
@@ -33507,7 +36804,7 @@ module.exports = function crc32(input, crc) {
 };
 // vim: set shiftwidth=4 softtabstop=4:
 
-},{"./utils":178}],162:[function(require,module,exports){
+},{"./utils":184}],168:[function(require,module,exports){
 'use strict';
 var utils = require('./utils');
 
@@ -33616,7 +36913,7 @@ DataReader.prototype = {
 };
 module.exports = DataReader;
 
-},{"./utils":178}],163:[function(require,module,exports){
+},{"./utils":184}],169:[function(require,module,exports){
 'use strict';
 exports.base64 = false;
 exports.binary = false;
@@ -33629,7 +36926,7 @@ exports.comment = null;
 exports.unixPermissions = null;
 exports.dosPermissions = null;
 
-},{}],164:[function(require,module,exports){
+},{}],170:[function(require,module,exports){
 'use strict';
 var utils = require('./utils');
 
@@ -33736,7 +37033,7 @@ exports.isRegExp = function (object) {
 };
 
 
-},{"./utils":178}],165:[function(require,module,exports){
+},{"./utils":184}],171:[function(require,module,exports){
 'use strict';
 var USE_TYPEDARRAY = (typeof Uint8Array !== 'undefined') && (typeof Uint16Array !== 'undefined') && (typeof Uint32Array !== 'undefined');
 
@@ -33754,7 +37051,7 @@ exports.uncompress =  function(input) {
     return pako.inflateRaw(input);
 };
 
-},{"pako":181}],166:[function(require,module,exports){
+},{"pako":187}],172:[function(require,module,exports){
 'use strict';
 
 var base64 = require('./base64');
@@ -33835,7 +37132,7 @@ JSZip.base64 = {
 JSZip.compressions = require('./compressions');
 module.exports = JSZip;
 
-},{"./base64":158,"./compressions":160,"./defaults":163,"./deprecatedPublicUtils":164,"./load":167,"./object":170,"./support":174}],167:[function(require,module,exports){
+},{"./base64":164,"./compressions":166,"./defaults":169,"./deprecatedPublicUtils":170,"./load":173,"./object":176,"./support":180}],173:[function(require,module,exports){
 'use strict';
 var base64 = require('./base64');
 var ZipEntries = require('./zipEntries');
@@ -33868,7 +37165,7 @@ module.exports = function(data, options) {
     return this;
 };
 
-},{"./base64":158,"./zipEntries":179}],168:[function(require,module,exports){
+},{"./base64":164,"./zipEntries":185}],174:[function(require,module,exports){
 (function (Buffer){
 'use strict';
 module.exports = function(data, encoding){
@@ -33879,7 +37176,7 @@ module.exports.test = function(b){
 };
 
 }).call(this,require("buffer").Buffer)
-},{"buffer":27}],169:[function(require,module,exports){
+},{"buffer":27}],175:[function(require,module,exports){
 'use strict';
 var Uint8ArrayReader = require('./uint8ArrayReader');
 
@@ -33901,7 +37198,7 @@ NodeBufferReader.prototype.readData = function(size) {
 };
 module.exports = NodeBufferReader;
 
-},{"./uint8ArrayReader":175}],170:[function(require,module,exports){
+},{"./uint8ArrayReader":181}],176:[function(require,module,exports){
 'use strict';
 var support = require('./support');
 var utils = require('./utils');
@@ -34786,9 +38083,9 @@ var out = {
 };
 module.exports = out;
 
-},{"./base64":158,"./compressedObject":159,"./compressions":160,"./crc32":161,"./defaults":163,"./nodeBuffer":168,"./signature":171,"./stringWriter":173,"./support":174,"./uint8ArrayWriter":176,"./utf8":177,"./utils":178}],171:[function(require,module,exports){
+},{"./base64":164,"./compressedObject":165,"./compressions":166,"./crc32":167,"./defaults":169,"./nodeBuffer":174,"./signature":177,"./stringWriter":179,"./support":180,"./uint8ArrayWriter":182,"./utf8":183,"./utils":184}],177:[function(require,module,exports){
 arguments[4][85][0].apply(exports,arguments)
-},{"dup":85}],172:[function(require,module,exports){
+},{"dup":85}],178:[function(require,module,exports){
 'use strict';
 var DataReader = require('./dataReader');
 var utils = require('./utils');
@@ -34826,7 +38123,7 @@ StringReader.prototype.readData = function(size) {
 };
 module.exports = StringReader;
 
-},{"./dataReader":162,"./utils":178}],173:[function(require,module,exports){
+},{"./dataReader":168,"./utils":184}],179:[function(require,module,exports){
 'use strict';
 
 var utils = require('./utils');
@@ -34858,7 +38155,7 @@ StringWriter.prototype = {
 
 module.exports = StringWriter;
 
-},{"./utils":178}],174:[function(require,module,exports){
+},{"./utils":184}],180:[function(require,module,exports){
 (function (Buffer){
 'use strict';
 exports.base64 = true;
@@ -34896,7 +38193,7 @@ else {
 }
 
 }).call(this,require("buffer").Buffer)
-},{"buffer":27}],175:[function(require,module,exports){
+},{"buffer":27}],181:[function(require,module,exports){
 'use strict';
 var DataReader = require('./dataReader');
 
@@ -34945,7 +38242,7 @@ Uint8ArrayReader.prototype.readData = function(size) {
 };
 module.exports = Uint8ArrayReader;
 
-},{"./dataReader":162}],176:[function(require,module,exports){
+},{"./dataReader":168}],182:[function(require,module,exports){
 'use strict';
 
 var utils = require('./utils');
@@ -34983,7 +38280,7 @@ Uint8ArrayWriter.prototype = {
 
 module.exports = Uint8ArrayWriter;
 
-},{"./utils":178}],177:[function(require,module,exports){
+},{"./utils":184}],183:[function(require,module,exports){
 'use strict';
 
 var utils = require('./utils');
@@ -35192,7 +38489,7 @@ exports.utf8decode = function utf8decode(buf) {
 };
 // vim: set shiftwidth=4 softtabstop=4:
 
-},{"./nodeBuffer":168,"./support":174,"./utils":178}],178:[function(require,module,exports){
+},{"./nodeBuffer":174,"./support":180,"./utils":184}],184:[function(require,module,exports){
 'use strict';
 var support = require('./support');
 var compressions = require('./compressions');
@@ -35520,7 +38817,7 @@ exports.isRegExp = function (object) {
 };
 
 
-},{"./compressions":160,"./nodeBuffer":168,"./support":174}],179:[function(require,module,exports){
+},{"./compressions":166,"./nodeBuffer":174,"./support":180}],185:[function(require,module,exports){
 'use strict';
 var StringReader = require('./stringReader');
 var NodeBufferReader = require('./nodeBufferReader');
@@ -35743,7 +39040,7 @@ ZipEntries.prototype = {
 // }}} end of ZipEntries
 module.exports = ZipEntries;
 
-},{"./nodeBufferReader":169,"./object":170,"./signature":171,"./stringReader":172,"./support":174,"./uint8ArrayReader":175,"./utils":178,"./zipEntry":180}],180:[function(require,module,exports){
+},{"./nodeBufferReader":175,"./object":176,"./signature":177,"./stringReader":178,"./support":180,"./uint8ArrayReader":181,"./utils":184,"./zipEntry":186}],186:[function(require,module,exports){
 'use strict';
 var StringReader = require('./stringReader');
 var utils = require('./utils');
@@ -36055,9 +39352,9 @@ ZipEntry.prototype = {
 };
 module.exports = ZipEntry;
 
-},{"./compressedObject":159,"./object":170,"./stringReader":172,"./utils":178}],181:[function(require,module,exports){
-arguments[4][125][0].apply(exports,arguments)
-},{"./lib/deflate":182,"./lib/inflate":183,"./lib/utils/common":184,"./lib/zlib/constants":187,"dup":125}],182:[function(require,module,exports){
+},{"./compressedObject":165,"./object":176,"./stringReader":178,"./utils":184}],187:[function(require,module,exports){
+arguments[4][131][0].apply(exports,arguments)
+},{"./lib/deflate":188,"./lib/inflate":189,"./lib/utils/common":190,"./lib/zlib/constants":193,"dup":131}],188:[function(require,module,exports){
 'use strict';
 
 
@@ -36459,7 +39756,7 @@ exports.deflate = deflate;
 exports.deflateRaw = deflateRaw;
 exports.gzip = gzip;
 
-},{"./utils/common":184,"./utils/strings":185,"./zlib/deflate":189,"./zlib/messages":194,"./zlib/zstream":196}],183:[function(require,module,exports){
+},{"./utils/common":190,"./utils/strings":191,"./zlib/deflate":195,"./zlib/messages":200,"./zlib/zstream":202}],189:[function(require,module,exports){
 'use strict';
 
 
@@ -36879,7 +40176,7 @@ exports.inflate = inflate;
 exports.inflateRaw = inflateRaw;
 exports.ungzip  = inflate;
 
-},{"./utils/common":184,"./utils/strings":185,"./zlib/constants":187,"./zlib/gzheader":190,"./zlib/inflate":192,"./zlib/messages":194,"./zlib/zstream":196}],184:[function(require,module,exports){
+},{"./utils/common":190,"./utils/strings":191,"./zlib/constants":193,"./zlib/gzheader":196,"./zlib/inflate":198,"./zlib/messages":200,"./zlib/zstream":202}],190:[function(require,module,exports){
 'use strict';
 
 
@@ -36983,7 +40280,7 @@ exports.setTyped = function (on) {
 
 exports.setTyped(TYPED_OK);
 
-},{}],185:[function(require,module,exports){
+},{}],191:[function(require,module,exports){
 // String encode/decode helpers
 'use strict';
 
@@ -37170,7 +40467,7 @@ exports.utf8border = function (buf, max) {
   return (pos + _utf8len[buf[pos]] > max) ? pos : max;
 };
 
-},{"./common":184}],186:[function(require,module,exports){
+},{"./common":190}],192:[function(require,module,exports){
 'use strict';
 
 // Note: adler32 takes 12% for level 0 and 2% for level 6.
@@ -37204,7 +40501,7 @@ function adler32(adler, buf, len, pos) {
 
 module.exports = adler32;
 
-},{}],187:[function(require,module,exports){
+},{}],193:[function(require,module,exports){
 'use strict';
 
 
@@ -37256,7 +40553,7 @@ module.exports = {
   //Z_NULL:                 null // Use -1 or null inline, depending on var type
 };
 
-},{}],188:[function(require,module,exports){
+},{}],194:[function(require,module,exports){
 'use strict';
 
 // Note: we can't get significant speed boost here.
@@ -37299,7 +40596,7 @@ function crc32(crc, buf, len, pos) {
 
 module.exports = crc32;
 
-},{}],189:[function(require,module,exports){
+},{}],195:[function(require,module,exports){
 'use strict';
 
 var utils   = require('../utils/common');
@@ -39156,7 +42453,7 @@ exports.deflatePrime = deflatePrime;
 exports.deflateTune = deflateTune;
 */
 
-},{"../utils/common":184,"./adler32":186,"./crc32":188,"./messages":194,"./trees":195}],190:[function(require,module,exports){
+},{"../utils/common":190,"./adler32":192,"./crc32":194,"./messages":200,"./trees":201}],196:[function(require,module,exports){
 'use strict';
 
 
@@ -39198,7 +42495,7 @@ function GZheader() {
 
 module.exports = GZheader;
 
-},{}],191:[function(require,module,exports){
+},{}],197:[function(require,module,exports){
 'use strict';
 
 // See state defs from inflate.js
@@ -39526,7 +42823,7 @@ module.exports = function inflate_fast(strm, start) {
   return;
 };
 
-},{}],192:[function(require,module,exports){
+},{}],198:[function(require,module,exports){
 'use strict';
 
 
@@ -41066,7 +44363,7 @@ exports.inflateSyncPoint = inflateSyncPoint;
 exports.inflateUndermine = inflateUndermine;
 */
 
-},{"../utils/common":184,"./adler32":186,"./crc32":188,"./inffast":191,"./inftrees":193}],193:[function(require,module,exports){
+},{"../utils/common":190,"./adler32":192,"./crc32":194,"./inffast":197,"./inftrees":199}],199:[function(require,module,exports){
 'use strict';
 
 
@@ -41395,7 +44692,7 @@ module.exports = function inflate_table(type, lens, lens_index, codes, table, ta
   return 0;
 };
 
-},{"../utils/common":184}],194:[function(require,module,exports){
+},{"../utils/common":190}],200:[function(require,module,exports){
 'use strict';
 
 module.exports = {
@@ -41410,7 +44707,7 @@ module.exports = {
   '-6':   'incompatible version' /* Z_VERSION_ERROR (-6) */
 };
 
-},{}],195:[function(require,module,exports){
+},{}],201:[function(require,module,exports){
 'use strict';
 
 
@@ -42614,7 +45911,7 @@ exports._tr_flush_block  = _tr_flush_block;
 exports._tr_tally = _tr_tally;
 exports._tr_align = _tr_align;
 
-},{"../utils/common":184}],196:[function(require,module,exports){
+},{"../utils/common":190}],202:[function(require,module,exports){
 'use strict';
 
 
@@ -42645,7 +45942,7 @@ function ZStream() {
 
 module.exports = ZStream;
 
-},{}],197:[function(require,module,exports){
+},{}],203:[function(require,module,exports){
 var zip = require('./zip');
 
 module.exports = function(gj, options) {
@@ -42653,7 +45950,7 @@ module.exports = function(gj, options) {
     location.href = 'data:application/zip;base64,' + content;
 };
 
-},{"./zip":206}],198:[function(require,module,exports){
+},{"./zip":212}],204:[function(require,module,exports){
 module.exports.enlarge = function enlargeExtent(extent, pt) {
     if (pt[0] < extent.xmin) extent.xmin = pt[0];
     if (pt[0] > extent.xmax) extent.xmax = pt[0];
@@ -42679,7 +45976,7 @@ module.exports.blank = function() {
     };
 };
 
-},{}],199:[function(require,module,exports){
+},{}],205:[function(require,module,exports){
 var types = require('./types').jstypes;
 
 module.exports.geojson = geojson;
@@ -42709,7 +46006,7 @@ function obj(_) {
     return o;
 }
 
-},{"./types":204}],200:[function(require,module,exports){
+},{"./types":210}],206:[function(require,module,exports){
 module.exports.point = justType('Point', 'POINT');
 module.exports.line = justType('LineString', 'POLYLINE');
 module.exports.polygon = justType('Polygon', 'POLYGON');
@@ -42743,7 +46040,7 @@ function isType(t) {
     return function(f) { return f.geometry.type === t; };
 }
 
-},{}],201:[function(require,module,exports){
+},{}],207:[function(require,module,exports){
 var ext = require('./extent');
 
 module.exports.write = function writePoints(coordinates, extent, shpView, shxView) {
@@ -42794,7 +46091,7 @@ module.exports.shpLength = function(coordinates) {
     return coordinates.length * 28;
 };
 
-},{"./extent":198}],202:[function(require,module,exports){
+},{"./extent":204}],208:[function(require,module,exports){
 var ext = require('./extent'),
     types = require('./types');
 
@@ -42913,10 +46210,10 @@ function justCoords(coords, l) {
 }
 
 
-},{"./extent":198,"./types":204}],203:[function(require,module,exports){
+},{"./extent":204,"./types":210}],209:[function(require,module,exports){
 module.exports = 'GEOGCS["GCS_WGS_1984",DATUM["D_WGS_1984",SPHEROID["WGS_1984",6378137,298.257223563]],PRIMEM["Greenwich",0],UNIT["Degree",0.017453292519943295]]';
 
-},{}],204:[function(require,module,exports){
+},{}],210:[function(require,module,exports){
 module.exports.geometries = {
     NULL: 0,
     POINT: 1,
@@ -42934,7 +46231,7 @@ module.exports.geometries = {
     MULTIPATCH: 31,
 };
 
-},{}],205:[function(require,module,exports){
+},{}],211:[function(require,module,exports){
 var types = require('./types'),
     dbf = require('dbf'),
     prj = require('./prj'),
@@ -43004,7 +46301,7 @@ function writeExtent(extent, view) {
     view.setFloat64(60, extent.ymax, true);
 }
 
-},{"./extent":198,"./fields":199,"./points":201,"./poly":202,"./prj":203,"./types":204,"assert":11,"dbf":50}],206:[function(require,module,exports){
+},{"./extent":204,"./fields":205,"./points":207,"./poly":208,"./prj":209,"./types":210,"assert":11,"dbf":50}],212:[function(require,module,exports){
 (function (process){
 var write = require('./write'),
     geojson = require('./geojson'),
@@ -43046,7 +46343,7 @@ module.exports = function(gj, options) {
 };
 
 }).call(this,require('_process'))
-},{"./geojson":200,"./prj":203,"./write":205,"_process":143,"jszip":166}],207:[function(require,module,exports){
+},{"./geojson":206,"./prj":209,"./write":211,"_process":149,"jszip":172}],213:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -43175,7 +46472,7 @@ Stream.prototype.pipe = function(dest, options) {
   return dest;
 };
 
-},{"events":55,"inherits":60,"readable-stream/duplex.js":145,"readable-stream/passthrough.js":151,"readable-stream/readable.js":152,"readable-stream/transform.js":153,"readable-stream/writable.js":154}],208:[function(require,module,exports){
+},{"events":55,"inherits":60,"readable-stream/duplex.js":151,"readable-stream/passthrough.js":157,"readable-stream/readable.js":158,"readable-stream/transform.js":159,"readable-stream/writable.js":160}],214:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -43398,7 +46695,7 @@ function base64DetectIncompleteChar(buffer) {
   this.charLength = this.charReceived ? 3 : 0;
 }
 
-},{"buffer":27}],209:[function(require,module,exports){
+},{"buffer":27}],215:[function(require,module,exports){
 (function (setImmediate,clearImmediate){
 var nextTick = require('process/browser.js').nextTick;
 var apply = Function.prototype.apply;
@@ -43477,7 +46774,7 @@ exports.clearImmediate = typeof clearImmediate === "function" ? clearImmediate :
   delete immediateIds[id];
 };
 }).call(this,require("timers").setImmediate,require("timers").clearImmediate)
-},{"process/browser.js":143,"timers":209}],210:[function(require,module,exports){
+},{"process/browser.js":149,"timers":215}],216:[function(require,module,exports){
 (function (global){
 
 /**
@@ -43548,7 +46845,102 @@ function config (name) {
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],211:[function(require,module,exports){
+},{}],217:[function(require,module,exports){
+/**
+ * Convert array of 16 byte values to UUID string format of the form:
+ * XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX
+ */
+var byteToHex = [];
+for (var i = 0; i < 256; ++i) {
+  byteToHex[i] = (i + 0x100).toString(16).substr(1);
+}
+
+function bytesToUuid(buf, offset) {
+  var i = offset || 0;
+  var bth = byteToHex;
+  // join used to fix memory issue caused by concatenation: https://bugs.chromium.org/p/v8/issues/detail?id=3175#c4
+  return ([
+    bth[buf[i++]], bth[buf[i++]],
+    bth[buf[i++]], bth[buf[i++]], '-',
+    bth[buf[i++]], bth[buf[i++]], '-',
+    bth[buf[i++]], bth[buf[i++]], '-',
+    bth[buf[i++]], bth[buf[i++]], '-',
+    bth[buf[i++]], bth[buf[i++]],
+    bth[buf[i++]], bth[buf[i++]],
+    bth[buf[i++]], bth[buf[i++]]
+  ]).join('');
+}
+
+module.exports = bytesToUuid;
+
+},{}],218:[function(require,module,exports){
+// Unique ID creation requires a high quality random # generator.  In the
+// browser this is a little complicated due to unknown quality of Math.random()
+// and inconsistent support for the `crypto` API.  We do the best we can via
+// feature-detection
+
+// getRandomValues needs to be invoked in a context where "this" is a Crypto
+// implementation. Also, find the complete implementation of crypto on IE11.
+var getRandomValues = (typeof(crypto) != 'undefined' && crypto.getRandomValues && crypto.getRandomValues.bind(crypto)) ||
+                      (typeof(msCrypto) != 'undefined' && typeof window.msCrypto.getRandomValues == 'function' && msCrypto.getRandomValues.bind(msCrypto));
+
+if (getRandomValues) {
+  // WHATWG crypto RNG - http://wiki.whatwg.org/wiki/Crypto
+  var rnds8 = new Uint8Array(16); // eslint-disable-line no-undef
+
+  module.exports = function whatwgRNG() {
+    getRandomValues(rnds8);
+    return rnds8;
+  };
+} else {
+  // Math.random()-based (RNG)
+  //
+  // If all else fails, use Math.random().  It's fast, but is of unspecified
+  // quality.
+  var rnds = new Array(16);
+
+  module.exports = function mathRNG() {
+    for (var i = 0, r; i < 16; i++) {
+      if ((i & 0x03) === 0) r = Math.random() * 0x100000000;
+      rnds[i] = r >>> ((i & 0x03) << 3) & 0xff;
+    }
+
+    return rnds;
+  };
+}
+
+},{}],219:[function(require,module,exports){
+var rng = require('./lib/rng');
+var bytesToUuid = require('./lib/bytesToUuid');
+
+function v4(options, buf, offset) {
+  var i = buf && offset || 0;
+
+  if (typeof(options) == 'string') {
+    buf = options === 'binary' ? new Array(16) : null;
+    options = null;
+  }
+  options = options || {};
+
+  var rnds = options.random || (options.rng || rng)();
+
+  // Per 4.4, set bits for version and `clock_seq_hi_and_reserved`
+  rnds[6] = (rnds[6] & 0x0f) | 0x40;
+  rnds[8] = (rnds[8] & 0x3f) | 0x80;
+
+  // Copy bytes to buffer, if provided
+  if (buf) {
+    for (var ii = 0; ii < 16; ++ii) {
+      buf[i + ii] = rnds[ii];
+    }
+  }
+
+  return buf || bytesToUuid(rnds);
+}
+
+module.exports = v4;
+
+},{"./lib/bytesToUuid":217,"./lib/rng":218}],220:[function(require,module,exports){
 var Pbf = require('pbf')
 var GeoJSONWrapper = require('./lib/geojson_wrapper')
 
@@ -43726,7 +47118,7 @@ function writeValue (value, pbf) {
   }
 }
 
-},{"./lib/geojson_wrapper":212,"pbf":141}],212:[function(require,module,exports){
+},{"./lib/geojson_wrapper":221,"pbf":147}],221:[function(require,module,exports){
 'use strict'
 
 var Point = require('@mapbox/point-geometry')

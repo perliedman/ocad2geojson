@@ -22,6 +22,7 @@
   "repository": "https://github.com/perliedman/ocad2geojson",
   "homepage": "https://github.com/perliedman/ocad2geojson",
   "devDependencies": {
+    "@babel/core": "^7.12.10",
     "ava": "^2.3.0",
     "eslint": "^6.2.2",
     "eslint-config-standard": "^14.0.1",

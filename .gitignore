@@ -2,6 +2,7 @@ node_modules/
 examples/viewer/node_modules
 examples/svg/node_modules
 examples/svg-patterns/node_modules
+examples/raster-tiles/node_modules
 demo/tiles
 demo/*.gpx
 *.ocd

@@ -74,8 +74,9 @@ const createSvgNode = (document, n) => {
 module.exports = {
   ocadToSvg: function (ocadFile, options) {
     options = { ...defaultOptions, ...options }
+    const objects = options.objects || ocadFile.objects
 
-    const usedSymbols = usedSymbolNumbers(ocadFile)
+    const usedSymbols = usedSymbolNumbers(objects)
       .map(symNum => ocadFile.symbols.find(s => symNum === s.symNum))
       .filter(s => s)
 
@@ -105,15 +106,10 @@ module.exports = {
   createSvgNode
 }
 
-const usedSymbolNumbers = ocadFile => ocadFile.objects.reduce((a, f) => {
-  const symbolNum = f.sym
-  if (!a.idSet.has(symbolNum)) {
-    a.symbolNums.push(symbolNum)
-    a.idSet.add(symbolNum)
-  }
-
-  return a
-}, { symbolNums: [], idSet: new Set() }).symbolNums
+const usedSymbolNumbers = objects => Array.from(objects.reduce((seen, f) => {
+  seen.add(f.sym)
+  return seen
+}, new Set()))
 
 const objectToSvg = (options, symbols, object) => {
   const symbol = symbols[object.sym]

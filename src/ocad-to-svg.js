@@ -99,8 +99,7 @@ module.exports = {
       })
     }
 
-    // TODO: make this possible to run outside the browser
-    return createSvgNode(window.document, root)
+    return createSvgNode(options.document || window.document, root)
   },
   patternToSvg,
   createSvgNode

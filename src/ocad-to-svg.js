@@ -6,7 +6,8 @@ const flatten = require('arr-flatten')
 
 const defaultOptions = {
   generateSymbolElements: true,
-  exportHidden: false
+  exportHidden: false,
+  fill: 'transparent'
 }
 
 const patternToSvg = (colors, s) => {
@@ -86,7 +87,7 @@ module.exports = {
 
     const root = {
       type: 'svg',
-      attrs: { fill: 'transparent' },
+      attrs: { fill: options.fill },
       children: [
         {
           type: 'defs',

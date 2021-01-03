@@ -1,8 +1,10 @@
-const { AreaSymbolType } = require('./ocad-reader/symbol-types')
+const { AreaSymbolType, DblFillColorOn } = require('./ocad-reader/symbol-types')
 const { LineObjectType, AreaObjectType } = require('./ocad-reader/object-types')
 const { LineElementType, AreaElementType, CircleElementType, DotElementType } = require('./ocad-reader/symbol-element-types')
 const transformFeatures = require('./transform-features')
 const flatten = require('arr-flatten')
+const { default: lineOffset } = require('@turf/line-offset')
+const TdPoly = require('./ocad-reader/td-poly')
 
 const defaultOptions = {
   generateSymbolElements: true,
@@ -117,9 +119,49 @@ const objectToSvg = (options, symbols, object) => {
 
   let node
   switch (object.objType) {
-    case LineObjectType:
-      node = symbol.lineWidth && lineToPath(object.coordinates, symbol.lineWidth, options.colors[symbol.lineColor], symbol.mainGap, symbol.mainLength)
+    case LineObjectType: {
+      const isDoubleLine = symbol.doubleLine && symbol.doubleLine.dblMode
+      if (!isDoubleLine) {
+        node = symbol.lineWidth && lineToPath(object.coordinates, symbol.lineWidth, options.colors[symbol.lineColor], symbol.mainGap, symbol.mainLength)
+      } else {
+        const dbl = symbol.doubleLine
+        node = {
+          type: 'g',
+          children: []
+        }
+        if (dbl.dblFlags & DblFillColorOn) {
+          if (dbl.dblLeftWidth > 0 && dbl.dblRightWidth > 0) {
+            node.children = [
+              lineToPath(
+                object.coordinates,
+                dbl.dblLeftWidth * 1.5 + dbl.dblRightWidth * 1.5 + dbl.dblWidth * 2,
+                options.colors[dbl.dblLeftColor],
+                dbl.dblGap,
+                dbl.dblLength),
+              lineToPath(
+                object.coordinates,
+                dbl.dblWidth * 2,
+                options.colors[dbl.dblFillColor],
+                dbl.dblGap,
+                dbl.dblLength)
+            ]
+            node.order = Math.max.apply(Math, node.children.map(n => n.order))
+          }
+        } else {
+          node.children = [
+            -dbl.dblWidth - dbl.dblLeftWidth / 2,
+            dbl.dblWidth + dbl.dblRightWidth / 2
+          ].map((offset, i) => lineToPath(
+            offsetLineCoordinates(object.coordinates, offset, { units: 'degrees' }),
+            i === 0 ? dbl.dblLeftWidth : dbl.dblRightWidth,
+            options.colors[i === 0 ? dbl.dblLeftColor : dbl.dblRightColor],
+            dbl.dblGap,
+            dbl.dblLength))
+          node.order = Math.max.apply(Math, node.children.map(n => n.order))
+        }
+      }
       break
+    }
     case AreaObjectType: {
       const fillColorIndex = symbol.fillOn !== undefined
         ? symbol.fillOn ? symbol.fillColor : symbol.colors[0]
@@ -237,4 +279,13 @@ const coordsToPath = coords => {
   }
 
   return cs.join(' ')
+}
+
+const offsetLineCoordinates = (coordinates, offset) => {
+  const offsetCoordinates = lineOffset({
+    type: 'LineString',
+    coordinates
+  }, offset, { units: 'degrees' }).geometry.coordinates
+  return offsetCoordinates.map((c, i) =>
+    new TdPoly(c[0], c[1], coordinates[i].xFlags, coordinates[i].yFlags))
 }

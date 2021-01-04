@@ -131,7 +131,7 @@ const readWideString = (object, len) => {
   const textChars = []
   for (let i = 0; i < len * (object.unicode ? 2 : 4); i++) {
     const c = object.unicode ? object.readByte() : object.readWord()
-    if (!c) break
+    if (!c) continue
     if (c !== 13) {
       textChars.push(String.fromCharCode(c))
     }

@@ -318,8 +318,6 @@ const offsetLineCoordinates = (coordinates, offset) => {
 }
 
 const ocadTextToSvg = (coord, s, horizontalAlign, verticalAlign, lineHeight) => {
-  console.log({ coord, s, horizontalAlign, verticalAlign })
-
   const lines = s.split('\n')
   const baseY = verticalAlign === VerticalAlignTop
     ? lineHeight

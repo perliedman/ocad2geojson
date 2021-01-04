@@ -30,7 +30,7 @@ OCAD version 10, 11 and 12 and 2018 files are mostly supported. Some OCAD featur
 * Fill patterns are ~~not supported~~ supported for SVG and PDF exports
 * ~~Curves are not supported~~ Bezier curves now supported!
 * ~~Some texts are not exported~~
-* SVG / PDF currently lack any text
+* ~~SVG / PDF currently lack any text~~ SVG and PDF now have text support
 * ...and probably a lot more that I do not even know is missing
 
 Feel free to open issues for lacking features - I will not promise to add them, but good to keep track of what is missing.

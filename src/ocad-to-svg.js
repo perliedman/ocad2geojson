@@ -1,10 +1,11 @@
 const { AreaSymbolType, DblFillColorOn } = require('./ocad-reader/symbol-types')
-const { LineObjectType, AreaObjectType } = require('./ocad-reader/object-types')
+const { LineObjectType, AreaObjectType, LineTextObjectType, FormattedTextObjectType, UnformattedTextObjectType } = require('./ocad-reader/object-types')
 const { LineElementType, AreaElementType, CircleElementType, DotElementType } = require('./ocad-reader/symbol-element-types')
 const transformFeatures = require('./transform-features')
 const flatten = require('arr-flatten')
 const { default: lineOffset } = require('@turf/line-offset')
 const TdPoly = require('./ocad-reader/td-poly')
+const { HorizontalAlignCenter, HorizontalAlignLeft, VerticalAlignTop, VerticalAlignBottom } = require('./ocad-reader/text-symbol')
 
 const defaultOptions = {
   generateSymbolElements: true,
@@ -66,7 +67,9 @@ const patternToSvg = (colors, s) => {
 }
 
 const createSvgNode = (document, n) => {
-  const node = document.createElementNS('http://www.w3.org/2000/svg', n.type)
+  const node = n.text === undefined
+    ? document.createElementNS('http://www.w3.org/2000/svg', n.type)
+    : document.createTextNode(n.text)
   n.id && (node.id = n.id)
   n.attrs && Object.keys(n.attrs).forEach(attrName => node.setAttribute(attrName, n.attrs[attrName]))
   n.children && n.children.forEach(child => node.appendChild(createSvgNode(document, child)))
@@ -187,6 +190,30 @@ const objectToSvg = (options, symbols, object) => {
 
       break
     }
+    case UnformattedTextObjectType:
+    case FormattedTextObjectType:
+    case LineTextObjectType: {
+      const horizontalAlign = symbol.getHorizontalAlignment()
+      const verticalAlign = symbol.getVerticalAlignment()
+      const [x, y] = object.coordinates[0]
+      const fontSize = symbol.fontSize * 3.52778
+      const lineHeight = fontSize * 1.2
+
+      node = {
+        type: 'text',
+        attrs: {
+          x,
+          y: -y,
+          fill: options.colors[symbol.fontColor].rgb,
+          'font-family': symbol.fontName,
+          'font-style': symbol.italic ? 'italic' : '',
+          'font-weight': symbol.weight > 400 ? 'bold' : '',
+          'font-size': fontSize // pt to millimeters * 10
+        },
+        children: ocadTextToSvg(object.coordinates[0], object.text, horizontalAlign, verticalAlign, lineHeight)
+      }
+      break
+    }
     default:
       return
   }
@@ -288,4 +315,29 @@ const offsetLineCoordinates = (coordinates, offset) => {
   }, offset, { units: 'degrees' }).geometry.coordinates
   return offsetCoordinates.map((c, i) =>
     new TdPoly(c[0], c[1], coordinates[i].xFlags, coordinates[i].yFlags))
+}
+
+const ocadTextToSvg = (coord, s, horizontalAlign, verticalAlign, lineHeight) => {
+  console.log({ coord, s, horizontalAlign, verticalAlign })
+
+  const lines = s.split('\n')
+  const baseY = verticalAlign === VerticalAlignTop
+    ? lineHeight
+    : verticalAlign === VerticalAlignBottom
+      ? 0
+      : 0.5 * lineHeight
+
+  return lines.map((l, i) => ({
+    type: 'tspan',
+    attrs: {
+      x: coord[0],
+      y: `${-coord[1] + baseY + i * lineHeight}`,
+      'text-anchor': horizontalAlign === HorizontalAlignCenter
+        ? 'middle'
+        : horizontalAlign === HorizontalAlignLeft
+          ? 'start'
+          : 'end'
+    },
+    children: [{ text: l }]
+  }))
 }

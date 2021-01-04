@@ -39,12 +39,15 @@ class TextSymbol11 extends Symbol11 {
 const readTextSymbol = block => {
   // ASCII string, 32 bytes
   block.fontName = ''
-  block.readByte() // String length
-  for (let i = 1; i < 32; i++) {
+  const fontLength = block.readByte() // String length
+  for (let i = 0; i < fontLength; i++) {
     const c = block.readByte()
     if (c) {
       block.fontName += String.fromCharCode(c)
     }
+  }
+  for (let i = 1; i < 32 - fontLength; i++) {
+    block.readByte()
   }
 
   block.fontColor = block.readSmallInt()

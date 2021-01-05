@@ -9,6 +9,8 @@ Export [OCAD](https://www.ocad.com/) files to open formats:
 * PDF
 * [QGIS](https://qgis.org/en/site/) / QML (very rough and incomplete)
 
+You might also want to look at [ocad2tiles](https://github.com/perliedman/ocad2tiles) which uses ocad2geojson to create overview images and tiles for online maps from OCAD files. 
+
 ![Example Map Output](example-map-2.png)
 ![Example Map Output](example-map-3.png)
 ![Example Map Output](example-map.png)

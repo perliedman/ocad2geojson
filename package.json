@@ -6,7 +6,7 @@
   "scripts": {
     "test": "npm run lint && ava",
     "lint": "eslint src/",
-    "prepublish": "npm run lint"
+    "prepublish": "npm test"
   },
   "bin": {
     "ocad-export": "./cli.js"
@@ -29,7 +29,8 @@
     "eslint-plugin-import": "^2.22.1",
     "eslint-plugin-node": "^9.1.0",
     "eslint-plugin-promise": "^4.2.1",
-    "eslint-plugin-standard": "^4.0.1"
+    "eslint-plugin-standard": "^4.0.1",
+    "xmldom": "^0.2.1"
   },
   "dependencies": {
     "@turf/bbox": "^6.0.1",
@@ -42,7 +43,6 @@
     "mkdirp": "^0.5.1",
     "reproject": "^1.2.3",
     "uuid": "^3.4.0",
-    "vt-pbf": "^3.1.1",
-    "xmldom": "^0.2.1"
+    "vt-pbf": "^3.1.1"
   }
 }

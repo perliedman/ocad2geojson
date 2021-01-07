@@ -47,7 +47,7 @@ class BaseSymbol extends Block {
   }
 
   isHidden () {
-    return (this.status & 0xf) === 2
+    return (this.status & 0x02) === 2
   }
 }
 

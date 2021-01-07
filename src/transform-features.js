@@ -16,12 +16,13 @@ module.exports = function (ocadFile, createObject, createElement, options) {
     return ss
   }, {})
 
-  let features = ocadFile.objects
+  const objects = options.objects || ocadFile.objects
+  let features = objects
     .map(createObject.bind(null, options, symbols))
     .filter(f => f)
 
   if (options.generateSymbolElements) {
-    const elementFeatures = ocadFile.objects
+    const elementFeatures = objects
       .map(generateSymbolElements.bind(null, createElement, options, symbols))
 
     features = features.concat(Array.prototype.concat.apply([], elementFeatures))

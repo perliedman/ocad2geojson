@@ -124,17 +124,21 @@ const objectToSvg = (options, symbols, object) => {
   switch (object.objType) {
     case LineObjectType: {
       const isDoubleLine = symbol.doubleLine && symbol.doubleLine.dblMode
-      if (!isDoubleLine) {
-        node = symbol.lineWidth && lineToPath(object.coordinates, symbol.lineWidth, options.colors[symbol.lineColor], symbol.mainGap, symbol.mainLength)
-      } else {
+      node = lineToPath(object.coordinates,
+        symbol.lineWidth,
+        options.colors[symbol.lineColor],
+        symbol.mainGap,
+        symbol.mainLength,
+        symbol.lineStyle)
+      if (isDoubleLine) {
         const dbl = symbol.doubleLine
         node = {
           type: 'g',
-          children: []
+          children: [node]
         }
         if (dbl.dblFlags & DblFillColorOn) {
           if (dbl.dblLeftWidth > 0 && dbl.dblRightWidth > 0) {
-            node.children = [
+            node.children = node.children.concat([
               lineToPath(
                 object.coordinates,
                 dbl.dblLeftWidth * 1.5 + dbl.dblRightWidth * 1.5 + dbl.dblWidth * 2,
@@ -147,11 +151,10 @@ const objectToSvg = (options, symbols, object) => {
                 options.colors[dbl.dblFillColor],
                 dbl.dblGap,
                 dbl.dblLength)
-            ]
-            node.order = Math.max.apply(Math, node.children.map(n => n.order))
+            ])
           }
         } else {
-          node.children = [
+          node.children = node.children.concat([
             -dbl.dblWidth - dbl.dblLeftWidth / 2,
             dbl.dblWidth + dbl.dblRightWidth / 2
           ].map((offset, i) => lineToPath(
@@ -159,7 +162,14 @@ const objectToSvg = (options, symbols, object) => {
             i === 0 ? dbl.dblLeftWidth : dbl.dblRightWidth,
             options.colors[i === 0 ? dbl.dblLeftColor : dbl.dblRightColor],
             dbl.dblGap,
-            dbl.dblLength))
+            dbl.dblLength)))
+        }
+
+        node.children = node.children.filter(x => x)
+        if (node.children.length === 0) {
+          node = null
+        } else {
+          // TODO: should probably separate children to allow different order
           node.order = Math.max.apply(Math, node.children.map(n => n.order))
         }
       }
@@ -261,14 +271,38 @@ const elementToSvg = (symbol, name, index, element, c, angle, options) => {
   return node
 }
 
-const lineToPath = (coordinates, width, color, baseMainGap, baseMainLength) => ({
+const lineToPath = (coordinates, width, color, baseMainGap, baseMainLength, lineStyle) => width > 0 && ({
   type: 'path',
   attrs: {
     d: coordsToPath(coordinates),
-    style: `stroke: ${color.rgb}; stroke-width: ${width}; ${baseMainGap && baseMainLength ? `stroke-dasharray: ${baseMainLength} ${baseMainGap};` : ''}`
+    style: `stroke: ${color.rgb}; stroke-width: ${width}; ${baseMainGap && baseMainLength ? `stroke-dasharray: ${baseMainLength} ${baseMainGap};` : ''} stroke-linejoin: ${linejoin(lineStyle)}; stroke-linecap: ${linecap(lineStyle)};`
   },
   order: color.renderOrder
 })
+
+function linejoin (lineStyle) {
+  lineStyle = lineStyle || 0
+  switch (lineStyle) {
+    case 0: return 'bevel'
+    case 1: return 'round'
+    case 4: return 'miter'
+    default:
+      console.warn(`Unknown lineStyle ${lineStyle}.`)
+      return ''
+  }
+}
+
+function linecap (lineStyle) {
+  lineStyle = lineStyle || 0
+  switch (lineStyle) {
+    case 0: return 'flat'
+    case 1: return 'round'
+    case 4: return 'flat'
+    default:
+      console.warn(`Unknown lineStyle ${lineStyle}.`)
+      return ''
+  }
+}
 
 const areaToPath = (coordinates, fillPattern, color) => ({
   type: 'path',

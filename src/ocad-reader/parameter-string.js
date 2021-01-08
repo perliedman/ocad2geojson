@@ -4,7 +4,7 @@ const { StringDecoder } = require('string_decoder')
 const decoder = new StringDecoder('utf8')
 
 module.exports = class ParameterString extends Block {
-  constructor (buffer, offset, indexRecord) {
+  constructor(buffer, offset, indexRecord) {
     super(buffer, offset)
 
     this.recType = indexRecord.recType

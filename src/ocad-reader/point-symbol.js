@@ -1,7 +1,7 @@
 const { Symbol10, Symbol11 } = require('./symbol')
 
 class PointSymbol10 extends Symbol10 {
-  constructor (buffer, offset) {
+  constructor(buffer, offset) {
     super(buffer, offset, 1)
 
     // TODO: why?
@@ -15,7 +15,7 @@ class PointSymbol10 extends Symbol10 {
 }
 
 class PointSymbol11 extends Symbol11 {
-  constructor (buffer, offset) {
+  constructor(buffer, offset) {
     super(buffer, offset, 1)
 
     // TODO: why?
@@ -32,5 +32,5 @@ module.exports = {
   10: PointSymbol10,
   11: PointSymbol11,
   12: PointSymbol11,
-  2018: PointSymbol11
+  2018: PointSymbol11,
 }

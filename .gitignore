@@ -7,3 +7,4 @@ demo/tiles
 demo/*.gpx
 *.ocd
 bundle.js
+.vscode/

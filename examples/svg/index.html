@@ -1,48 +1,48 @@
 <!DOCTYPE html>
 <html>
-<head>
-  <title>OCAD to SVG demo</title>
+  <head>
+    <title>OCAD to SVG demo</title>
 
-  <style type="text/css">
-    body {
-      background-color: #eee;
-    }
+    <style type="text/css">
+      body {
+        background-color: #eee;
+      }
 
-    svg {
-      background-color: white;
-    }
+      svg {
+        background-color: white;
+      }
 
-    .content {
-      position: relative;
-      width: 100vw;
-      height: 100vh;
-      display: flex;
-      flex-direction: row;
-    }
+      .content {
+        position: relative;
+        width: 100vw;
+        height: 100vh;
+        display: flex;
+        flex-direction: row;
+      }
 
-    .frame {
-      flex-grow: 1;
-    }
+      .frame {
+        flex-grow: 1;
+      }
 
-    iframe {
-      position: absolute;
-      width: 100%;
-      height: 100%;
-    }
-  </style>
-</head>
-<body>
-  <div class="content">
-    <div class="frame">
-      <h1>SVG</h1>
-      <div id="svg-container"></div>
+      iframe {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="content">
+      <div class="frame">
+        <h1>SVG</h1>
+        <div id="svg-container"></div>
+      </div>
+      <div class="frame pdf-frame">
+        <h1>PDF</h1>
+        <iframe id="pdf-frame"></iframe>
+      </div>
     </div>
-    <div class="frame pdf-frame">
-      <h1>PDF</h1>
-      <iframe id="pdf-frame"></iframe>
-    </div>
-  </div>
 
-  <script src="bundle.js"></script>
-</body>
+    <script src="bundle.js"></script>
+  </body>
 </html>

@@ -19,73 +19,82 @@ module.exports = async (path, options) => {
         if (err) reject(err)
 
         resolve(buffer)
-      }))
+      })
+    )
     return parseOcadBuffer(buffer, options)
   }
 }
 
-const parseOcadBuffer = async (buffer, options) => new Promise((resolve, reject) => {
-  let warnings = []
+const parseOcadBuffer = async (buffer, options) =>
+  new Promise((resolve, reject) => {
+    let warnings = []
 
-  const header = new FileHeader(buffer, 0)
-  if (!header.isValid()) {
-    throw new Error(`Not an OCAD file (invalid header ${header.ocadMark} !== ${0x0cad})`)
-  }
+    const header = new FileHeader(buffer, 0)
+    if (!header.isValid()) {
+      throw new Error(
+        `Not an OCAD file (invalid header ${header.ocadMark} !== ${0x0cad})`
+      )
+    }
 
-  if (header.version < 10 && !options.bypassVersionCheck) {
-    throw new Error(`Unsupport OCAD file version (${header.version}), only >= 10 supported for now.`)
-  }
+    if (header.version < 10 && !options.bypassVersionCheck) {
+      throw new Error(
+        `Unsupport OCAD file version (${header.version}), only >= 10 supported for now.`
+      )
+    }
 
-  const symbols = []
-  let symbolIndexOffset = header.symbolIndexBlock
-  while (symbolIndexOffset) {
-    const symbolIndex = new SymbolIndex(buffer, symbolIndexOffset, header.version, options)
-    Array.prototype.push.apply(symbols, symbolIndex.parseSymbols())
-    warnings = warnings.concat(symbolIndex.warnings)
+    const symbols = []
+    let symbolIndexOffset = header.symbolIndexBlock
+    while (symbolIndexOffset) {
+      const symbolIndex = new SymbolIndex(
+        buffer,
+        symbolIndexOffset,
+        header.version,
+        options
+      )
+      Array.prototype.push.apply(symbols, symbolIndex.parseSymbols())
+      warnings = warnings.concat(symbolIndex.warnings)
 
-    symbolIndexOffset = symbolIndex.nextSymbolIndexBlock
-  }
+      symbolIndexOffset = symbolIndex.nextSymbolIndexBlock
+    }
 
-  const objects = []
-  let objectIndexOffset = header.objectIndexBlock
-  while (objectIndexOffset) {
-    const objectIndex = new ObjectIndex(buffer, objectIndexOffset, header.version)
-    Array.prototype.push.apply(objects, objectIndex.parseObjects())
+    const objects = []
+    let objectIndexOffset = header.objectIndexBlock
+    while (objectIndexOffset) {
+      const objectIndex = new ObjectIndex(
+        buffer,
+        objectIndexOffset,
+        header.version
+      )
+      Array.prototype.push.apply(objects, objectIndex.parseObjects())
 
-    objectIndexOffset = objectIndex.nextObjectIndexBlock
-  }
+      objectIndexOffset = objectIndex.nextObjectIndexBlock
+    }
 
-  const parameterStrings = {}
-  let stringIndexOffset = header.stringIndexBlock
-  while (stringIndexOffset) {
-    const stringIndex = new StringIndex(buffer, stringIndexOffset)
-    const strings = stringIndex.getStrings()
+    const parameterStrings = {}
+    let stringIndexOffset = header.stringIndexBlock
+    while (stringIndexOffset) {
+      const stringIndex = new StringIndex(buffer, stringIndexOffset)
+      const strings = stringIndex.getStrings()
 
-    Object.keys(strings).reduce((a, recType) => {
-      const typeStrings = strings[recType]
-      const concatStrings = a[recType] || []
-      a[recType] = concatStrings.concat(typeStrings.map(s => s.values))
-      return a
-    }, parameterStrings)
+      Object.keys(strings).reduce((a, recType) => {
+        const typeStrings = strings[recType]
+        const concatStrings = a[recType] || []
+        a[recType] = concatStrings.concat(typeStrings.map(s => s.values))
+        return a
+      }, parameterStrings)
 
-    stringIndexOffset = stringIndex.nextStringIndexBlock
-  }
+      stringIndexOffset = stringIndex.nextStringIndexBlock
+    }
 
-  if (!options.quietWarnings) {
-    warnings.forEach(w => console.warn(w))
-  }
+    if (!options.quietWarnings) {
+      warnings.forEach(w => console.warn(w))
+    }
 
-  resolve(new OcadFile(
-    header,
-    parameterStrings,
-    objects,
-    symbols,
-    warnings
-  ))
-})
+    resolve(new OcadFile(header, parameterStrings, objects, symbols, warnings))
+  })
 
 class OcadFile {
-  constructor (header, parameterStrings, objects, symbols, warnings) {
+  constructor(header, parameterStrings, objects, symbols, warnings) {
     this.header = header
     this.parameterStrings = parameterStrings
     this.objects = objects
@@ -94,7 +103,12 @@ class OcadFile {
 
     this.colors = parameterStrings[9]
       .map((colorDef, i) => {
-        const cmyk = [colorDef.c || 0, colorDef.m || 0, colorDef.y || 0, colorDef.k || 0].map(Number)
+        const cmyk = [
+          colorDef.c || 0,
+          colorDef.m || 0,
+          colorDef.y || 0,
+          colorDef.k || 0,
+        ].map(Number)
         const rgb = getRgb(cmyk)
         return {
           number: colorDef.n,
@@ -102,7 +116,7 @@ class OcadFile {
           name: colorDef._first,
           rgb: `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`,
           renderOrder: i,
-          rgbArray: rgb
+          rgbArray: rgb,
         }
       })
       .reduce((a, c) => {
@@ -111,7 +125,7 @@ class OcadFile {
       }, [])
   }
 
-  getCrs () {
+  getCrs() {
     const scalePar = this.parameterStrings['1039']
       ? this.parameterStrings['1039'][0]
       : { x: 0, y: 0, m: 1 }
@@ -132,7 +146,7 @@ class OcadFile {
       gridId,
       code,
       catalog,
-      name
+      name,
     }
   }
 }

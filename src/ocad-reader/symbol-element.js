@@ -3,7 +3,7 @@ const TdPoly = require('./td-poly')
 const InvalidSymbolElementException = require('./invalid-symbol-element-exception')
 
 module.exports = class SymbolElement extends Block {
-  constructor (buffer, offset) {
+  constructor(buffer, offset) {
     super(buffer, offset)
 
     this.type = this.readSmallInt()
@@ -21,7 +21,10 @@ module.exports = class SymbolElement extends Block {
       }
     } else {
       // Negative number of coords seems to happen in some files; we ignore it for now.
-      throw new InvalidSymbolElementException(`Symbol element with invalid (${this.numberCoords}) number of coordinates.`, this)
+      throw new InvalidSymbolElementException(
+        `Symbol element with invalid (${this.numberCoords}) number of coordinates.`,
+        this
+      )
     }
   }
 }

@@ -2,7 +2,7 @@ const Block = require('./block')
 const { Symbol10, Symbol11 } = require('./symbol')
 
 class LineSymbol10 extends Symbol10 {
-  constructor (buffer, offset) {
+  constructor(buffer, offset) {
     super(buffer, offset, 2)
 
     readLineSymbol(this, DoubleLine10, Decrease10)
@@ -10,7 +10,7 @@ class LineSymbol10 extends Symbol10 {
 }
 
 class LineSymbol11 extends Symbol11 {
-  constructor (buffer, offset) {
+  constructor(buffer, offset) {
     super(buffer, offset, 2)
 
     // TODO: why?
@@ -21,7 +21,7 @@ class LineSymbol11 extends Symbol11 {
 }
 
 class BaseDoubleLine extends Block {
-  constructor (buffer, offset) {
+  constructor(buffer, offset) {
     super(buffer, offset)
 
     this._startOffset = offset
@@ -39,7 +39,7 @@ class BaseDoubleLine extends Block {
 }
 
 class DoubleLine10 extends BaseDoubleLine {
-  constructor (buffer, offset) {
+  constructor(buffer, offset) {
     super(buffer, offset)
     this.dblRes = new Array(3)
     for (let i = 0; i < this.dblRes.length; i++) {
@@ -49,7 +49,7 @@ class DoubleLine10 extends BaseDoubleLine {
 }
 
 class DoubleLine11 extends BaseDoubleLine {
-  constructor (buffer, offset) {
+  constructor(buffer, offset) {
     super(buffer, offset)
 
     this.dblBackgroundColor = this.readSmallInt()
@@ -61,7 +61,7 @@ class DoubleLine11 extends BaseDoubleLine {
 }
 
 class Decrease10 extends Block {
-  constructor (buffer, offset) {
+  constructor(buffer, offset) {
     super(buffer, offset)
 
     this.decMode = this.readWord()
@@ -71,7 +71,7 @@ class Decrease10 extends Block {
 }
 
 class Decrease11 extends Block {
-  constructor (buffer, offset) {
+  constructor(buffer, offset) {
     super(buffer, offset)
 
     this.decMode = this.readWord()
@@ -124,5 +124,5 @@ module.exports = {
   10: LineSymbol10,
   11: LineSymbol11,
   12: LineSymbol11,
-  2018: LineSymbol11
+  2018: LineSymbol11,
 }

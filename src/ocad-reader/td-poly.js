@@ -1,69 +1,83 @@
 class TdPoly extends Array {
-  constructor (ocadX, ocadY, xFlags, yFlags) {
-    super(xFlags === undefined ? ocadX >> 8 : ocadX, yFlags === undefined ? ocadY >> 8 : ocadY)
+  constructor(ocadX, ocadY, xFlags, yFlags) {
+    super(
+      xFlags === undefined ? ocadX >> 8 : ocadX,
+      yFlags === undefined ? ocadY >> 8 : ocadY
+    )
     this.xFlags = xFlags === undefined ? ocadX & 0xff : xFlags
     this.yFlags = yFlags === undefined ? ocadY & 0xff : yFlags
   }
 
-  isFirstBezier () {
+  isFirstBezier() {
     return this.xFlags & 0x01
   }
 
-  isSecondBezier () {
+  isSecondBezier() {
     return this.xFlags & 0x02
   }
 
-  hasNoLeftLine () {
+  hasNoLeftLine() {
     return this.xFlags & 0x04
   }
 
-  isBorderOrVirtualLine () {
+  isBorderOrVirtualLine() {
     return this.xFlags & 0x08
   }
 
-  isCornerPoint () {
+  isCornerPoint() {
     return this.yFlags & 0x01
   }
 
-  isFirstHolePoint () {
+  isFirstHolePoint() {
     return this.yFlags & 0x02
   }
 
-  hasNoRightLine () {
+  hasNoRightLine() {
     return this.yFlags & 0x04
   }
 
-  isDashPoint () {
+  isDashPoint() {
     return this.yFlags & 0x08
   }
 
-  vLength () {
+  vLength() {
     return Math.sqrt(this[0] * this[0] + this[1] * this[1])
   }
 
-  add (c1) {
-    return new TdPoly(this[0] + c1[0], this[1] + c1[1], this.xFlags, this.yFlags)
+  add(c1) {
+    return new TdPoly(
+      this[0] + c1[0],
+      this[1] + c1[1],
+      this.xFlags,
+      this.yFlags
+    )
   }
 
-  sub (c1) {
-    return new TdPoly(this[0] - c1[0], this[1] - c1[1], this.xFlags, this.yFlags)
+  sub(c1) {
+    return new TdPoly(
+      this[0] - c1[0],
+      this[1] - c1[1],
+      this.xFlags,
+      this.yFlags
+    )
   }
 
-  mul (f) {
+  mul(f) {
     return new TdPoly(this[0] * f, this[1] * f, this.xFlags, this.yFlags)
   }
 
-  unit () {
+  unit() {
     const l = this.vLength()
     return this.mul(1 / l)
   }
 
-  rotate (theta) {
+  rotate(theta) {
     return new TdPoly(
       this[0] * Math.cos(theta) - this[1] * Math.sin(theta),
       this[0] * Math.sin(theta) + this[1] * Math.cos(theta),
       this.xFlags,
-      this.yFlags)
+      this.yFlags
+    )
   }
 }
 

@@ -9,5 +9,5 @@ module.exports = {
   ocadToGeoJson,
   ocadToSvg,
   ocadToMapboxGlStyle,
-  ocadToQml
+  ocadToQml,
 }

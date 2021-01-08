@@ -9,30 +9,38 @@ const proj4 = require('proj4')
 const olProj = require('ol/proj').default
 const OcadSource = require('./ocad-source')
 
-proj4.defs('EPSG:3006', '+proj=utm +zone=33 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs')
+proj4.defs(
+  'EPSG:3006',
+  '+proj=utm +zone=33 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs'
+)
 olProj.setProj4(proj4)
 
 const projection = olProj.get('EPSG:3006')
 
 fetch('example.ocd')
   .then(res => res.blob())
-  .then(blob => new Promise((resolve, reject) => toBuffer(blob, (err, buffer) => {
-    if (err) reject(err)
-    resolve(buffer)
-  })))
+  .then(
+    blob =>
+      new Promise((resolve, reject) =>
+        toBuffer(blob, (err, buffer) => {
+          if (err) reject(err)
+          resolve(buffer)
+        })
+      )
+  )
   .then(buffer => readOcad(buffer))
   .then(ocadFile => {
     var map = new Map({
       target: 'map',
       layers: [
         new TileLayer({
-          source: new OcadSource({ ocadFile })
-        })
+          source: new OcadSource({ ocadFile }),
+        }),
       ],
       view: new View({
         center: olProj.fromLonLat([11.94, 57.75], projection),
-        zoom: 16
+        zoom: 16,
       }),
-      projection
-    });
+      projection,
+    })
   })

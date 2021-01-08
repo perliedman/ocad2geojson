@@ -62,32 +62,27 @@ OcadSource.prototype.getTile = function (z, x, y) {
     extent[1] = (extent[1] - crs.northing) / crs.scale / hundredsMmToMeter
     extent[2] = (extent[2] - crs.easting) / crs.scale / hundredsMmToMeter
     extent[3] = (extent[3] - crs.northing) / crs.scale / hundredsMmToMeter
-    const objects = this.index_.search(extent[0], extent[1], extent[2], extent[3])
+    const objects = this.index_
+      .search(extent[0], extent[1], extent[2], extent[3])
       .map(i => this.ocadFile_.objects[i])
     const svg = ocadToSvg(this.ocadFile_, { objects })
 
     const mapGroup = svg.querySelector('g')
     svg.setAttribute('width', tileSize[0])
     svg.setAttribute('height', tileSize[1])
-    const transform = `scale(${(hundredsMmToMeter * crs.scale / resolution)}) translate(${-extent[0]}, ${extent[3]})`
+    const transform = `scale(${
+      (hundredsMmToMeter * crs.scale) / resolution
+    }) translate(${-extent[0]}, ${extent[3]})`
     mapGroup.setAttribute('transform', transform)
 
-    const tile = new OcadTile(
-      tileCoord,
-      tileSize,
-      svg
-    )
+    const tile = new OcadTile(tileCoord, tileSize, svg)
     this.tileCache.set(tileCoordKey, tile)
 
     return tile
   }
 }
 
-function OcadTile(
-  tileCoord,
-  tileSize,
-  svg
-) {
+function OcadTile(tileCoord, tileSize, svg) {
   ImageTile.call(this, tileCoord, TileState.LOADING)
 
   this.tileSize_ = tileSize

@@ -3,7 +3,7 @@ const LRect = require('./lrect')
 const TObject = require('./tobject')
 
 module.exports = class ObjectIndex extends Block {
-  constructor (buffer, offset, version) {
+  constructor(buffer, offset, version) {
     super(buffer, offset)
 
     this.version = version
@@ -26,19 +26,19 @@ module.exports = class ObjectIndex extends Block {
         group: this.readSmallInt(),
         impLayer: this.readSmallInt(),
         dbDatasetHash: this.readByte(),
-        dbKeyHash: this.readByte()
+        dbKeyHash: this.readByte(),
       }
     }
   }
 
-  parseObjects () {
+  parseObjects() {
     return this.table
       .filter(o => o.status === 1) // Remove deleted and hidden objects
       .map(o => this.parseObject(o, o.objType))
       .filter(o => o)
   }
 
-  parseObject (objIndex, objType) {
+  parseObject(objIndex, objType) {
     if (!objIndex.pos) return
 
     return new TObject[this.version](this.buffer, objIndex.pos, objType)

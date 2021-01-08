@@ -3,7 +3,7 @@ const SymbolElement = require('./symbol-element')
 const InvalidSymbolElementException = require('./invalid-symbol-element-exception')
 
 class BaseSymbol extends Block {
-  constructor (buffer, offset, symbolType) {
+  constructor(buffer, offset, symbolType) {
     super(buffer, offset)
 
     this.warnings = []
@@ -23,7 +23,7 @@ class BaseSymbol extends Block {
     this.filePos = this.readCardinal()
   }
 
-  readElements (dataSize) {
+  readElements(dataSize) {
     const elements = []
 
     for (let i = 0; i < dataSize; i += 2) {
@@ -46,13 +46,13 @@ class BaseSymbol extends Block {
     return elements
   }
 
-  isHidden () {
+  isHidden() {
     return (this.status & 0x02) === 2
   }
 }
 
 class Symbol10 extends BaseSymbol {
-  constructor (buffer, offset, symbolType) {
+  constructor(buffer, offset, symbolType) {
     super(buffer, offset, symbolType)
 
     this.group = this.readSmallInt()
@@ -77,7 +77,7 @@ class Symbol10 extends BaseSymbol {
 }
 
 class Symbol11 extends BaseSymbol {
-  constructor (buffer, offset, symbolType) {
+  constructor(buffer, offset, symbolType) {
     super(buffer, offset, symbolType)
 
     this.readByte() // notUsed1
@@ -110,5 +110,5 @@ class Symbol11 extends BaseSymbol {
 
 module.exports = {
   Symbol10,
-  Symbol11
+  Symbol11,
 }

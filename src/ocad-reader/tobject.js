@@ -2,12 +2,12 @@ const Block = require('./block')
 const TdPoly = require('./td-poly')
 
 class BaseTObject extends Block {
-  constructor (buffer, offset, objType) {
+  constructor(buffer, offset, objType) {
     super(buffer, offset)
     this.objType = objType
   }
 
-  getProperties () {
+  getProperties() {
     return {
       sym: this.sym,
       otp: this.otp,
@@ -29,13 +29,13 @@ class BaseTObject extends Block {
       res1: this.res1,
       text: this.text,
       objectString: this.objectString,
-      databaseString: this.databaseString
+      databaseString: this.databaseString,
     }
   }
 }
 
 class TObject10 extends BaseTObject {
-  constructor (buffer, offset, objType) {
+  constructor(buffer, offset, objType) {
     super(buffer, offset, objType)
 
     this.sym = this.readInteger()
@@ -66,7 +66,7 @@ class TObject10 extends BaseTObject {
 }
 
 class TObject11 extends BaseTObject {
-  constructor (buffer, offset, objType) {
+  constructor(buffer, offset, objType) {
     super(buffer, offset, objType)
 
     this.sym = this.readInteger()
@@ -94,7 +94,7 @@ class TObject11 extends BaseTObject {
 }
 
 class TObject12 extends BaseTObject {
-  constructor (buffer, offset, objType) {
+  constructor(buffer, offset, objType) {
     super(buffer, offset, objType)
 
     this.sym = this.readInteger()
@@ -144,5 +144,5 @@ module.exports = {
   10: TObject10,
   11: TObject11,
   12: TObject12,
-  2018: TObject12
+  2018: TObject12,
 }

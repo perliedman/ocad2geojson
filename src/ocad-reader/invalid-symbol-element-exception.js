@@ -1,5 +1,5 @@
 module.exports = class InvalidSymbolElementException extends Error {
-  constructor (msg, symbolElement) {
+  constructor(msg, symbolElement) {
     super(msg)
     this.symbolElement = symbolElement
   }

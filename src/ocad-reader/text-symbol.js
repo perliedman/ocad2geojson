@@ -2,23 +2,23 @@ const { TextSymbolType } = require('./symbol-types')
 const { Symbol10, Symbol11 } = require('./symbol')
 
 class TextSymbol10 extends Symbol10 {
-  constructor (buffer, offset) {
+  constructor(buffer, offset) {
     super(buffer, offset, TextSymbolType)
 
     readTextSymbol(this)
   }
 
-  getVerticalAlignment () {
+  getVerticalAlignment() {
     return verticalAlignment(this.alignment)
   }
 
-  getHorizontalAlignment () {
+  getHorizontalAlignment() {
     return horizontalAlignment(this.alignment)
   }
 }
 
 class TextSymbol11 extends Symbol11 {
-  constructor (buffer, offset) {
+  constructor(buffer, offset) {
     super(buffer, offset, TextSymbolType)
 
     // TODO: why?
@@ -27,11 +27,11 @@ class TextSymbol11 extends Symbol11 {
     readTextSymbol(this)
   }
 
-  getVerticalAlignment () {
+  getVerticalAlignment() {
     return verticalAlignment(this.alignment)
   }
 
-  getHorizontalAlignment () {
+  getHorizontalAlignment() {
     return horizontalAlignment(this.alignment)
   }
 }
@@ -93,5 +93,5 @@ module.exports = {
   HorizontalAlignLeft: 0,
   HorizontalAlignCenter: 1,
   HorizontalAlignRight: 2,
-  HorizontalAlignAllLine: 3
+  HorizontalAlignAllLine: 3,
 }

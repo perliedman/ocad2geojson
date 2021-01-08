@@ -1,8 +1,20 @@
 const { coordEach } = require('@turf/meta')
 const Bezier = require('bezier-js')
 const flatten = require('arr-flatten')
-const { PointObjectType, LineObjectType, AreaObjectType, UnformattedTextObjectType, FormattedTextObjectType, LineTextObjectType } = require('./ocad-reader/object-types')
-const { LineElementType, AreaElementType, CircleElementType, DotElementType } = require('./ocad-reader/symbol-element-types')
+const {
+  PointObjectType,
+  LineObjectType,
+  AreaObjectType,
+  UnformattedTextObjectType,
+  FormattedTextObjectType,
+  LineTextObjectType,
+} = require('./ocad-reader/object-types')
+const {
+  LineElementType,
+  AreaElementType,
+  CircleElementType,
+  DotElementType,
+} = require('./ocad-reader/symbol-element-types')
 const transformFeatures = require('./transform-features')
 const TdPoly = require('./ocad-reader/td-poly')
 
@@ -11,16 +23,21 @@ const defaultOptions = {
   applyCrs: true,
   generateSymbolElements: true,
   exportHidden: false,
-  coordinatePrecision: 6
+  coordinatePrecision: 6,
 }
 
 module.exports = function (ocadFile, options) {
   options = { ...defaultOptions, ...options }
 
-  const features = transformFeatures(ocadFile, tObjectToGeoJson, createElement, options)
+  const features = transformFeatures(
+    ocadFile,
+    tObjectToGeoJson,
+    createElement,
+    options
+  )
   const featureCollection = {
     type: 'FeatureCollection',
-    features
+    features,
   }
 
   if (options.applyCrs) {
@@ -44,30 +61,33 @@ const tObjectToGeoJson = (options, symbols, object, i) => {
     case PointObjectType:
       geometry = {
         type: 'Point',
-        coordinates: object.coordinates[0].slice()
+        coordinates: object.coordinates[0].slice(),
       }
       break
     case LineObjectType:
       geometry = {
         type: 'LineString',
-        coordinates: extractCoords(object.coordinates).map(c => c.slice())
+        coordinates: extractCoords(object.coordinates).map(c => c.slice()),
       }
       break
     case AreaObjectType:
       geometry = {
         type: 'Polygon',
-        coordinates: coordinatesToRings(object.coordinates)
+        coordinates: coordinatesToRings(object.coordinates),
       }
       break
     case UnformattedTextObjectType:
     case FormattedTextObjectType:
     case LineTextObjectType: {
-      const lineHeight = symbol.fontSize / 10 * 0.352778 * 100
-      const anchorCoord = [object.coordinates[0][0], object.coordinates[0][1] + lineHeight]
+      const lineHeight = (symbol.fontSize / 10) * 0.352778 * 100
+      const anchorCoord = [
+        object.coordinates[0][0],
+        object.coordinates[0][1] + lineHeight,
+      ]
 
       geometry = {
         type: 'Point',
-        coordinates: anchorCoord
+        coordinates: anchorCoord,
       }
       break
     }
@@ -79,7 +99,7 @@ const tObjectToGeoJson = (options, symbols, object, i) => {
     type: 'Feature',
     properties: object.getProperties(),
     id: i + 1,
-    geometry
+    geometry,
   }
 }
 
@@ -99,7 +119,9 @@ const extractCoords = coords => {
     } else if (cp1 && cp2) {
       const l = cp2.sub(cp1).vLength()
       const bezier = new Bezier(flatten([lastC, cp1, cp2, c]))
-      const bezierCoords = bezier.getLUT(Math.round(l / 2)).map(bc => TdPoly.fromCoords(bc.x, bc.y))
+      const bezierCoords = bezier
+        .getLUT(Math.round(l / 2))
+        .map(bc => TdPoly.fromCoords(bc.x, bc.y))
       cs.push.apply(cs, bezierCoords.slice(1))
       cp1 = cp2 = undefined
       lastC = c
@@ -112,7 +134,17 @@ const extractCoords = coords => {
   return cs
 }
 
-const createElement = (symbol, name, index, element, c, angle, options, object, objectId) => {
+const createElement = (
+  symbol,
+  name,
+  index,
+  element,
+  c,
+  angle,
+  options,
+  object,
+  objectId
+) => {
   var geometry
   const coords = extractCoords(element.coords)
   const rotatedCoords = angle ? coords.map(lc => lc.rotate(angle)) : coords
@@ -122,20 +154,20 @@ const createElement = (symbol, name, index, element, c, angle, options, object, 
     case LineElementType:
       geometry = {
         type: 'LineString',
-        coordinates: translatedCoords
+        coordinates: translatedCoords,
       }
       break
     case AreaElementType:
       geometry = {
         type: 'Polygon',
-        coordinates: coordinatesToRings(translatedCoords)
+        coordinates: coordinatesToRings(translatedCoords),
       }
       break
     case CircleElementType:
     case DotElementType:
       geometry = {
         type: 'Point',
-        coordinates: translatedCoords[0]
+        coordinates: translatedCoords[0],
       }
       break
   }
@@ -144,10 +176,10 @@ const createElement = (symbol, name, index, element, c, angle, options, object, 
     type: 'Feature',
     properties: {
       element: `${symbol.symNum}-${name}-${index}`,
-      parentId: objectId + 1
+      parentId: objectId + 1,
     },
     id: ++options.idCount,
-    geometry
+    geometry,
   }
 }
 
@@ -157,13 +189,13 @@ const applyCrs = (featureCollection, crs) => {
   const hundredsMmToMeter = 1 / (100 * 1000)
 
   coordEach(featureCollection, coord => {
-    coord[0] = (coord[0] * hundredsMmToMeter) * crs.scale + crs.easting
-    coord[1] = (coord[1] * hundredsMmToMeter) * crs.scale + crs.northing
+    coord[0] = coord[0] * hundredsMmToMeter * crs.scale + crs.easting
+    coord[1] = coord[1] * hundredsMmToMeter * crs.scale + crs.northing
   })
 }
 
-function formatNum (num, digits) {
-  var pow = Math.pow(10, (digits === undefined ? 6 : digits))
+function formatNum(num, digits) {
+  var pow = Math.pow(10, digits === undefined ? 6 : digits)
   return Math.round(num * pow) / pow
 }
 

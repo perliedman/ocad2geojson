@@ -2,7 +2,7 @@ const Block = require('./block')
 const ParameterString = require('./parameter-string')
 
 module.exports = class StringIndex extends Block {
-  constructor (buffer, offset) {
+  constructor(buffer, offset) {
     super(buffer, offset)
 
     this.nextStringIndexBlock = this.readInteger()
@@ -12,12 +12,12 @@ module.exports = class StringIndex extends Block {
         pos: this.readInteger(),
         len: this.readInteger(),
         recType: this.readInteger(),
-        objIndex: this.readInteger()
+        objIndex: this.readInteger(),
       }
     }
   }
 
-  getStrings () {
+  getStrings() {
     const strings = this.table
       .filter(si => si.recType > 0)
       .map(si => new ParameterString(this.buffer, si.pos, si))

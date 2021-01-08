@@ -5,5 +5,5 @@ module.exports = {
   UnformattedTextObjectType: 4,
   FormattedTextObjectType: 5,
   LineTextObjectType: 6,
-  RectangleObjectType: 7
+  RectangleObjectType: 7,
 }

@@ -1,7 +1,7 @@
 const { Symbol10, Symbol11 } = require('./symbol')
 
 class AreaSymbol10 extends Symbol10 {
-  constructor (buffer, offset) {
+  constructor(buffer, offset) {
     super(buffer, offset, 3)
 
     this.borderSym = this.readInteger()
@@ -27,7 +27,7 @@ class AreaSymbol10 extends Symbol10 {
 }
 
 class AreaSymbol11 extends Symbol11 {
-  constructor (buffer, offset) {
+  constructor(buffer, offset) {
     super(buffer, offset, 3)
 
     // TODO: why?
@@ -62,5 +62,5 @@ module.exports = {
   10: AreaSymbol10,
   11: AreaSymbol11,
   12: AreaSymbol11,
-  2018: AreaSymbol11
+  2018: AreaSymbol11,
 }

@@ -1,7 +1,7 @@
 const Block = require('./block')
 
 module.exports = class FileHeader extends Block {
-  constructor (buffer, offset) {
+  constructor(buffer, offset) {
     super(buffer, offset)
 
     if (buffer.length - offset < 60) {
@@ -29,7 +29,7 @@ module.exports = class FileHeader extends Block {
     this.mrStartBlockPosition = this.readCardinal()
   }
 
-  isValid () {
+  isValid() {
     return this.ocadMark === 0x0cad
   }
 }

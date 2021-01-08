@@ -75,7 +75,18 @@ test('can convert to SVG', async t => {
   t.is('g', mainGroup.childNodes[1].tagName)
   t.truthy(
     Array.from(mainGroup.childNodes[1].childNodes).every(
-      x => x.tagName == 'path'
+      x => x.tagName === 'path'
     )
   )
+})
+
+test('can get CRS', async t => {
+  const map = await readOcad(path.join(__dirname, 'data', 'basic-1.ocd'))
+  const crs = map.getCrs()
+  console.log(crs)
+  t.is(316000, crs.easting)
+  t.is(6404000, crs.northing)
+  t.is(15000, crs.scale)
+  t.is(3006, crs.code)
+  t.is('EPSG', crs.catalog)
 })

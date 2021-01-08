@@ -37,7 +37,7 @@ module.exports = function (ocadFile, options) {
 
 const tObjectToGeoJson = (options, symbols, object, i) => {
   const symbol = symbols[object.sym]
-  if (!options.exportHidden && (!symbol || symbol.isHidden())) return
+  if (!symbol || (!options.exportHidden && symbol.isHidden())) return
 
   var geometry
   switch (object.objType) {

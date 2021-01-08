@@ -36,7 +36,7 @@ const generateSymbolElements = (createElement, options, symbols, object, objectI
   const symbol = symbols[object.sym]
   let elements = []
 
-  if (!options.exportHidden && (!symbol || symbol.isHidden())) return elements
+  if (!symbol || (!options.exportHidden && symbol.isHidden())) return
 
   switch (symbol.type) {
     case PointSymbolType: {

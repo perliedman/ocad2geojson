@@ -118,7 +118,7 @@ const usedSymbolNumbers = objects => Array.from(objects.reduce((seen, f) => {
 
 const objectToSvg = (options, symbols, object) => {
   const symbol = symbols[object.sym]
-  if (!options.exportHidden && (!symbol || symbol.isHidden())) return
+  if (!symbol || (!options.exportHidden && symbol.isHidden())) return
 
   let node
   switch (object.objType) {

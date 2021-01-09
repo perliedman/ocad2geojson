@@ -184,13 +184,11 @@ const createElement = (
 }
 
 const applyCrs = (featureCollection, crs) => {
-  // OCAD uses 1/100 mm of "paper coordinates" as units, we
-  // want to convert to meters in real world
-  const hundredsMmToMeter = 1 / (100 * 1000)
-
   coordEach(featureCollection, coord => {
-    coord[0] = coord[0] * hundredsMmToMeter * crs.scale + crs.easting
-    coord[1] = coord[1] * hundredsMmToMeter * crs.scale + crs.northing
+    const crsCoord = crs.toProjectedCoord(coord)
+
+    coord[0] = crsCoord[0]
+    coord[1] = crsCoord[1]
   })
 }
 

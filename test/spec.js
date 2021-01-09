@@ -3,6 +3,7 @@ const test = require('ava')
 const { readOcad, ocadToGeoJson, ocadToSvg } = require('../')
 
 const { Buffer } = require('buffer')
+const { coordEach } = require('@turf/meta')
 const DOMImplementation = new (require('xmldom').DOMImplementation)()
 
 test('too small files can not be opened', async t => {
@@ -40,6 +41,19 @@ test('can convert GeoJSON', async t => {
   t.is('Feature', rectangleFeature.type)
   t.is('LineString', rectangleFeature.geometry.type)
   t.is(5, rectangleFeature.geometry.coordinates.length)
+})
+
+test('can apply CRS to GeoJSON', async t => {
+  const map = await readOcad(path.join(__dirname, 'data', 'basic-1.ocd'))
+  const geoJson = ocadToGeoJson(map)
+  const crs = map.getCrs()
+
+  coordEach(geoJson, c => {
+    t.truthy(
+      Math.abs(c[0] - crs.easting) < 4000 &&
+        Math.abs(c[1] - crs.northing) < 4000
+    )
+  })
 })
 
 test('can convert limited number of objects', async t => {
@@ -83,7 +97,6 @@ test('can convert to SVG', async t => {
 test('can get CRS', async t => {
   const map = await readOcad(path.join(__dirname, 'data', 'basic-1.ocd'))
   const crs = map.getCrs()
-  console.log(crs)
   t.is(316000, crs.easting)
   t.is(6404000, crs.northing)
   t.is(15000, crs.scale)

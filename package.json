@@ -9,7 +9,7 @@
     "prepublish": "npm test"
   },
   "bin": {
-    "ocad-export": "./cli.js"
+    "ocad-tool": "src/ocad-tool.js"
   },
   "keywords": [
     "ocad",
@@ -39,6 +39,7 @@
     "@turf/meta": "^6.0.2",
     "arr-flatten": "^1.1.0",
     "bezier-js": "^2.4.0",
+    "commander": "^6.2.1",
     "geojson-vt": "^3.2.0",
     "minimist": "^1.2.5",
     "mkdirp": "^0.5.1",

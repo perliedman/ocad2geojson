@@ -22,8 +22,8 @@ working together:
 - _OCAD file reader_, to get meaningful data out of the binary OCAD files
 - _OCAD to GeoJSON_, to export the geographic objects from OCAD files
 - _OCAD to SVG_, to export the map to vector graphics; SVG can then also easily be used to produce PDFs
-- _OCAD to Mapbox GL style_, to get the styling (colors, line widths, etc.) into something you can
-  use with other tools
+- _OCAD to QML_, to export the map styling to QGIS QML format
+- _OCAD to Mapbox GL style_, to get the styling (colors, line widths, etc.) into something you can use with other tools
 
 OCAD version 10, 11 and 12 and 2018 files are mostly supported. Some OCAD features are currently not fully supported:
 
@@ -42,33 +42,49 @@ Have you built something with this module, or want to help out improving it? I'd
 
 ### Command line
 
-Installing the `ocad2geojson` package will also install the binary `ocad-export` in
-your path. The state of this tool is a bit ad hoc, it will hopefully be reworked
-into something more general/easy to use at some point in the future.
+Installing the `ocad2geojson` package will also install the binary `ocad-tool` in
+your path.
 
 It can be used to get data out of an OCAD file in various formats:
 
-```sh
-ocad-export [-p|-s|--qml|--vector-tiles] [--symbol-elements] [-v] [-o PATH] OCAD_FILE_PATH
+```
+Usage: ocad-tool [options] [command]
+
+Options:
+  -h, --help                       display help for command
+
+Commands:
+  info [options] <path>            display file info
+  export [options] <path> <outpu>  export OCAD map into another format
+  help [command]                   display help for command
 ```
 
-The different export modes:
+Use `info` to extract information from OCAD files:
 
-- Default is GeoJSON: will output a GeoJSON `FeatureCollection` of all visible
-  features in the OCAD file, with extra features added for symbol elements unless
-  `--symbol-elements=false` is specified
-- `-p` exports the OCAD parameter strings in the file
-- `-s` exports symbol definitions
-- `-qml` exports in QGIS's QML style format; together with a GeoJSON export (with `--symbol-elements=false`), you can use this to load the OCAD map into QGIS
-- `--vector-tiles` exports the objects of the file into [Mapbox Vector Tiles](https://docs.mapbox.com/vector-tiles/specification/); the `-o` option should be used to specify a _directory_ where the tiles and their Mapbox styling JSON will be saved
+```
+Usage: ocad-tool info [options] <path>
 
-Additional options:
+display file info
 
-- `--symbol-elements=[true|false]` to control if additional vector features should
-  be added for symbol elements along lines; default is `true`. These additional features are required for Mapbox styling and SVG exports to work, but should be disabled for use with QGIS/QML
-- `-v` for verbose file information to be output
+Options:
+  --symbols                   dump symbol information
+  --filter-symbols <numbers>  only show numbered symbols
+  --icons-bits                display symbols' iconBits property (hidden by default)
+  -h, --help                  display help for command
+```
 
-(The code for `ocad-export` is found in [`cli.js`]())
+Use `export` to export OCAD files to other formats:
+
+```
+Usage: ocad-tool export [options] <path> <outpu>
+
+export OCAD map into another format
+
+Options:
+  -f, --format <string>  output format (geojson, svg, qml, mvt), otherwise guessed from output file extension
+  --export-hidden        include hidden objects in the export (default: false)
+  -h, --help             display help for command
+```
 
 ### API
 

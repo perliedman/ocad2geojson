@@ -59,6 +59,15 @@ async function info(path, options) {
     `CRS identifier: ${crs.catalog}:${crs.code}`,
   ])
 
+  const bounds = getBounds(ocadFile)
+  infos = infos.concat([
+    `Bounds (mm): ${bounds.map(x => x / 100)}`,
+    `Bounds (CRS): ${crs.toProjectedCoord([
+      bounds[0],
+      bounds[1],
+    ])},${crs.toProjectedCoord([bounds[2], bounds[3]])}`,
+  ])
+
   stream.write(infos.join('\n'))
   stream.write('\n')
 

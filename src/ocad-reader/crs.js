@@ -24,22 +24,24 @@ module.exports = class Crs {
   // Converts a map coordinate (OCAD paper coordinates) to
   // the a coordinate in this CRS
   toProjectedCoord(coord) {
-    return new TdPoly(
+    const projected = [
       coord[0] * hundredsMmToMeter * this.scale + this.easting,
       coord[1] * hundredsMmToMeter * this.scale + this.northing,
-      coord.xFlags,
-      coord.yFlags
-    )
+    ]
+    return coord instanceof TdPoly
+      ? new TdPoly(projected[0], projected[1], coord.xFlags, coord.yFlags)
+      : projected
   }
 
   // Converts a CRS coordinate to
   // map coordinate (OCAD paper coordinates)
   toMapCoord(coord) {
-    return new TdPoly(
+    const map = [
       (coord[0] - this.easting) / hundredsMmToMeter / this.scale,
       (coord[1] - this.northing) / hundredsMmToMeter / this.scale,
-      coord.xFlags,
-      coord.yFlags
-    )
+    ]
+    return coord instanceof TdPoly
+      ? new TdPoly(map[0], map[1], coord.xFlags, coord.yFlags)
+      : map
   }
 }

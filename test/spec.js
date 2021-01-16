@@ -103,3 +103,15 @@ test('can get CRS', async t => {
   t.is(3006, crs.code)
   t.is('EPSG', crs.catalog)
 })
+
+test('can convert to projected CRS', async t => {
+  const map = await readOcad(path.join(__dirname, 'data', 'basic-1.ocd'))
+  const crs = map.getCrs()
+  t.deepEqual([316000, 6404000], crs.toProjectedCoord([0, 0]))
+})
+
+test('can convert to map coord', async t => {
+  const map = await readOcad(path.join(__dirname, 'data', 'basic-1.ocd'))
+  const crs = map.getCrs()
+  t.deepEqual([0, 0], crs.toMapCoord([316000, 6404000]))
+})

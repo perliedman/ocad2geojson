@@ -85,12 +85,20 @@ async function info(path, options) {
       process.exit(1)
     }
 
+    const symbolBlacklist = new Set(
+      options.iconBits
+        ? ['buffer', 'offset', '_startOffset', 'filePos']
+        : ['iconBits', 'buffer', 'offset', '_startOffset', 'filePos']
+    )
+
+    deleteBuffer(ocadFile)
+
     stream.write(
       symbols
         .map(s =>
           [
             `${s.number} ${s.description}`,
-            formatObject(s, options.iconBits ? [] : ['iconBits']),
+            formatObject(s, symbolBlacklist),
           ].join('\n')
         )
         .join('\n\n')
@@ -142,16 +150,32 @@ function parseSymNum(x) {
   return (t + (n - t) / 100) * 1000
 }
 
+// This is a hack to remove the buffer instance from all
+// the objects in the OCAD file object. They shouldn't
+// be serialized, and also make the serialization take
+// ages.
+// Ideally, the OCAD file object should not contain any
+// reference to the buffer at all, but that is a major
+// refactor.
+function deleteBuffer(x) {
+  if (x instanceof Object) {
+    Object.keys(x).forEach(k => {
+      if (k === 'buffer') {
+        delete x[k]
+      } else {
+        deleteBuffer(x[k])
+      }
+    })
+  }
+}
 function formatObject(o, blackList) {
-  blackList = [...blackList, 'buffer', 'offset', '_startOffset', 'filePos']
-
   return Object.keys(o)
-    .filter(k => blackList.indexOf(k) < 0)
-    .map(k => `${k}: ${JSON.stringify(o[k], replacer)}`)
+    .filter(k => !blackList.has(k))
+    .map(k => `\t${k}: ${JSON.stringify(o[k], replacer)}`)
     .join('\n')
 
   function replacer(k, v) {
-    return blackList.indexOf(k) < 0 ? v : undefined
+    return !blackList.has(k) ? v : undefined
   }
 }
 

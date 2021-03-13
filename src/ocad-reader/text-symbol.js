@@ -2,10 +2,10 @@ const { TextSymbolType } = require('./symbol-types')
 const { Symbol10, Symbol11 } = require('./symbol')
 
 class TextSymbol10 extends Symbol10 {
-  constructor(buffer, offset) {
-    super(buffer, offset, TextSymbolType)
+  constructor(reader) {
+    super(reader, TextSymbolType)
 
-    readTextSymbol(this)
+    readTextSymbol(this, reader)
   }
 
   getVerticalAlignment() {
@@ -18,13 +18,13 @@ class TextSymbol10 extends Symbol10 {
 }
 
 class TextSymbol11 extends Symbol11 {
-  constructor(buffer, offset) {
-    super(buffer, offset, TextSymbolType)
+  constructor(reader) {
+    super(reader, TextSymbolType)
 
     // TODO: why?
-    this.offset += 64
+    reader.skip(64)
 
-    readTextSymbol(this)
+    readTextSymbol(this, reader)
   }
 
   getVerticalAlignment() {
@@ -36,46 +36,46 @@ class TextSymbol11 extends Symbol11 {
   }
 }
 
-const readTextSymbol = block => {
+const readTextSymbol = (symbol, reader) => {
   // ASCII string, 32 bytes
-  block.fontName = ''
-  const fontLength = block.readByte() // String length
+  symbol.fontName = ''
+  const fontLength = reader.readByte() // String length
   for (let i = 0; i < fontLength; i++) {
-    const c = block.readByte()
+    const c = reader.readByte()
     if (c) {
-      block.fontName += String.fromCharCode(c)
+      symbol.fontName += String.fromCharCode(c)
     }
   }
   for (let i = 1; i < 32 - fontLength; i++) {
-    block.readByte()
+    reader.readByte()
   }
 
-  block.fontColor = block.readSmallInt()
-  block.fontSize = block.readSmallInt()
-  block.weight = block.readSmallInt()
-  block.italic = !!block.readByte()
-  block.res1 = block.readByte()
-  block.charSpace = block.readSmallInt()
-  block.wordSpace = block.readSmallInt()
-  block.alignment = block.readSmallInt()
-  block.lineSpace = block.readSmallInt()
-  block.paraSpace = block.readSmallInt()
-  block.indentFirst = block.readSmallInt()
-  block.indentOther = block.readSmallInt()
-  block.nTabs = block.readSmallInt()
-  block.tabs = []
+  symbol.fontColor = reader.readSmallInt()
+  symbol.fontSize = reader.readSmallInt()
+  symbol.weight = reader.readSmallInt()
+  symbol.italic = !!reader.readByte()
+  symbol.res1 = reader.readByte()
+  symbol.charSpace = reader.readSmallInt()
+  symbol.wordSpace = reader.readSmallInt()
+  symbol.alignment = reader.readSmallInt()
+  symbol.lineSpace = reader.readSmallInt()
+  symbol.paraSpace = reader.readSmallInt()
+  symbol.indentFirst = reader.readSmallInt()
+  symbol.indentOther = reader.readSmallInt()
+  symbol.nTabs = reader.readSmallInt()
+  symbol.tabs = []
   for (let i = 0; i < 32; i++) {
-    block.tabs.push(block.readCardinal())
+    symbol.tabs.push(reader.readCardinal())
   }
-  block.lbOn = block.readWordBool()
-  block.lbColor = block.readSmallInt()
-  block.lbWidth = block.readSmallInt()
-  block.lbDist = block.readSmallInt()
-  block.res2 = block.readSmallInt()
-  block.frMode = block.readByte()
-  block.frStyle = block.readByte()
-  block.pointSymOn = !!block.readByte()
-  block.pointSymNumber = block.readByte()
+  symbol.lbOn = reader.readWordBool()
+  symbol.lbColor = reader.readSmallInt()
+  symbol.lbWidth = reader.readSmallInt()
+  symbol.lbDist = reader.readSmallInt()
+  symbol.res2 = reader.readSmallInt()
+  symbol.frMode = reader.readByte()
+  symbol.frStyle = reader.readByte()
+  symbol.pointSymOn = !!reader.readByte()
+  symbol.pointSymNumber = reader.readByte()
   // TODO: Some frame parameters ignored here
 }
 

@@ -19,6 +19,11 @@ test('can open valid file', async t => {
   t.is(5196, map.header.objectIndexBlock, 'First object index block')
 })
 
+test('can read symbols from file', async t => {
+  const map = await readOcad(path.join(__dirname, 'data', 'basic-1.ocd'))
+  t.is(map.symbols.length, 289)
+})
+
 test('can read objects from file', async t => {
   const map = await readOcad(path.join(__dirname, 'data', 'basic-1.ocd'))
   t.is(map.objects.length, 2)

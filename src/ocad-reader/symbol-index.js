@@ -1,4 +1,3 @@
-const Block = require('./block')
 const PointSymbol = require('./point-symbol')
 const LineSymbol = require('./line-symbol')
 const AreaSymbol = require('./area-symbol')
@@ -11,33 +10,34 @@ const {
   RectangleSymbolType,
 } = require('./symbol-types')
 
-module.exports = class SymbolIndex extends Block {
-  constructor(buffer, offset, version, options) {
-    super(buffer, offset)
-
+module.exports = class SymbolIndex {
+  constructor(reader, version, options) {
     this.version = version
-    this.nextSymbolIndexBlock = this.readInteger()
+    this.nextSymbolIndexBlock = reader.readInteger()
     this.symbolPosition = new Array(256)
     this.warnings = []
     this.options = options || {}
     for (let i = 0; i < this.symbolPosition.length; i++) {
-      this.symbolPosition[i] = this.readInteger()
+      this.symbolPosition[i] = reader.readInteger()
     }
   }
 
-  parseSymbols() {
+  parseSymbols(reader) {
     return this.symbolPosition
       .filter(sp => sp > 0)
-      .map(sp => this.parseSymbol(sp))
+      .map(sp => this.parseSymbol(reader, sp))
       .filter(s => s)
   }
 
-  parseSymbol(offset) {
+  parseSymbol(reader, offset) {
     if (!offset) return
 
-    const type = this.buffer.readInt8(offset + 8)
-    let Cls
+    reader.push(offset)
+
+    const type = reader.buffer.readInt8(offset + 8)
+    let symbol
     try {
+      let Cls
       switch (type) {
         case PointSymbolType:
           Cls = PointSymbol[this.version]
@@ -53,16 +53,19 @@ module.exports = class SymbolIndex extends Block {
           break
         case RectangleSymbolType:
           this.warnings.push(
-            `Ignoring rectangle symbol ${this.buffer.readInt32LE(offset + 4)}.`
+            `Ignoring rectangle symbol ${reader.buffer.readInt32LE(
+              offset + 4
+            )}.`
           )
           return null
         default:
           throw new Error(`Unknown symbol type ${type}`)
       }
 
-      const symbol = new Cls(this.buffer, offset)
+      reader.push(offset)
+      symbol = new Cls(reader)
+      reader.pop()
       this.warnings = this.warnings.concat(symbol.warnings)
-      return symbol
     } catch (e) {
       if (!this.options.failOnWarning) {
         this.warnings.push(e)
@@ -71,6 +74,7 @@ module.exports = class SymbolIndex extends Block {
       }
     }
 
-    // Ignore other symbols for now
+    reader.pop()
+    return symbol
   }
 }

@@ -1,19 +1,12 @@
-const Block = require('./block')
-
-module.exports = class LRect extends Block {
-  constructor(buffer, offset) {
-    super(buffer, offset)
+module.exports = class LRect {
+  constructor(reader) {
     this.min = {
-      x: this.readInteger(),
-      y: this.readInteger(),
+      x: reader.readInteger(),
+      y: reader.readInteger(),
     }
     this.max = {
-      x: this.readInteger(),
-      y: this.readInteger(),
+      x: reader.readInteger(),
+      y: reader.readInteger(),
     }
-  }
-
-  size() {
-    return 16
   }
 }

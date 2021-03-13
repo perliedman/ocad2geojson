@@ -1,28 +1,25 @@
 const { Symbol10, Symbol11 } = require('./symbol')
 
 class PointSymbol10 extends Symbol10 {
-  constructor(buffer, offset) {
-    super(buffer, offset, 1)
+  constructor(reader) {
+    super(reader, 1)
 
-    // TODO: why?
-    // this.offset += 64
+    this.dataSize = reader.readWord()
+    reader.readSmallInt() // Reserved
 
-    this.dataSize = this.readWord()
-    this.readSmallInt() // Reserved
-
-    this.elements = this.readElements(this.dataSize)
+    this.elements = reader.readElements(this.dataSize)
   }
 }
 
 class PointSymbol11 extends Symbol11 {
-  constructor(buffer, offset) {
-    super(buffer, offset, 1)
+  constructor(reader) {
+    super(reader, 1)
 
     // TODO: why?
-    this.offset += 64
+    reader.skip(64)
 
-    this.dataSize = this.readWord()
-    this.readSmallInt() // Reserved
+    this.dataSize = reader.readWord()
+    reader.readSmallInt() // Reserved
 
     this.elements = this.readElements(this.dataSize)
   }

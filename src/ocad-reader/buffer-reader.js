@@ -1,7 +1,9 @@
-module.exports = class Block {
-  constructor(buffer, offset) {
+module.exports = class BufferReader {
+  constructor(buffer, offset = 0) {
     this.buffer = buffer
-    this._startOffset = this.offset = offset || 0
+    this.offset = offset
+
+    this.stack = []
   }
 
   readInteger() {
@@ -45,6 +47,19 @@ module.exports = class Block {
   }
 
   getSize() {
-    return this.offset - this._startOffset
+    return this.offset - this.stack[this.stack.length - 1]
+  }
+
+  skip(bytes) {
+    this.offset += bytes
+  }
+
+  push(offset) {
+    this.stack.push(this.offset)
+    this.offset = offset
+  }
+
+  pop() {
+    this.offset = this.stack.pop()
   }
 }

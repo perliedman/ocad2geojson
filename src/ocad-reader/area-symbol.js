@@ -1,60 +1,60 @@
 const { Symbol10, Symbol11 } = require('./symbol')
 
 class AreaSymbol10 extends Symbol10 {
-  constructor(buffer, offset) {
-    super(buffer, offset, 3)
+  constructor(reader) {
+    super(reader, 3)
 
-    this.borderSym = this.readInteger()
-    this.fillColor = this.readSmallInt()
-    this.hatchMode = this.readSmallInt()
-    this.hatchColor = this.readSmallInt()
-    this.hatchLineWidth = this.readSmallInt()
-    this.hatchDist = this.readSmallInt()
-    this.hatchAngle1 = this.readSmallInt()
-    this.hatchAngle2 = this.readSmallInt()
-    this.fillOn = !!this.readByte()
-    this.borderOn = !!this.readByte()
-    this.structMode = this.readByte()
-    this.structDraw = this.readByte()
-    this.structWidth = this.readSmallInt()
-    this.structHeight = this.readSmallInt()
-    this.structAngle = this.readSmallInt()
-    this.structRes = this.readSmallInt()
-    this.dataSize = this.readWord()
+    this.borderSym = reader.readInteger()
+    this.fillColor = reader.readSmallInt()
+    this.hatchMode = reader.readSmallInt()
+    this.hatchColor = reader.readSmallInt()
+    this.hatchLineWidth = reader.readSmallInt()
+    this.hatchDist = reader.readSmallInt()
+    this.hatchAngle1 = reader.readSmallInt()
+    this.hatchAngle2 = reader.readSmallInt()
+    this.fillOn = !!reader.readByte()
+    this.borderOn = !!reader.readByte()
+    this.structMode = reader.readByte()
+    this.structDraw = reader.readByte()
+    this.structWidth = reader.readSmallInt()
+    this.structHeight = reader.readSmallInt()
+    this.structAngle = reader.readSmallInt()
+    this.structRes = reader.readSmallInt()
+    this.dataSize = reader.readWord()
 
-    this.elements = this.readElements(this.dataSize)
+    this.elements = reader.readElements(this.dataSize)
   }
 }
 
 class AreaSymbol11 extends Symbol11 {
-  constructor(buffer, offset) {
-    super(buffer, offset, 3)
+  constructor(reader) {
+    super(reader, 3)
 
     // TODO: why?
-    this.offset += 64
+    reader.skip(64)
 
-    this.borderSym = this.readInteger()
-    this.fillColor = this.readSmallInt()
-    this.hatchMode = this.readSmallInt()
-    this.hatchColor = this.readSmallInt()
-    this.hatchLineWidth = this.readSmallInt()
-    this.hatchDist = this.readSmallInt()
-    this.hatchAngle1 = this.readSmallInt()
-    this.hatchAngle2 = this.readSmallInt()
-    this.fillOn = !!this.readByte()
-    this.borderOn = !!this.readByte()
-    this.structMode = this.readByte()
-    this.structDraw = this.readByte()
-    this.structWidth = this.readSmallInt()
-    this.structHeight = this.readSmallInt()
-    this.structAngle = this.readSmallInt()
-    this.structIrregularVarX = this.readByte()
-    this.structIrregularVarY = this.readByte()
-    this.structIrregularMinDist = this.readSmallInt()
-    this.structRes = this.readSmallInt()
-    this.dataSize = this.readWord()
+    this.borderSym = reader.readInteger()
+    this.fillColor = reader.readSmallInt()
+    this.hatchMode = reader.readSmallInt()
+    this.hatchColor = reader.readSmallInt()
+    this.hatchLineWidth = reader.readSmallInt()
+    this.hatchDist = reader.readSmallInt()
+    this.hatchAngle1 = reader.readSmallInt()
+    this.hatchAngle2 = reader.readSmallInt()
+    this.fillOn = !!reader.readByte()
+    this.borderOn = !!reader.readByte()
+    this.structMode = reader.readByte()
+    this.structDraw = reader.readByte()
+    this.structWidth = reader.readSmallInt()
+    this.structHeight = reader.readSmallInt()
+    this.structAngle = reader.readSmallInt()
+    this.structIrregularVarX = reader.readByte()
+    this.structIrregularVarY = reader.readByte()
+    this.structIrregularMinDist = reader.readSmallInt()
+    this.structRes = reader.readSmallInt()
+    this.dataSize = reader.readWord()
 
-    this.elements = this.readElements(this.dataSize)
+    this.elements = this.readElements(reader, this.dataSize)
   }
 }
 

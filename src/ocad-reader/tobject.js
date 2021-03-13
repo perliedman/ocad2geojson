@@ -1,9 +1,7 @@
-const Block = require('./block')
 const TdPoly = require('./td-poly')
 
-class BaseTObject extends Block {
-  constructor(buffer, offset, objType) {
-    super(buffer, offset)
+class BaseTObject {
+  constructor(reader, objType) {
     this.objType = objType
   }
 
@@ -35,30 +33,33 @@ class BaseTObject extends Block {
 }
 
 class TObject10 extends BaseTObject {
-  constructor(buffer, offset, objType) {
-    super(buffer, offset, objType)
+  constructor(reader, objType) {
+    super(reader, objType)
 
-    this.sym = this.readInteger()
-    this.otp = this.readByte()
-    this.unicode = this.readByte()
-    this.ang = this.readSmallInt()
-    this.nItem = this.readCardinal()
-    this.nText = this.readWord()
-    this.readSmallInt() // Reserved
-    this.col = this.readInteger()
-    this.lineWidth = this.readSmallInt()
-    this.diamFlags = this.readSmallInt()
-    this.readInteger() // Reserved
-    this.readByte() // Reserved
-    this.readByte() // Reserved
-    this.readSmallInt() // Reserved
-    this.height = this.readInteger()
+    this.sym = reader.readInteger()
+    this.otp = reader.readByte()
+    this.unicode = reader.readByte()
+    this.ang = reader.readSmallInt()
+    this.nItem = reader.readCardinal()
+    this.nText = reader.readWord()
+    reader.readSmallInt() // Reserved
+    this.col = reader.readInteger()
+    this.lineWidth = reader.readSmallInt()
+    this.diamFlags = reader.readSmallInt()
+    reader.readInteger() // Reserved
+    reader.readByte() // Reserved
+    reader.readByte() // Reserved
+    reader.readSmallInt() // Reserved
+    this.height = reader.readInteger()
     this.coordinates = new Array(this.nItem)
 
     this.offset += 4
 
     for (let i = 0; i < this.nItem; i++) {
-      this.coordinates[i] = new TdPoly(this.readInteger(), this.readInteger())
+      this.coordinates[i] = new TdPoly(
+        reader.readInteger(),
+        reader.readInteger()
+      )
     }
 
     this.text = readWideString(this, this.nText)
@@ -66,27 +67,30 @@ class TObject10 extends BaseTObject {
 }
 
 class TObject11 extends BaseTObject {
-  constructor(buffer, offset, objType) {
-    super(buffer, offset, objType)
+  constructor(reader, objType) {
+    super(reader, objType)
 
-    this.sym = this.readInteger()
-    this.otp = this.readByte()
-    this.unicode = this.readByte()
-    this.ang = this.readSmallInt()
-    this.nItem = this.readCardinal()
-    this.nText = this.readWord()
-    this.mark = this.readByte()
-    this.snappingMark = this.readByte()
-    this.col = this.readInteger()
-    this.lineWidth = this.readSmallInt()
-    this.diamFlags = this.readSmallInt()
-    this.serverObjectId = this.readInteger()
-    this.height = this.readInteger()
-    this._date = this.readDouble()
+    this.sym = reader.readInteger()
+    this.otp = reader.readByte()
+    this.unicode = reader.readByte()
+    this.ang = reader.readSmallInt()
+    this.nItem = reader.readCardinal()
+    this.nText = reader.readWord()
+    this.mark = reader.readByte()
+    this.snappingMark = reader.readByte()
+    this.col = reader.readInteger()
+    this.lineWidth = reader.readSmallInt()
+    this.diamFlags = reader.readSmallInt()
+    this.serverObjectId = reader.readInteger()
+    this.height = reader.readInteger()
+    this._date = reader.readDouble()
     this.coordinates = new Array(this.nItem)
 
     for (let i = 0; i < this.nItem; i++) {
-      this.coordinates[i] = new TdPoly(this.readInteger(), this.readInteger())
+      this.coordinates[i] = new TdPoly(
+        reader.readInteger(),
+        reader.readInteger()
+      )
     }
 
     this.text = readWideString(this, this.nText)
@@ -94,43 +98,46 @@ class TObject11 extends BaseTObject {
 }
 
 class TObject12 extends BaseTObject {
-  constructor(buffer, offset, objType) {
-    super(buffer, offset, objType)
+  constructor(reader, objType) {
+    super(reader, objType)
 
-    this.sym = this.readInteger()
-    this.otp = this.readByte()
-    this.unicode = this.readByte()
-    this.ang = this.readSmallInt()
-    this.col = this.readInteger()
-    this.lineWidth = this.readSmallInt()
-    this.diamFlags = this.readSmallInt()
-    this.serverObjectId = this.readInteger()
-    this.height = this.readInteger()
-    this.creationDate = this.readDouble()
-    this.multirepresentationId = this.readCardinal()
-    this.modificationDate = this.readDouble()
-    this.nItem = this.readCardinal()
-    this.nText = this.readWord()
-    this.nObjectString = this.readWord()
-    this.nDatabaseString = this.readWord()
-    this.objectStringType = this.readByte()
-    this.res1 = this.readByte()
+    this.sym = reader.readInteger()
+    this.otp = reader.readByte()
+    this.unicode = reader.readByte()
+    this.ang = reader.readSmallInt()
+    this.col = reader.readInteger()
+    this.lineWidth = reader.readSmallInt()
+    this.diamFlags = reader.readSmallInt()
+    this.serverObjectId = reader.readInteger()
+    this.height = reader.readInteger()
+    this.creationDate = reader.readDouble()
+    this.multirepresentationId = reader.readCardinal()
+    this.modificationDate = reader.readDouble()
+    this.nItem = reader.readCardinal()
+    this.nText = reader.readWord()
+    this.nObjectString = reader.readWord()
+    this.nDatabaseString = reader.readWord()
+    this.objectStringType = reader.readByte()
+    this.res1 = reader.readByte()
     this.coordinates = new Array(this.nItem)
 
     for (let i = 0; i < this.nItem; i++) {
-      this.coordinates[i] = new TdPoly(this.readInteger(), this.readInteger())
+      this.coordinates[i] = new TdPoly(
+        reader.readInteger(),
+        reader.readInteger()
+      )
     }
 
-    this.text = readWideString(this, this.nText)
+    this.text = readWideString(this, reader, this.nText)
     this.objectString = readWideString(this, this.nObjectString)
     this.databaseString = readWideString(this, this.nDatabaseString)
   }
 }
 
-const readWideString = (object, len) => {
+const readWideString = (object, reader, len) => {
   const textChars = []
   for (let i = 0; i < len * (object.unicode ? 2 : 4); i++) {
-    const c = object.unicode ? object.readByte() : object.readWord()
+    const c = object.unicode ? reader.readByte() : reader.readWord()
     if (!c) continue
     if (c !== 13) {
       textChars.push(String.fromCharCode(c))

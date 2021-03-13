@@ -1,26 +1,28 @@
-const Block = require('./block')
 const ParameterString = require('./parameter-string')
 
-module.exports = class StringIndex extends Block {
-  constructor(buffer, offset) {
-    super(buffer, offset)
-
-    this.nextStringIndexBlock = this.readInteger()
+module.exports = class StringIndex {
+  constructor(reader) {
+    this.nextStringIndexBlock = reader.readInteger()
     this.table = new Array(256)
     for (let i = 0; i < 256; i++) {
       this.table[i] = {
-        pos: this.readInteger(),
-        len: this.readInteger(),
-        recType: this.readInteger(),
-        objIndex: this.readInteger(),
+        pos: reader.readInteger(),
+        len: reader.readInteger(),
+        recType: reader.readInteger(),
+        objIndex: reader.readInteger(),
       }
     }
   }
 
-  getStrings() {
+  getStrings(reader) {
     const strings = this.table
       .filter(si => si.recType > 0)
-      .map(si => new ParameterString(this.buffer, si.pos, si))
+      .map(si => {
+        reader.push(si.pos)
+        const s = new ParameterString(reader, si)
+        reader.pop()
+        return s
+      })
     return strings.reduce((pss, ps) => {
       let typeStrings = pss[ps.recType]
       if (!typeStrings) {

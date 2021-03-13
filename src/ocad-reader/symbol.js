@@ -1,41 +1,43 @@
-const Block = require('./block')
 const SymbolElement = require('./symbol-element')
 const InvalidSymbolElementException = require('./invalid-symbol-element-exception')
 
-class BaseSymbol extends Block {
-  constructor(buffer, offset, symbolType) {
-    super(buffer, offset)
-
+class BaseSymbol {
+  constructor(reader, symbolType) {
     this.warnings = []
     this.type = symbolType
-    this.size = this.readInteger()
-    this.symNum = this.readInteger()
+    this.size = reader.readInteger()
+    this.symNum = reader.readInteger()
     this.number = `${Math.floor(this.symNum / 1000)}.${this.symNum % 1000}`
-    this.otp = this.readByte()
-    this.flags = this.readByte()
-    this.selected = !!this.readByte()
-    this.status = this.readByte()
-    this.preferredDrawingTool = this.readByte()
-    this.csMode = this.readByte()
-    this.csObjType = this.readByte()
-    this.csCdFlags = this.readByte()
-    this.extent = this.readInteger()
-    this.filePos = this.readCardinal()
+    this.otp = reader.readByte()
+    this.flags = reader.readByte()
+    this.selected = !!reader.readByte()
+    this.status = reader.readByte()
+    this.preferredDrawingTool = reader.readByte()
+    this.csMode = reader.readByte()
+    this.csObjType = reader.readByte()
+    this.csCdFlags = reader.readByte()
+    this.extent = reader.readInteger()
+    this.filePos = reader.readCardinal()
   }
 
-  readElements(dataSize) {
+  readElements(reader, dataSize) {
     const elements = []
 
     for (let i = 0; i < dataSize; i += 2) {
       try {
-        const element = new SymbolElement(this.buffer, this.offset)
-        this.offset += element.getSize()
+        reader.push(reader.offset)
+        const element = new SymbolElement(reader)
+        const size = reader.getSize()
+        reader.pop()
+        reader.skip(size)
         elements.push(element)
 
         i += element.numberCoords
       } catch (e) {
         if (e instanceof InvalidSymbolElementException) {
-          this.offset += e.symbolElement.getSize()
+          const size = reader.getSize()
+          reader.pop()
+          reader.skip(size)
           this.warnings.push(e)
         } else {
           throw e
@@ -52,45 +54,45 @@ class BaseSymbol extends Block {
 }
 
 class Symbol10 extends BaseSymbol {
-  constructor(buffer, offset, symbolType) {
-    super(buffer, offset, symbolType)
+  constructor(reader, symbolType) {
+    super(reader, symbolType)
 
-    this.group = this.readSmallInt()
-    this.nColors = this.readSmallInt()
+    this.group = reader.readSmallInt()
+    this.nColors = reader.readSmallInt()
     this.colors = new Array(14)
     for (let i = 0; i < this.colors.length; i++) {
-      this.colors[i] = this.readSmallInt()
+      this.colors[i] = reader.readSmallInt()
     }
     this.description = ''
-    this.readByte() // String length
+    reader.readByte() // String length
     for (let i = 1; i < 32; i++) {
-      const c = this.readByte()
+      const c = reader.readByte()
       if (c) {
         this.description += String.fromCharCode(c)
       }
     }
     this.iconBits = new Array(484)
     for (let i = 0; i < this.iconBits.length; i++) {
-      this.iconBits[i] = this.readByte()
+      this.iconBits[i] = reader.readByte()
     }
   }
 }
 
 class Symbol11 extends BaseSymbol {
-  constructor(buffer, offset, symbolType) {
-    super(buffer, offset, symbolType)
+  constructor(reader, symbolType) {
+    super(reader, symbolType)
 
-    this.readByte() // notUsed1
-    this.readByte() // notUsed2
-    this.nColors = this.readSmallInt()
+    reader.readByte() // notUsed1
+    reader.readByte() // notUsed2
+    this.nColors = reader.readSmallInt()
     this.colors = new Array(14)
     for (let i = 0; i < this.colors.length; i++) {
-      this.colors[i] = this.readSmallInt()
+      this.colors[i] = reader.readSmallInt()
     }
     this.description = ''
     // UTF-16 string, 64 bytes
     for (let i = 0; i < 64 / 2; i++) {
-      const c = this.readWord()
+      const c = reader.readWord()
       if (c) {
         this.description += String.fromCharCode(c)
       }
@@ -98,12 +100,12 @@ class Symbol11 extends BaseSymbol {
 
     this.iconBits = new Array(484)
     for (let i = 0; i < this.iconBits.length; i++) {
-      this.iconBits[i] = this.readByte()
+      this.iconBits[i] = reader.readByte()
     }
 
     this.symbolTreeGroup = new Array(64)
     for (let i = 0; i < this.symbolTreeGroup.length; i++) {
-      this.symbolTreeGroup[i] = this.readWord()
+      this.symbolTreeGroup[i] = reader.readWord()
     }
   }
 }

@@ -1,17 +1,15 @@
-const Block = require('./block')
 const { StringDecoder } = require('string_decoder')
 
 const decoder = new StringDecoder('utf8')
 
-module.exports = class ParameterString extends Block {
-  constructor(buffer, offset, indexRecord) {
-    super(buffer, offset)
-
+module.exports = class ParameterString {
+  constructor(reader, indexRecord) {
     this.recType = indexRecord.recType
 
+    const offset = reader.offset
     let strLen = 0
-    while (this.readByte()) strLen++
-    const val = decoder.end(buffer.slice(offset, offset + strLen))
+    while (reader.readByte()) strLen++
+    const val = decoder.end(reader.buffer.slice(offset, offset + strLen))
 
     const vals = val.split('\t')
     this.values = { _first: vals[0], _pairs: [] }

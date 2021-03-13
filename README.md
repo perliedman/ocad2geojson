@@ -1,6 +1,10 @@
 # OCAD to GeoJSON
 
-Export [OCAD](https://www.ocad.com/) files to open formats:
+![Example Map Output 1](example-images/1.png)
+![Example Map Output 2](example-images/2.png)
+![Example Map Output 3](example-images/3.png)
+
+Library and command line tool for exporting [OCAD](https://www.ocad.com/) map files to open formats:
 
 - [GeoJSON](http://geojson.org/)
 - [Mapbox Style Spec](https://www.mapbox.com/mapbox-gl-js/style-spec/)
@@ -10,33 +14,9 @@ Export [OCAD](https://www.ocad.com/) files to open formats:
 
 You might also want to look at [ocad2tiles](https://github.com/perliedman/ocad2tiles) which uses ocad2geojson to create overview images and tiles for online maps from OCAD files.
 
-![Example Map Output](example-map-2.png)
-![Example Map Output](example-map-3.png)
-![Example Map Output](example-map.png)
+Online demo: [OCAD map viewer and converter in your browser](https://www.liedman.net/ocad2geojson/)
 
-Demo: [OCAD map viewer and converter in your browser](https://www.liedman.net/ocad2geojson/)
-
-You can use this to get geo/GIS data out of an OCAD file. This is currently more or less four modules
-working together:
-
-- _OCAD file reader_, to get meaningful data out of the binary OCAD files
-- _OCAD to GeoJSON_, to export the geographic objects from OCAD files
-- _OCAD to SVG_, to export the map to vector graphics; SVG can then also easily be used to produce PDFs
-- _OCAD to QML_, to export the map styling to QGIS QML format
-- _OCAD to Mapbox GL style_, to get the styling (colors, line widths, etc.) into something you can use with other tools
-
-OCAD version 10, 11 and 12 and 2018 files are mostly supported. Some OCAD features are currently not fully supported:
-
-- Hatch fills are not supported when exported to Mapbox styles and emulated by semi-transparent fills
-- Fill patterns are ~~not supported~~ supported for SVG and PDF exports
-- ~~Curves are not supported~~ Bezier curves now supported!
-- ~~Some texts are not exported~~
-- ~~SVG / PDF currently lack any text~~ SVG and PDF now have text support
-- ...and probably a lot more that I do not even know is missing
-
-Feel free to open issues for lacking features - I will not promise to add them, but good to keep track of what is missing.
-
-Have you built something with this module, or want to help out improving it? I'd love to know; open an issue, pull request or contact [per@liedman.net](mailto:per@liedman.net).
+You can use this to get geo/GIS data out of an OCAD file. OCAD version 10, 11 and 12 and 2018 files are mostly supported.
 
 ## Usage
 
@@ -88,6 +68,20 @@ Options:
 
 ### API
 
+Exported functions:
+
+- `readOcad` - read and parse OCAD maps
+- `ocadToGeoJson` - transform objects from a parsed OCAD file into GeoJSON
+- `ocadToSvg` - transform a parsed OCAD map into an SVG document
+- `ocadToMapboxGlStyle` - transform symbol styles of a parsed OCAD file into Mapbox GL style spec
+- `ocadToQml` - transform a parsed OCAD file into QML
+
+Begin by parsing an OCAD file with `readOcad`: this function accepts a file path
+as string, or a [Buffer](https://nodejs.org/api/buffer.html) instance to read from.
+`readOcad` returns a [Promise](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise) that will resolve to the parsed result.
+
+Example, turning an OCAD file into GeoJSON and Mapbox GL styles:
+
 ```js
 const { readOcad, ocadToGeoJson, ocadToMapboxGlStyle } = require('../')
 
@@ -99,9 +93,22 @@ readOcad(filePath).then(ocadFile => {
 })
 ```
 
-The argument to `readOcad` can either be a file path (string) or a `Buffer` object.
-
 I will try to write some docs, in the meantime, check out the [demo directory](demo) for some examples of how to use this module.
+
+## Missing features
+
+Some OCAD features are currently not fully supported:
+
+- Hatch fills are not supported when exported to Mapbox styles and emulated by semi-transparent fills
+- Fill patterns are ~~not supported~~ supported for SVG and PDF exports
+- ~~Curves are not supported~~ Bezier curves now supported!
+- ~~Some texts are not exported~~
+- ~~SVG / PDF currently lack any text~~ SVG and PDF now have text support
+- ...and probably a lot more that I do not even know is missing
+
+Feel free to open issues for lacking features - I will not promise to add them, but good to keep track of what is missing.
+
+Have you built something with this module, or want to help out improving it? I'd love to know; open an issue, pull request or contact [per@liedman.net](mailto:per@liedman.net).
 
 ## License
 

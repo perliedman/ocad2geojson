@@ -1,3 +1,4 @@
+const flatten = require('arr-flatten')
 const {
   PointSymbolType,
   LineSymbolType,
@@ -40,8 +41,7 @@ module.exports = function ocadToMapboxGlStyle(ocadFile, options) {
     })
   }
 
-  const symbolLayers = Array.prototype.concat.apply(
-    [],
+  const symbolLayers = flatten(
     usedSymbols.map(symbol =>
       (symbolToMapboxLayer(symbol, ocadFile.colors, options) || []).map(
         metadata(symbol)
@@ -49,8 +49,7 @@ module.exports = function ocadToMapboxGlStyle(ocadFile, options) {
     )
   )
 
-  const elementLayers = Array.prototype.concat.apply(
-    [],
+  const elementLayers = flatten(
     usedSymbols.map(symbol =>
       (symbolElementsToMapboxLayer(symbol, ocadFile.colors, options) || []).map(
         metadata(symbol)
@@ -121,8 +120,7 @@ const symbolElementsToMapboxLayer = (symbol, colors, options) => {
       break
   }
 
-  return Array.prototype.concat.apply(
-    [],
+  return flatten(
     elements
       .map(([e, name], i) =>
         createElementLayer(e, name, i, symbol, colors, options)

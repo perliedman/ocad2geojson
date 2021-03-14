@@ -26,71 +26,70 @@ module.exports = async (path, options) => {
   }
 }
 
-const parseOcadBuffer = async (buffer, options) =>
-  new Promise((resolve, reject) => {
-    let warnings = []
+function parseOcadBuffer(buffer, options) {
+  let warnings = []
 
-    const reader = new BufferReader(buffer)
-    const header = new FileHeader(reader)
-    if (!header.isValid()) {
-      throw new Error(
-        `Not an OCAD file (invalid header ${header.ocadMark} !== ${0x0cad})`
-      )
-    }
+  const reader = new BufferReader(buffer)
+  const header = new FileHeader(reader)
+  if (!header.isValid()) {
+    throw new Error(
+      `Not an OCAD file (invalid header ${header.ocadMark} !== ${0x0cad})`
+    )
+  }
 
-    if (header.version < 10 && !options.bypassVersionCheck) {
-      throw new Error(
-        `Unsupport OCAD file version (${header.version}), only >= 10 supported for now.`
-      )
-    }
+  if (header.version < 10 && !options.bypassVersionCheck) {
+    throw new Error(
+      `Unsupport OCAD file version (${header.version}), only >= 10 supported for now.`
+    )
+  }
 
-    const symbols = []
-    let symbolIndexOffset = header.symbolIndexBlock
-    while (symbolIndexOffset) {
-      reader.push(symbolIndexOffset)
-      const symbolIndex = new SymbolIndex(reader, header.version, options)
-      reader.pop()
-      Array.prototype.push.apply(symbols, symbolIndex.parseSymbols(reader))
-      warnings = warnings.concat(symbolIndex.warnings)
+  const symbols = []
+  let symbolIndexOffset = header.symbolIndexBlock
+  while (symbolIndexOffset) {
+    reader.push(symbolIndexOffset)
+    const symbolIndex = new SymbolIndex(reader, header.version, options)
+    reader.pop()
+    Array.prototype.push.apply(symbols, symbolIndex.parseSymbols(reader))
+    warnings = warnings.concat(symbolIndex.warnings)
 
-      symbolIndexOffset = symbolIndex.nextSymbolIndexBlock
-    }
+    symbolIndexOffset = symbolIndex.nextSymbolIndexBlock
+  }
 
-    const objects = []
-    let objectIndexOffset = header.objectIndexBlock
-    while (objectIndexOffset) {
-      reader.push(objectIndexOffset)
-      const objectIndex = new ObjectIndex(reader, header.version)
-      reader.pop()
-      Array.prototype.push.apply(objects, objectIndex.parseObjects(reader))
+  const objects = []
+  let objectIndexOffset = header.objectIndexBlock
+  while (objectIndexOffset) {
+    reader.push(objectIndexOffset)
+    const objectIndex = new ObjectIndex(reader, header.version)
+    reader.pop()
+    Array.prototype.push.apply(objects, objectIndex.parseObjects(reader))
 
-      objectIndexOffset = objectIndex.nextObjectIndexBlock
-    }
+    objectIndexOffset = objectIndex.nextObjectIndexBlock
+  }
 
-    const parameterStrings = {}
-    let stringIndexOffset = header.stringIndexBlock
-    while (stringIndexOffset) {
-      reader.push(stringIndexOffset)
-      const stringIndex = new StringIndex(reader)
-      reader.pop()
-      const strings = stringIndex.getStrings(reader)
+  const parameterStrings = {}
+  let stringIndexOffset = header.stringIndexBlock
+  while (stringIndexOffset) {
+    reader.push(stringIndexOffset)
+    const stringIndex = new StringIndex(reader)
+    reader.pop()
+    const strings = stringIndex.getStrings(reader)
 
-      Object.keys(strings).reduce((a, recType) => {
-        const typeStrings = strings[recType]
-        const concatStrings = a[recType] || []
-        a[recType] = concatStrings.concat(typeStrings.map(s => s.values))
-        return a
-      }, parameterStrings)
+    Object.keys(strings).reduce((a, recType) => {
+      const typeStrings = strings[recType]
+      const concatStrings = a[recType] || []
+      a[recType] = concatStrings.concat(typeStrings.map(s => s.values))
+      return a
+    }, parameterStrings)
 
-      stringIndexOffset = stringIndex.nextStringIndexBlock
-    }
+    stringIndexOffset = stringIndex.nextStringIndexBlock
+  }
 
-    if (!options.quietWarnings) {
-      warnings.forEach(w => console.warn(w))
-    }
+  if (!options.quietWarnings) {
+    warnings.forEach(w => console.warn(w))
+  }
 
-    resolve(new OcadFile(header, parameterStrings, objects, symbols, warnings))
-  })
+  return new OcadFile(header, parameterStrings, objects, symbols, warnings)
+}
 
 class OcadFile {
   constructor(header, parameterStrings, objects, symbols, warnings) {

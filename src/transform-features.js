@@ -1,3 +1,4 @@
+const flatten = require('arr-flatten')
 const {
   PointSymbolType,
   LineSymbolType,
@@ -34,9 +35,7 @@ module.exports = function (ocadFile, createObject, createElement, options) {
       generateSymbolElements.bind(null, createElement, options, symbols)
     )
 
-    features = features
-      .concat(Array.prototype.concat.apply([], elementFeatures))
-      .filter(f => f)
+    features = features.concat(flatten(elementFeatures)).filter(f => f)
   }
 
   return features

@@ -4,7 +4,7 @@
   "description": "Convert OCAD files to GeoJSON",
   "main": "src/index.js",
   "scripts": {
-    "test": "node --async-stack-traces node_modules/.bin/ava",
+    "test": "npm run lint && ava",
     "lint": "eslint src/",
     "prepublish": "npm test"
   },

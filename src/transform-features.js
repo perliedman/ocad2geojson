@@ -20,10 +20,16 @@ module.exports = function (ocadFile, createObject, createElement, options) {
     idCount: ocadFile.objects.length,
   }
 
-  const symbols = ocadFile.symbols.reduce((ss, s) => {
-    ss[s.symNum] = s
-    return ss
-  }, {})
+  const symbols = ocadFile.symbols
+    .filter(
+      s =>
+        !options.includeSymbols ||
+        options.includeSymbols.find(symNum => symNum === s.symNum)
+    )
+    .reduce((ss, s) => {
+      ss[s.symNum] = s
+      return ss
+    }, {})
 
   const objects = options.objects || ocadFile.objects
   let features = objects

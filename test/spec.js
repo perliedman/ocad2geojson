@@ -120,3 +120,11 @@ test('can convert to map coord', async t => {
   const crs = map.getCrs()
   t.deepEqual([0, 0], crs.toMapCoord([316000, 6404000]))
 })
+
+test('can filter symbols', async t => {
+  const map = await readOcad(path.join(__dirname, 'data', 'basic-1.ocd'))
+  let geoJson = ocadToGeoJson(map, { includeSymbols: [709003] })
+  t.is(1, geoJson.features.length)
+  geoJson = ocadToGeoJson(map, { includeSymbols: [709004] })
+  t.is(0, geoJson.features.length)
+})

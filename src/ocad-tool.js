@@ -32,6 +32,7 @@ program
     '-f, --format <string>',
     'output format (geojson, svg, qml, mvt), otherwise guessed from output file extension'
   )
+  .option('--filter-symbols <numbers>', 'only show numbered symbols')
   .option('--export-hidden', 'include hidden objects in the export', false)
   .action(exportMap)
 
@@ -74,7 +75,7 @@ async function info(path, options) {
   if (options.symbols || options.filterSymbols) {
     let symNums
     if (options.filterSymbols) {
-      symNums = new Set(options.filterSymbols.split(',').map(parseSymNum))
+      symNums = new Set(parseSymNums(options.filterSymbols))
     }
     const symbols = symNums
       ? ocadFile.symbols.filter(s => symNums.has(s.symNum))
@@ -113,6 +114,8 @@ async function exportMap(path, outputPath, options) {
     options.format || /^.*\.(\w+)$/.exec(outputPath)[1].toLocaleLowerCase()
   const outputOptions = {
     exportHidden: options.exportHidden,
+    includeSymbols:
+      options.filterSymbols && parseSymNums(options.filterSymbols),
   }
 
   let output
@@ -142,6 +145,10 @@ async function exportMap(path, outputPath, options) {
     stream.write(output)
     stream.close()
   }
+}
+
+function parseSymNums(s) {
+  return s.split(',').map(parseSymNum)
 }
 
 function parseSymNum(x) {

@@ -53,7 +53,7 @@ class TObject10 extends BaseTObject {
     this.height = reader.readInteger()
     this.coordinates = new Array(this.nItem)
 
-    this.offset += 4
+    reader.skip(4)
 
     for (let i = 0; i < this.nItem; i++) {
       this.coordinates[i] = new TdPoly(

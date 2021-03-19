@@ -7,7 +7,7 @@ class PointSymbol10 extends Symbol10 {
     this.dataSize = reader.readWord()
     reader.readSmallInt() // Reserved
 
-    this.elements = reader.readElements(this.dataSize)
+    this.elements = this.readElements(this.dataSize)
   }
 }
 

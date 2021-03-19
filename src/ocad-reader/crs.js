@@ -7,12 +7,19 @@ const hundredsMmToMeter = 1 / (100 * 1000)
 
 module.exports = class Crs {
   constructor(scalePar) {
-    const { x: easting, y: northing, m: scale, i: gridId } = scalePar
+    const {
+      x: easting,
+      y: northing,
+      m: scale,
+      i: gridId,
+      a: grivation,
+    } = scalePar
 
     this.easting = Number(easting)
     this.northing = Number(northing)
     this.scale = Number(scale)
     this.gridId = Number(gridId)
+    this.grivation = (Number(grivation) / 180) * Math.PI
 
     this.grid = crsGrids.find(g => g[0] === this.gridId)
     const [, code, catalog, name] = this.grid || [this.gridId, 0, null, null]
@@ -24,6 +31,10 @@ module.exports = class Crs {
   // Converts a map coordinate (OCAD paper coordinates) to
   // the a coordinate in this CRS
   toProjectedCoord(coord) {
+    if (coord instanceof TdPoly) {
+      coord = coord.rotate(-this.grivation)
+    }
+
     const projected = [
       coord[0] * hundredsMmToMeter * this.scale + this.easting,
       coord[1] * hundredsMmToMeter * this.scale + this.northing,

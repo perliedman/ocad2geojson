@@ -92,8 +92,6 @@ async function info(path, options) {
         : ['iconBits', 'buffer', 'offset', '_startOffset', 'filePos']
     )
 
-    deleteBuffer(ocadFile)
-
     stream.write(
       symbols
         .map(s =>
@@ -157,24 +155,6 @@ function parseSymNum(x) {
   return (t + (n - t) / 100) * 1000
 }
 
-// This is a hack to remove the buffer instance from all
-// the objects in the OCAD file object. They shouldn't
-// be serialized, and also make the serialization take
-// ages.
-// Ideally, the OCAD file object should not contain any
-// reference to the buffer at all, but that is a major
-// refactor.
-function deleteBuffer(x) {
-  if (x instanceof Object) {
-    Object.keys(x).forEach(k => {
-      if (k === 'buffer') {
-        delete x[k]
-      } else {
-        deleteBuffer(x[k])
-      }
-    })
-  }
-}
 function formatObject(o, blackList) {
   return Object.keys(o)
     .filter(k => !blackList.has(k))

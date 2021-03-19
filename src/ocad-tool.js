@@ -23,6 +23,7 @@ program
     '--icons-bits',
     "display symbols' iconBits property (hidden by default)"
   )
+  .option('--parameter-strings', 'dump parameter strings')
   .action(info)
 
 program
@@ -103,6 +104,14 @@ async function info(path, options) {
         .join('\n\n')
     )
     stream.write('\n')
+  }
+
+  if (options.parameterStrings) {
+    stream.write(
+      Object.keys(ocadFile.parameterStrings)
+        .map(k => `${k}\t${JSON.stringify(ocadFile.parameterStrings[k])}`)
+        .join('\n')
+    )
   }
 }
 

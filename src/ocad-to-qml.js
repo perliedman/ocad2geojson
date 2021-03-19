@@ -1,11 +1,12 @@
 const { LineSymbolType, AreaSymbolType } = require('./ocad-reader/symbol-types')
 const { patternToSvg, createSvgNode } = require('./ocad-to-svg')
 const uuidv4 = require('uuid/v4')
-const DOMImplementation = global.DOMImplementation
-  ? global.DOMImplementation
+const _global = getGlobal()
+const DOMImplementation = _global.DOMImplementation
+  ? _global.DOMImplementation
   : new (require('xmldom').DOMImplementation)()
-const XMLSerializer = global.XMLSerializer
-  ? global.XMLSerializer
+const XMLSerializer = _global.XMLSerializer
+  ? _global.XMLSerializer
   : require('xmldom').XMLSerializer
 
 const defaultOptions = {
@@ -278,3 +279,13 @@ const prop = (k, v) => ({
 })
 
 const toMapUnit = (scale, x) => (x / (100 * 1000)) * scale
+
+function getGlobal() {
+  if (typeof global !== 'undefined') {
+    return global
+  } else if (typeof window !== 'undefined') {
+    return window
+  } else {
+    return {}
+  }
+}

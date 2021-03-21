@@ -31,9 +31,7 @@ module.exports = class Crs {
   // Converts a map coordinate (OCAD paper coordinates) to
   // the a coordinate in this CRS
   toProjectedCoord(coord) {
-    if (coord instanceof TdPoly) {
-      coord = coord.rotate(-this.grivation)
-    }
+    coord = rotate(coord, -this.grivation)
 
     const projected = [
       coord[0] * hundredsMmToMeter * this.scale + this.easting,
@@ -51,8 +49,20 @@ module.exports = class Crs {
       (coord[0] - this.easting) / hundredsMmToMeter / this.scale,
       (coord[1] - this.northing) / hundredsMmToMeter / this.scale,
     ]
+    coord = rotate(coord, this.grivation)
     return coord instanceof TdPoly
       ? new TdPoly(map[0], map[1], coord.xFlags, coord.yFlags)
       : map
+  }
+}
+
+function rotate(c, theta) {
+  if (c instanceof TdPoly) {
+    return c.rotate(theta)
+  } else {
+    return [
+      c[0] * Math.cos(theta) - c[1] * Math.sin(theta),
+      c[0] * Math.sin(theta) + c[1] * Math.cos(theta),
+    ]
   }
 }

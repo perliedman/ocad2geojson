@@ -102,11 +102,11 @@ const readLineSymbol = (symbol, reader, DoubleLine, Decrease) => {
   symbol.useSymbolFlags = reader.readByte()
   symbol.reserved = reader.readByte()
 
-  symbol.primSymElements = symbol.readElements(reader.primDSize)
-  symbol.secSymElements = symbol.readElements(reader.secDSize)
-  symbol.cornerSymElements = symbol.readElements(reader.cornerDSize)
-  symbol.startSymElements = symbol.readElements(reader.startDSize)
-  symbol.endSymElements = symbol.readElements(reader.endDSize)
+  symbol.primSymElements = symbol.readElements(reader, this.primDSize)
+  symbol.secSymElements = symbol.readElements(reader, this.secDSize)
+  symbol.cornerSymElements = symbol.readElements(reader, this.cornerDSize)
+  symbol.startSymElements = symbol.readElements(reader, this.startDSize)
+  symbol.endSymElements = symbol.readElements(reader, this.endDSize)
 }
 
 module.exports = {

@@ -22,7 +22,7 @@ class AreaSymbol10 extends Symbol10 {
     this.structRes = reader.readSmallInt()
     this.dataSize = reader.readWord()
 
-    this.elements = this.readElements(this.dataSize)
+    this.elements = this.readElements(reader, this.dataSize)
   }
 }
 

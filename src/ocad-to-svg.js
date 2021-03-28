@@ -14,7 +14,7 @@ const {
 } = require('./ocad-reader/symbol-element-types')
 const transformFeatures = require('./transform-features')
 const flatten = require('arr-flatten')
-const { default: lineOffset } = require('@turf/line-offset')
+const lineOffset = require('@turf/line-offset')
 const TdPoly = require('./ocad-reader/td-poly')
 const {
   HorizontalAlignCenter,

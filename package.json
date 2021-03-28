@@ -6,7 +6,7 @@
   "scripts": {
     "test": "npm run lint && ava",
     "lint": "eslint src/",
-    "prepublish": "npm test"
+    "prepublishOnly": "npm test"
   },
   "bin": {
     "ocad-tool": "src/ocad-tool.js"
@@ -23,6 +23,7 @@
   "homepage": "https://github.com/perliedman/ocad2geojson",
   "devDependencies": {
     "@babel/core": "^7.12.10",
+    "@turf/meta": "^6.3.0",
     "ava": "^3.15.0",
     "eslint": "^7.11.0",
     "eslint-config-prettier": "^6.11.0",
@@ -34,9 +35,7 @@
     "xmldom": "^0.5.0"
   },
   "dependencies": {
-    "@turf/bbox": "^6.0.1",
-    "@turf/line-offset": "^5.1.5",
-    "@turf/meta": "^6.0.2",
+    "@turf/line-offset": "^6.3.0",
     "arr-flatten": "^1.1.0",
     "bezier-js": "^2.4.0",
     "commander": "^6.2.1",

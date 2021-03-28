@@ -48,17 +48,19 @@ async function info(path, options) {
     `File: ${path}`,
     `OCAD version: ${header.version}.${header.subVersion}.${header.subSubVersion}`,
     `File version: ${header.currentFileVersion}`,
-    `Total number objects: ${ocadFile.objects.length}`,
+    `Number symbols: ${ocadFile.symbols.length}`,
+    `Number objects: ${ocadFile.objects.length}`,
   ]
 
   const crs = ocadFile.getCrs()
   infos = infos.concat([
     `Scale: 1:${crs.scale}`,
-    `Northing: ${crs.northing}`,
-    `Easting: ${crs.easting}`,
     `Grid ID: ${crs.gridId}`,
     `CRS Name: ${crs.name}`,
     `CRS identifier: ${crs.catalog}:${crs.code}`,
+    `Grivation: ${((crs.grivation / Math.PI) * 180).toFixed(2)}°`,
+    `Northing: ${crs.northing}`,
+    `Easting: ${crs.easting}`,
   ])
 
   const bounds = getBounds(ocadFile)

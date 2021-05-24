@@ -14,7 +14,9 @@ const {
 } = require('./ocad-reader/symbol-element-types')
 const transformFeatures = require('./transform-features')
 const flatten = require('arr-flatten')
-const lineOffset = require('@turf/line-offset')
+// TODO: there must be a better way to make Webpack handle this?
+const _lineOffset = require('@turf/line-offset')
+const lineOffset = _lineOffset.default || _lineOffset
 const TdPoly = require('./ocad-reader/td-poly')
 const {
   HorizontalAlignCenter,

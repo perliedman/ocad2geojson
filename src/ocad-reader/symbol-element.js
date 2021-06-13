@@ -11,6 +11,12 @@ module.exports = class SymbolElement {
     this.numberCoords = reader.readSmallInt()
     reader.readCardinal() // Reserved
 
+    if (this.type < 1 || this.type > 4) {
+      throw new InvalidSymbolElementException(
+        `Symbol element with invalid type (${this.type}).`
+      )
+    }
+
     if (this.numberCoords >= 0) {
       this.coords = new Array(this.numberCoords)
       for (let j = 0; j < this.numberCoords; j++) {

@@ -140,7 +140,8 @@ const patternToSvg = (colors, s) => {
                   )
                 )
             : []
-        ),
+        )
+        .filter(Boolean),
     })
   }
 

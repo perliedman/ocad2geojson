@@ -36,7 +36,7 @@ module.exports = class ObjectIndex {
 
   parseObjects(reader) {
     return this.table
-      .filter(o => o.status === 1) // Remove deleted and hidden objects
+      .filter(o => o.status > 0 && o.status < 3) // Remove deleted objects, keep normal and hidden objects.
       .map(o => this.parseObject(reader, o, o.objType))
       .filter(o => o)
   }

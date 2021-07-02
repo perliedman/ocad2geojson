@@ -1,12 +1,8 @@
+const TdPoly = require('./td-poly')
+
 module.exports = class LRect {
   constructor(reader) {
-    this.min = {
-      x: reader.readInteger(),
-      y: reader.readInteger(),
-    }
-    this.max = {
-      x: reader.readInteger(),
-      y: reader.readInteger(),
-    }
+    this.min = new TdPoly(reader.readInteger(), reader.readInteger())
+    this.max = new TdPoly(reader.readInteger(), reader.readInteger())
   }
 }

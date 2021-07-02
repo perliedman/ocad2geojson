@@ -44,15 +44,15 @@ module.exports = class ObjectIndex {
   parseObjects(reader) {
     return this.table
       .filter(o => o.status > 0 && o.status < 3) // Remove deleted objects, keep normal and hidden objects.
-      .map(o => this.parseObject(reader, o, o.objType))
+      .map(o => this.parseObject(reader, o))
       .filter(o => o)
   }
 
-  parseObject(reader, objIndex, objType) {
+  parseObject(reader, objIndex) {
     if (!objIndex.pos) return
 
     reader.push(objIndex.pos)
-    const tObject = new TObject[this.version](reader, objType)
+    const tObject = new TObject[this.version](reader, objIndex)
     reader.pop()
     return tObject
   }

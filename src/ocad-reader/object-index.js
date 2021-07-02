@@ -4,7 +4,12 @@ const TObject = require('./tobject')
 module.exports = class ObjectIndex {
   constructor(reader, version) {
     this.version = version
-    this.nextObjectIndexBlock = reader.readInteger()
+
+    // Ignore pointers that do not point to a valid location in the file.
+    // Compare getBlockCheckedRaw() in Open Orienteering Mapper.
+    this.nextObjectIndexBlock = (i =>
+      i > reader.buffer.length - (256 * 40 + 4) ? 0 : i)(reader.readInteger())
+
     this.table = new Array(256)
     for (let i = 0; i < 256; i++) {
       const rc = new LRect(reader)

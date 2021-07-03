@@ -217,15 +217,6 @@ function toSvg(ocadFile, outputOptions) {
     document: new DOMImplementation().createDocument(null, 'xml', null),
   })
   fixIds(svgDoc)
-  const crs = ocadFile.getCrs()
-  const bounds = ocadFile.getBounds()
-  const hundredsMmToMeter = 1 / (100 * 1000)
-  const transform = `scale(${
-    hundredsMmToMeter * crs.scale
-  }) translate(${-bounds[0]}, ${bounds[3]})`
-  const mapGroup = svgDoc.getElementsByTagName('g')[0]
-  mapGroup.setAttributeNS('http://www.w3.org/2000/svg', 'transform', transform)
-
   return new XMLSerializer().serializeToString(svgDoc)
 }
 

@@ -17,13 +17,22 @@ const {
 program
   .command('info <path>')
   .description('display file info')
-  .option('--symbols', 'dump symbol information')
-  .option('--filter-symbols <numbers>', 'only show numbered symbols')
+  .option(
+    '--symbols [identifiers]',
+    'dump symbol information optionally limiting the output by a comma separated list of symbol identifiers'
+  )
   .option(
     '--icons-bits',
     "display symbols' iconBits property (hidden by default)"
   )
-  .option('--parameter-strings', 'dump parameter strings')
+  .option(
+    '--parameter-strings [types]',
+    'dump parameter strings optionally limiting the output by a comma separated list of type identifiers'
+  )
+  .option(
+    '--object-strings [symbols]',
+    'dump object strings optionally limiting the output by a comma separated list of symbol identifiers'
+  )
   .action(info)
 
 program
@@ -33,7 +42,10 @@ program
     '-f, --format <string>',
     'output format (geojson, svg, qml, mvt), otherwise guessed from output file extension'
   )
-  .option('--filter-symbols <numbers>', 'only show numbered symbols')
+  .option(
+    '--symbols <identifiers>',
+    'limit the output by a comma separated list of symbol identifiers'
+  )
   .option('--export-hidden', 'include hidden objects in the export', false)
   .action(exportMap)
 
@@ -73,17 +85,17 @@ async function info(path, options) {
   stream.write(infos.join('\n'))
   stream.write('\n')
 
-  if (options.symbols || options.filterSymbols) {
+  if (options.symbols) {
     let symNums
-    if (options.filterSymbols) {
-      symNums = new Set(parseSymNums(options.filterSymbols))
+    if (typeof options.symbols === 'string') {
+      symNums = new Set(parseSymNums(options.symbols))
     }
     const symbols = symNums
       ? ocadFile.symbols.filter(s => symNums.has(s.symNum))
       : ocadFile.symbols
 
     if (symbols.length === 0) {
-      console.error(`No such symbol ${symNums} (${options.filterSymbols})`)
+      console.error(`No such symbol ${symNums} (${options.symbols})`)
       process.exit(1)
     }
 
@@ -108,9 +120,34 @@ async function info(path, options) {
 
   if (options.parameterStrings) {
     stream.write(
-      Object.keys(ocadFile.parameterStrings)
-        .map(k => `${k}\t${JSON.stringify(ocadFile.parameterStrings[k])}`)
-        .join('\n')
+      Object.entries(ocadFile.parameterStrings)
+        .filter(
+          ([k, v]) =>
+            typeof options.parameterStrings !== 'string' ||
+            options.parameterStrings.split(',').indexOf(k) >= 0
+        )
+        .map(([k, v]) => `${k}\t${JSON.stringify(v)}\n`)
+        .join('')
+    )
+  }
+
+  if (options.objectStrings) {
+    stream.write(
+      ocadFile.objects
+        .filter(
+          o =>
+            typeof options.objectStrings !== 'string' ||
+            options.objectStrings
+              .split(',')
+              .indexOf(
+                '' +
+                  Math.trunc(o.sym / 1000) +
+                  '.' +
+                  String(o.sym % 1000).padStart(3, '0')
+              ) >= 0
+        )
+        .map(o => `${o.sym}\t${o.objectString}\n`)
+        .join('')
     )
   }
 }
@@ -122,7 +159,7 @@ async function exportMap(path, outputPath, options) {
   const outputOptions = {
     exportHidden: options.exportHidden,
     includeSymbols:
-      options.filterSymbols && parseSymNums(options.filterSymbols),
+      typeof options.symbols === 'string' && parseSymNums(options.symbols),
   }
 
   let output

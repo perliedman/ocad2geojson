@@ -241,16 +241,14 @@ const objectToSvg = (options, symbols, object) => {
             node.children = node.children.concat([
               lineToPath(
                 object.coordinates,
-                dbl.dblLeftWidth * 1.5 +
-                  dbl.dblRightWidth * 1.5 +
-                  dbl.dblWidth * 2,
+                dbl.dblLeftWidth + dbl.dblRightWidth + dbl.dblWidth,
                 options.colors[dbl.dblLeftColor],
                 dbl.dblGap,
                 dbl.dblLength
               ),
               lineToPath(
                 object.coordinates,
-                dbl.dblWidth * 2,
+                dbl.dblWidth,
                 options.colors[dbl.dblFillColor],
                 dbl.dblGap,
                 dbl.dblLength

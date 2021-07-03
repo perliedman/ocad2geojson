@@ -63,13 +63,11 @@ async function info(path, options) {
     `Easting: ${crs.easting}`,
   ])
 
-  const bounds = getBounds(ocadFile)
+  const bounds = ocadFile.getBounds()
+  const projectedBounds = ocadFile.getBounds(crs.toProjectedCoord.bind(crs))
   infos = infos.concat([
     `Bounds (mm): ${bounds.map(x => x / 100)}`,
-    `Bounds (CRS): ${crs.toProjectedCoord([
-      bounds[0],
-      bounds[1],
-    ])},${crs.toProjectedCoord([bounds[2], bounds[3]])}`,
+    `Bounds (CRS): ${projectedBounds}`,
   ])
 
   stream.write(infos.join('\n'))
@@ -219,9 +217,9 @@ function toSvg(ocadFile, outputOptions) {
     document: new DOMImplementation().createDocument(null, 'xml', null),
   })
   fixIds(svgDoc)
-  const bounds = getBounds(ocadFile)
-  const hundredsMmToMeter = 1 / (100 * 1000)
   const crs = ocadFile.getCrs()
+  const bounds = ocadFile.getBounds()
+  const hundredsMmToMeter = 1 / (100 * 1000)
   const transform = `scale(${
     hundredsMmToMeter * crs.scale
   }) translate(${-bounds[0]}, ${bounds[3]})`
@@ -251,26 +249,6 @@ function getProj4Def(crs) {
     })
     request.end()
   })
-}
-
-function getBounds(ocadFile) {
-  const bounds = [
-    Number.MAX_VALUE,
-    Number.MAX_VALUE,
-    -Number.MAX_VALUE,
-    -Number.MAX_VALUE,
-  ]
-
-  for (const o of ocadFile.objects) {
-    for (const [x, y] of o.coordinates) {
-      bounds[0] = Math.min(x, bounds[0])
-      bounds[1] = Math.min(y, bounds[1])
-      bounds[2] = Math.max(x, bounds[2])
-      bounds[3] = Math.max(y, bounds[3])
-    }
-  }
-
-  return bounds
 }
 
 // In xmldom, node ids are normal attributes, while in the browser's

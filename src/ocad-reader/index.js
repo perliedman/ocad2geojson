@@ -131,4 +131,24 @@ class OcadFile {
       : { x: 0, y: 0, m: 1 }
     return new Crs(scalePar)
   }
+
+  getBounds(projection = v => v) {
+    const bounds = [
+      Number.MAX_VALUE,
+      Number.MAX_VALUE,
+      -Number.MAX_VALUE,
+      -Number.MAX_VALUE,
+    ]
+  
+    for (const [[x1, y1], [x2, y2]] of this.objects
+      .map(o => Object.values(o.objIndex.rc).map(projection))) {
+      bounds[0] = Math.min(x1, x2, bounds[0])
+      bounds[1] = Math.min(y1, y2, bounds[1])
+      bounds[2] = Math.max(x1, x2, bounds[2])
+      bounds[3] = Math.max(y1, y2, bounds[3])
+    }
+  
+    return bounds
+  }
+  
 }

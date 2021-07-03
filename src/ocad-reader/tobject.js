@@ -130,8 +130,8 @@ class TObject12 extends BaseTObject {
     }
 
     this.text = readWideString(this, reader, this.nText)
-    this.objectString = readWideString(this, this.nObjectString)
-    this.databaseString = readWideString(this, this.nDatabaseString)
+    this.objectString = readWideString(this, reader, this.nObjectString)
+    this.databaseString = readWideString(this, reader, this.nDatabaseString)
   }
 }
 

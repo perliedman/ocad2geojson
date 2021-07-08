@@ -8,6 +8,7 @@ const ObjectIndex = require('./object-index')
 const StringIndex = require('./string-index')
 const Crs = require('./crs')
 const BufferReader = require('./buffer-reader')
+const InvalidObjectIndexBlockException = require('./invalid-object-index-block-exception')
 
 module.exports = async (path, options) => {
   options = options || {}
@@ -59,11 +60,17 @@ function parseOcadBuffer(buffer, options) {
   let objectIndexOffset = header.objectIndexBlock
   while (objectIndexOffset) {
     reader.push(objectIndexOffset)
-    const objectIndex = new ObjectIndex(reader, header.version)
-    reader.pop()
-    Array.prototype.push.apply(objects, objectIndex.parseObjects(reader))
+    try {
+      const objectIndex = new ObjectIndex(reader, header.version)
+      reader.pop()
+      Array.prototype.push.apply(objects, objectIndex.parseObjects(reader))
 
-    objectIndexOffset = objectIndex.nextObjectIndexBlock
+      objectIndexOffset = objectIndex.nextObjectIndexBlock
+    } catch (e) {
+      if (e instanceof InvalidObjectIndexBlockException) {
+        warnings.push(e.toString())
+      }
+    }
   }
 
   const parameterStrings = {}

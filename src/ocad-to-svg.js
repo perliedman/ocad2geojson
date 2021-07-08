@@ -153,7 +153,7 @@ const createSvgNode = (document, n) => {
   if (n.text === undefined) {
     node = document.createElement(n.type)
     const xmlnss = Object.entries(n.attrs || []).filter(
-      ([key, _]) => key.indexOf('xmlns') === 0
+      ([key, _]) => key.startsWith('xmlns')
     )
     for (const [ns, uri] of xmlnss) {
       node.setAttributeNS('http://www.w3.org/2000/xmlns/', ns, uri)

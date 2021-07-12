@@ -1,8 +1,9 @@
 const TdPoly = require('./td-poly')
 
 class BaseTObject {
-  constructor(reader, objType) {
-    this.objType = objType
+  constructor(reader, objIndex) {
+    this.objIndex = objIndex
+    this.objType = objIndex.objType
   }
 
   getProperties() {
@@ -33,8 +34,8 @@ class BaseTObject {
 }
 
 class TObject10 extends BaseTObject {
-  constructor(reader, objType) {
-    super(reader, objType)
+  constructor(reader, objIndex) {
+    super(reader, objIndex)
 
     this.sym = reader.readInteger()
     this.otp = reader.readByte()
@@ -67,8 +68,8 @@ class TObject10 extends BaseTObject {
 }
 
 class TObject11 extends BaseTObject {
-  constructor(reader, objType) {
-    super(reader, objType)
+  constructor(reader, objIndex) {
+    super(reader, objIndex)
 
     this.sym = reader.readInteger()
     this.otp = reader.readByte()
@@ -98,8 +99,8 @@ class TObject11 extends BaseTObject {
 }
 
 class TObject12 extends BaseTObject {
-  constructor(reader, objType) {
-    super(reader, objType)
+  constructor(reader, objIndex) {
+    super(reader, objIndex)
 
     this.sym = reader.readInteger()
     this.otp = reader.readByte()
@@ -129,8 +130,8 @@ class TObject12 extends BaseTObject {
     }
 
     this.text = readWideString(this, reader, this.nText)
-    this.objectString = readWideString(this, this.nObjectString)
-    this.databaseString = readWideString(this, this.nDatabaseString)
+    this.objectString = readWideString(this, reader, this.nObjectString)
+    this.databaseString = readWideString(this, reader, this.nDatabaseString)
   }
 }
 

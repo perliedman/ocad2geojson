@@ -149,11 +149,20 @@ const patternToSvg = (colors, s) => {
 }
 
 const createSvgNode = (document, n) => {
-  const node =
-    n.text === undefined
-      ? document.createElementNS('http://www.w3.org/2000/svg', n.type)
-      : document.createTextNode(n.text)
+  let node
+  if (n.text === undefined) {
+    node = document.createElement(n.type)
+    const xmlnss = Object.entries(n.attrs || []).filter(
+      ([key, _]) => key.startsWith('xmlns')
+    )
+    for (const [ns, uri] of xmlnss) {
+      node.setAttributeNS('http://www.w3.org/2000/xmlns/', ns, uri)
+    }
+  } else {
+    node = document.createTextNode(n.text)
+  }
   n.id && (node.id = n.id)
+
   n.attrs &&
     Object.keys(n.attrs).forEach(attrName =>
       node.setAttribute(attrName, n.attrs[attrName])
@@ -181,23 +190,40 @@ module.exports = {
         .map(patternToSvg.bind(null, ocadFile.colors))
     )
 
+    const crs = ocadFile.getCrs()
+    const bounds = ocadFile.getBounds()
     const root = {
       type: 'svg',
-      attrs: { fill: options.fill },
+      attrs: {
+        xmlns: 'http://www.w3.org/2000/svg',
+        fill: options.fill,
+        viewBox:
+          bounds.slice(0, 2) +
+          ',' +
+          (bounds[2] - bounds[0]) +
+          ',' +
+          (bounds[3] - bounds[1]),
+      },
       children: [
         {
           type: 'defs',
           children: patterns,
         },
-      ].concat({
-        type: 'g',
-        children: transformFeatures(
-          ocadFile,
-          objectToSvg,
-          elementToSvg,
-          options
-        ).sort((a, b) => b.order - a.order),
-      }),
+      ].concat([
+        {
+          type: 'g',
+          attrs: {
+            xmlns: 'http://www.w3.org/2000/svg',
+            transform: `translate(0, ${bounds[1] + bounds[3]})`,
+          },
+          children: transformFeatures(
+            ocadFile,
+            objectToSvg,
+            elementToSvg,
+            options
+          ).sort((a, b) => b.order - a.order),
+        },
+      ]),
     }
 
     return createSvgNode(options.document || window.document, root)
@@ -241,16 +267,14 @@ const objectToSvg = (options, symbols, object) => {
             node.children = node.children.concat([
               lineToPath(
                 object.coordinates,
-                dbl.dblLeftWidth * 1.5 +
-                  dbl.dblRightWidth * 1.5 +
-                  dbl.dblWidth * 2,
+                dbl.dblLeftWidth + dbl.dblRightWidth + dbl.dblWidth,
                 options.colors[dbl.dblLeftColor],
                 dbl.dblGap,
                 dbl.dblLength
               ),
               lineToPath(
                 object.coordinates,
-                dbl.dblWidth * 2,
+                dbl.dblWidth,
                 options.colors[dbl.dblFillColor],
                 dbl.dblGap,
                 dbl.dblLength
@@ -336,28 +360,43 @@ const objectToSvg = (options, symbols, object) => {
     case LineTextObjectType: {
       const horizontalAlign = symbol.getHorizontalAlignment()
       const verticalAlign = symbol.getVerticalAlignment()
-      const [x, y] = object.coordinates[0]
+      const bounds = [
+        ...object.objIndex.rc.min,
+        ...object.objIndex.rc.max,
+      ]
+      const width = Math.abs(bounds[2] - bounds[0])
+      const height = Math.abs(bounds[3] - bounds[1])
       const fontSize = symbol.fontSize * 3.52778
-      const lineHeight = fontSize * 1.2
-
       node = {
-        type: 'text',
+        type: 'foreignObject',
         attrs: {
-          x,
-          y: -y,
-          fill: options.colors[symbol.fontColor].rgb,
-          'font-family': symbol.fontName,
-          'font-style': symbol.italic ? 'italic' : '',
-          'font-weight': symbol.weight > 400 ? 'bold' : '',
-          'font-size': fontSize, // pt to millimeters * 10
+          x: bounds[0],
+          y: -bounds[3],
+          width,
+          height,
         },
-        children: ocadTextToSvg(
-          object.coordinates[0],
-          object.text,
-          horizontalAlign,
-          verticalAlign,
-          lineHeight
-        ),
+        children: [
+          {
+            type: 'div',
+            attrs: {
+              style: `font-size: ${fontSize}px; font-family: "${
+                symbol.fontName
+              }"; font-weight: ${symbol.weight}; font-style: ${
+                symbol.italic ? 'italic' : 'normal'
+              }; color: ${options.colors[symbol.fontColor].rgb}; line-height: ${
+                symbol.lineSpace / 100
+              }; text-align: ${
+                horizontalAlign === HorizontalAlignCenter
+                  ? 'center'
+                  : horizontalAlign === HorizontalAlignLeft
+                  ? 'left'
+                  : 'right'
+              };`,
+              xmlns: 'http://www.w3.org/1999/xhtml',
+            },
+            children: [{ text: object.text }],
+          },
+        ],
       }
       break
     }
@@ -398,8 +437,8 @@ const elementToSvg = (symbol, name, index, element, c, angle, options) => {
       node = {
         type: 'circle',
         attrs: {
-          cx: c[0],
-          cy: -c[1],
+          cx: c[0] + element.coords[0][0],
+          cy: -c[1] - element.coords[0][1],
           r: element.diameter / 2,
         },
         order: options.colors[element.color].renderOrder,
@@ -525,35 +564,4 @@ const offsetLineCoordinates = (coordinates, offset) => {
     (c, i) =>
       new TdPoly(c[0], c[1], coordinates[i].xFlags, coordinates[i].yFlags)
   )
-}
-
-const ocadTextToSvg = (
-  coord,
-  s,
-  horizontalAlign,
-  verticalAlign,
-  lineHeight
-) => {
-  const lines = s.split('\n')
-  const baseY =
-    verticalAlign === VerticalAlignTop
-      ? lineHeight
-      : verticalAlign === VerticalAlignBottom
-      ? 0
-      : 0.5 * lineHeight
-
-  return lines.map((l, i) => ({
-    type: 'tspan',
-    attrs: {
-      x: coord[0],
-      y: `${-coord[1] + baseY + i * lineHeight}`,
-      'text-anchor':
-        horizontalAlign === HorizontalAlignCenter
-          ? 'middle'
-          : horizontalAlign === HorizontalAlignLeft
-          ? 'start'
-          : 'end',
-    },
-    children: [{ text: l }],
-  }))
 }

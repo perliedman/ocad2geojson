@@ -152,8 +152,8 @@ const createSvgNode = (document, n) => {
   let node
   if (n.text === undefined) {
     node = document.createElement(n.type)
-    const xmlnss = Object.entries(n.attrs || []).filter(
-      ([key, _]) => key.startsWith('xmlns')
+    const xmlnss = Object.entries(n.attrs || []).filter(([key, _]) =>
+      key.startsWith('xmlns')
     )
     for (const [ns, uri] of xmlnss) {
       node.setAttributeNS('http://www.w3.org/2000/xmlns/', ns, uri)
@@ -190,7 +190,6 @@ module.exports = {
         .map(patternToSvg.bind(null, ocadFile.colors))
     )
 
-    const crs = ocadFile.getCrs()
     const bounds = ocadFile.getBounds()
     const root = {
       type: 'svg',
@@ -214,9 +213,7 @@ module.exports = {
           type: 'g',
           attrs: {
             xmlns: 'http://www.w3.org/2000/svg',
-            transform: `translate(0, ${
-              bounds[1] + bounds[3]
-            })`,
+            transform: `translate(0, ${bounds[1] + bounds[3]})`,
           },
           children: transformFeatures(
             ocadFile,

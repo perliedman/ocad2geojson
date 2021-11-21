@@ -149,11 +149,20 @@ const patternToSvg = (colors, s) => {
 }
 
 const createSvgNode = (document, n) => {
-  const node =
-    n.text === undefined
-      ? document.createElementNS('http://www.w3.org/2000/svg', n.type)
-      : document.createTextNode(n.text)
+  let node
+  if (n.text === undefined) {
+    node = document.createElement(n.type)
+    const xmlnss = Object.entries(n.attrs || []).filter(([key, _]) =>
+      key.startsWith('xmlns')
+    )
+    for (const [ns, uri] of xmlnss) {
+      node.setAttributeNS('http://www.w3.org/2000/xmlns/', ns, uri)
+    }
+  } else {
+    node = document.createTextNode(n.text)
+  }
   n.id && (node.id = n.id)
+
   n.attrs &&
     Object.keys(n.attrs).forEach(attrName =>
       node.setAttribute(attrName, n.attrs[attrName])
@@ -181,23 +190,39 @@ module.exports = {
         .map(patternToSvg.bind(null, ocadFile.colors))
     )
 
+    const bounds = ocadFile.getBounds()
     const root = {
       type: 'svg',
-      attrs: { fill: options.fill },
+      attrs: {
+        xmlns: 'http://www.w3.org/2000/svg',
+        fill: options.fill,
+        viewBox:
+          bounds.slice(0, 2) +
+          ',' +
+          (bounds[2] - bounds[0]) +
+          ',' +
+          (bounds[3] - bounds[1]),
+      },
       children: [
         {
           type: 'defs',
           children: patterns,
         },
-      ].concat({
-        type: 'g',
-        children: transformFeatures(
-          ocadFile,
-          objectToSvg,
-          elementToSvg,
-          options
-        ).sort((a, b) => b.order - a.order),
-      }),
+      ].concat([
+        {
+          type: 'g',
+          attrs: {
+            xmlns: 'http://www.w3.org/2000/svg',
+            transform: `translate(0, ${bounds[1] + bounds[3]})`,
+          },
+          children: transformFeatures(
+            ocadFile,
+            objectToSvg,
+            elementToSvg,
+            options
+          ).sort((a, b) => b.order - a.order),
+        },
+      ]),
     }
 
     return createSvgNode(options.document || window.document, root)
@@ -241,16 +266,14 @@ const objectToSvg = (options, symbols, object) => {
             node.children = node.children.concat([
               lineToPath(
                 object.coordinates,
-                dbl.dblLeftWidth * 1.5 +
-                  dbl.dblRightWidth * 1.5 +
-                  dbl.dblWidth * 2,
+                dbl.dblLeftWidth + dbl.dblRightWidth + dbl.dblWidth,
                 options.colors[dbl.dblLeftColor],
                 dbl.dblGap,
                 dbl.dblLength
               ),
               lineToPath(
                 object.coordinates,
-                dbl.dblWidth * 2,
+                dbl.dblWidth,
                 options.colors[dbl.dblFillColor],
                 dbl.dblGap,
                 dbl.dblLength

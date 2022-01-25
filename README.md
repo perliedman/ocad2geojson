@@ -12,7 +12,7 @@ Library and command line tool for exporting [OCAD](https://www.ocad.com/) map fi
 - PDF
 - [QGIS](https://qgis.org/en/site/) / QML (very rough and incomplete)
 
-You might also want to look at [ocad2tiles](https://github.com/perliedman/ocad2tiles) which uses ocad2geojson to create overview images and tiles for online maps from OCAD files.
+You might also want to look at [ocad2tiles](https://github.com/perliedman/ocad2tiles) which uses ocad2geojson to create overview images and tiles for online maps from OCAD files. Also see this short [tutorial on making OCAD maps for the web](https://www.liedman.net/2022/01/05/orienteering-maps-for-the-web/).
 
 Online demo: [OCAD map viewer and converter in your browser](https://www.liedman.net/ocad2geojson/)
 

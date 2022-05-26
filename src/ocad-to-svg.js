@@ -470,6 +470,8 @@ function linejoin(lineStyle) {
       return 'bevel'
     case 1:
       return 'round'
+    case 2:
+      return 'bevel'
     case 4:
       return 'miter'
     default:
@@ -482,11 +484,13 @@ function linecap(lineStyle) {
   lineStyle = lineStyle || 0
   switch (lineStyle) {
     case 0:
-      return 'flat'
+      return 'butt'
     case 1:
       return 'round'
+    case 2:
+      return 'butt'
     case 4:
-      return 'flat'
+      return 'butt'
     default:
       console.warn(`Unknown lineStyle ${lineStyle}.`)
       return ''

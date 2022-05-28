@@ -240,11 +240,12 @@ const usedSymbolNumbers = objects =>
   )
 
 const objectToSvg = (options, symbols, object) => {
-  const symbol = symbols[object.sym]
+  const symNum = options.sym || object.sym
+  const symbol = symbols[symNum]
   if (!symbol || (!options.exportHidden && symbol.isHidden())) return
 
   let node
-  switch (object.objType) {
+  switch (options.objType || object.objType) {
     case LineObjectType: {
       const isDoubleLine = symbol.doubleLine && symbol.doubleLine.dblMode
       node = lineToPath(
@@ -253,7 +254,8 @@ const objectToSvg = (options, symbols, object) => {
         options.colors[symbol.lineColor],
         symbol.mainGap,
         symbol.mainLength,
-        symbol.lineStyle
+        symbol.lineStyle,
+        options.closePath
       )
       if (isDoubleLine) {
         const dbl = symbol.doubleLine
@@ -269,14 +271,18 @@ const objectToSvg = (options, symbols, object) => {
                 dbl.dblLeftWidth + dbl.dblRightWidth + dbl.dblWidth,
                 options.colors[dbl.dblLeftColor],
                 dbl.dblGap,
-                dbl.dblLength
+                dbl.dblLength,
+                symbol.lineStyle,
+                options.closePath
               ),
               lineToPath(
                 object.coordinates,
                 dbl.dblWidth,
                 options.colors[dbl.dblFillColor],
                 dbl.dblGap,
-                dbl.dblLength
+                dbl.dblLength,
+                symbol.lineStyle,
+                options.closePath
               ),
             ])
           }
@@ -293,7 +299,9 @@ const objectToSvg = (options, symbols, object) => {
                 i === 0 ? dbl.dblLeftWidth : dbl.dblRightWidth,
                 options.colors[i === 0 ? dbl.dblLeftColor : dbl.dblRightColor],
                 dbl.dblGap,
-                dbl.dblLength
+                dbl.dblLength,
+                symbol.lineStyle,
+                options.closePath
               )
             )
           )
@@ -325,7 +333,6 @@ const objectToSvg = (options, symbols, object) => {
       node = {
         type: 'g',
         children: [],
-        order: options.colors[fillColorIndex].renderOrder,
       }
 
       if (symbol.fillOn) {
@@ -333,26 +340,48 @@ const objectToSvg = (options, symbols, object) => {
           node.children.push(
             areaToPath(object.coordinates, null, options.colors[fillColorIndex])
           )
-        } else if (fillPattern) {
+        }
+      }
+
+      if (fillPattern) {
+        node.children.push(
+          areaToPath(
+            object.coordinates,
+            fillPattern,
+            options.colors[fillColorIndex]
+          )
+        )
+
+        if (symbol.hatchMode === 2) {
           node.children.push(
             areaToPath(
               object.coordinates,
-              fillPattern,
+              `url(#hatch-fill-${symbol.symNum}-2)`,
               options.colors[fillColorIndex]
             )
           )
-
-          if (symbol.hatchMode === 2) {
-            node.children.push(
-              areaToPath(
-                object.coordinates,
-                `url(#hatch-fill-${symbol.symNum}-2)`,
-                options.colors[fillColorIndex]
-              )
-            )
-          }
         }
       }
+
+      if (symbol.borderSym) {
+        node.children.push(
+          objectToSvg(
+            {
+              ...options,
+              sym: symbol.borderSym,
+              objType: LineObjectType,
+              closePath: true,
+            },
+            symbols,
+            object
+          )
+        )
+      }
+
+      node.order = Math.max.apply(
+        Math,
+        node.children.map(n => n.order)
+      )
 
       break
     }
@@ -448,12 +477,13 @@ const lineToPath = (
   color,
   baseMainGap,
   baseMainLength,
-  lineStyle
+  lineStyle,
+  closePath
 ) =>
   width > 0 && {
     type: 'path',
     attrs: {
-      d: coordsToPath(coordinates),
+      d: coordsToPath(coordinates, closePath),
       style: `stroke: ${color.rgb}; stroke-width: ${width}; ${
         baseMainGap && baseMainLength
           ? `stroke-dasharray: ${baseMainLength} ${baseMainGap};`
@@ -504,11 +534,12 @@ const areaToPath = (coordinates, fillPattern, color) => ({
   attrs: {
     d: coordsToPath(coordinates),
     style: `fill: ${fillPattern || color.rgb};`,
+    'fill-rule': 'evenodd',
   },
   order: color.renderOrder,
 })
 
-const coordsToPath = coords => {
+const coordsToPath = (coords, closePath) => {
   if (coords === []) {
     return []
   }
@@ -536,6 +567,10 @@ const coordsToPath = coords => {
     } else {
       cs.push(`L ${c[0]} ${-c[1]}`)
     }
+  }
+
+  if (closePath) {
+    cs.push(`L ${coords[0][0]} ${-coords[0][1]}`)
   }
 
   return cs.join(' ')

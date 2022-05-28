@@ -328,28 +328,30 @@ const objectToSvg = (options, symbols, object) => {
         order: options.colors[fillColorIndex].renderOrder,
       }
 
-      if (fillColorIndex && symbol.fillOn) {
-        node.children.push(
-          areaToPath(object.coordinates, null, options.colors[fillColorIndex])
-        )
-      }
-
-      node.children.push(
-        areaToPath(
-          object.coordinates,
-          fillPattern,
-          options.colors[fillColorIndex]
-        )
-      )
-
-      if (symbol.hatchMode === 2) {
-        node.children.push(
-          areaToPath(
-            object.coordinates,
-            `url(#hatch-fill-${symbol.symNum}-2)`,
-            options.colors[fillColorIndex]
+      if (symbol.fillOn) {
+        if (fillColorIndex) {
+          node.children.push(
+            areaToPath(object.coordinates, null, options.colors[fillColorIndex])
           )
-        )
+        } else if (fillPattern) {
+          node.children.push(
+            areaToPath(
+              object.coordinates,
+              fillPattern,
+              options.colors[fillColorIndex]
+            )
+          )
+
+          if (symbol.hatchMode === 2) {
+            node.children.push(
+              areaToPath(
+                object.coordinates,
+                `url(#hatch-fill-${symbol.symNum}-2)`,
+                options.colors[fillColorIndex]
+              )
+            )
+          }
+        }
       }
 
       break

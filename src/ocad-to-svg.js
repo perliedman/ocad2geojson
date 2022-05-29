@@ -247,7 +247,8 @@ const objectToSvg = (options, symbols, object) => {
   let node
   switch (options.objType || object.objType) {
     case LineObjectType: {
-      const isDoubleLine = symbol.doubleLine && symbol.doubleLine.dblMode
+      const dblMode = symbol.doubleLine.dblMode
+      const isDoubleLine = symbol.doubleLine && dblMode
       node = lineToPath(
         object.coordinates,
         symbol.lineWidth,
@@ -263,6 +264,8 @@ const objectToSvg = (options, symbols, object) => {
           type: 'g',
           children: [node],
         }
+        const dblGap = dblMode !== 1 ? dbl.dblGap : undefined
+        const dblLength = dblMode !== 1 ? dbl.dblLength : undefined
         if (dbl.dblFlags & DblFillColorOn) {
           if (dbl.dblLeftWidth > 0 && dbl.dblRightWidth > 0) {
             node.children = node.children.concat([
@@ -270,8 +273,8 @@ const objectToSvg = (options, symbols, object) => {
                 object.coordinates,
                 dbl.dblLeftWidth + dbl.dblRightWidth + dbl.dblWidth,
                 options.colors[dbl.dblLeftColor],
-                dbl.dblGap,
-                dbl.dblLength,
+                dblGap,
+                dblLength,
                 symbol.lineStyle,
                 options.closePath
               ),
@@ -279,8 +282,8 @@ const objectToSvg = (options, symbols, object) => {
                 object.coordinates,
                 dbl.dblWidth,
                 options.colors[dbl.dblFillColor],
-                dbl.dblGap,
-                dbl.dblLength,
+                dblGap,
+                dblLength,
                 symbol.lineStyle,
                 options.closePath
               ),
@@ -298,8 +301,8 @@ const objectToSvg = (options, symbols, object) => {
                 }),
                 i === 0 ? dbl.dblLeftWidth : dbl.dblRightWidth,
                 options.colors[i === 0 ? dbl.dblLeftColor : dbl.dblRightColor],
-                dbl.dblGap,
-                dbl.dblLength,
+                dblGap,
+                dblLength,
                 symbol.lineStyle,
                 options.closePath
               )

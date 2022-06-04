@@ -47,6 +47,11 @@ program
     'limit the output by a comma separated list of symbol identifiers'
   )
   .option('--export-hidden', 'include hidden objects in the export', false)
+  .option(
+    '--crs <string>',
+    'exported CRS; options are "source" (unmodified from OCAD file), "projection" (map\'s geographic projection, default) or "wgs84" (WGS84 coordinates); only applies to GeoJSON exports',
+    'projection'
+  )
   .action(exportMap)
 
 program.parse(process.argv)
@@ -160,14 +165,36 @@ async function exportMap(path, outputPath, options) {
     exportHidden: options.exportHidden,
     includeSymbols:
       typeof options.symbols === 'string' && parseSymNums(options.symbols),
+    applyCrs: options.crs !== 'source',
   }
 
   let output
   switch (format) {
     case 'json':
-    case 'geojson':
-      output = JSON.stringify(ocadToGeoJson(ocadFile, outputOptions))
+    case 'geojson': {
+      const crs = ocadFile.getCrs()
+      const crsDef =
+        options.crs === 'projection'
+          ? crs.catalog && crs.code
+            ? {
+                crs: {
+                  type: 'name',
+                  properties: {
+                    name: `urn:ogc:def:crs:${crs.catalog}::${crs.code}`,
+                  },
+                },
+              }
+            : {}
+          : {}
+      const geojson = ocadToGeoJson(ocadFile, outputOptions)
+      output = JSON.stringify({
+        ...crsDef,
+        ...(options.crs === 'wgs84'
+          ? toWgs84(geojson, await getProj4Def(crs.code))
+          : geojson),
+      })
       break
+    }
     case 'svg':
       output = toSvg(ocadFile, outputOptions)
       break

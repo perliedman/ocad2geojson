@@ -25,6 +25,8 @@ const {
   VerticalAlignBottom,
 } = require('./ocad-reader/text-symbol')
 
+const svgNamespace = 'http://www.w3.org/2000/svg'
+
 const defaultOptions = {
   generateSymbolElements: true,
   exportHidden: false,
@@ -151,7 +153,7 @@ const patternToSvg = (colors, s) => {
 const createSvgNode = (document, n) => {
   let node
   if (n.text === undefined) {
-    node = document.createElement(n.type)
+    node = document.createElementNS(svgNamespace, n.type)
     const xmlnss = Object.entries(n.attrs || []).filter(([key, _]) =>
       key.startsWith('xmlns')
     )
@@ -194,7 +196,7 @@ module.exports = {
     const root = {
       type: 'svg',
       attrs: {
-        xmlns: 'http://www.w3.org/2000/svg',
+        xmlns: svgNamespace,
         fill: options.fill,
         viewBox:
           bounds.slice(0, 2) +
@@ -212,7 +214,7 @@ module.exports = {
         {
           type: 'g',
           attrs: {
-            xmlns: 'http://www.w3.org/2000/svg',
+            xmlns: svgNamespace,
             transform: `translate(0, ${bounds[1] + bounds[3]})`,
           },
           children: transformFeatures(

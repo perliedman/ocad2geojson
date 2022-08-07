@@ -512,7 +512,7 @@ function linejoin(lineStyle) {
     case 4:
       return 'miter'
     default:
-      console.warn(`Unknown lineStyle ${lineStyle}.`)
+      console.warn(`Unknown line join style ${lineStyle}.`)
       return ''
   }
 }
@@ -529,7 +529,7 @@ function linecap(lineStyle) {
     case 4:
       return 'butt'
     default:
-      console.warn(`Unknown lineStyle ${lineStyle}.`)
+      console.warn(`Unknown line cap style ${lineStyle}.`)
       return ''
   }
 }

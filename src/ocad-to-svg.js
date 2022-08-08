@@ -170,9 +170,9 @@ const createSvgNode = (document, n) => {
       node.setAttribute(attrName, n.attrs[attrName])
     )
   n.children &&
-    n.children.forEach(child =>
-      node.appendChild(createSvgNode(document, child))
-    )
+    n.children
+      .filter(Boolean)
+      .forEach(child => node.appendChild(createSvgNode(document, child)))
 
   return node
 }

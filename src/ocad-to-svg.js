@@ -249,7 +249,9 @@ const objectToSvg = (options, symbols, object) => {
   let node
   switch (options.objType || object.objType) {
     case LineObjectType: {
-      const dblMode = symbol.doubleLine.dblMode
+      // doubleLine is possibly undefined since symbol might
+      // be an AreaSymbol when used for drawing area boundary.
+      const dblMode = symbol.doubleLine && symbol.doubleLine.dblMode
       const isDoubleLine = symbol.doubleLine && dblMode
       node = lineToPath(
         object.coordinates,

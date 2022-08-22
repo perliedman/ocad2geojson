@@ -36,8 +36,6 @@ module.exports = class ObjectIndex {
         dbDatasetHash: reader.readByte(),
         dbKeyHash: reader.readByte(),
       }
-
-      // console.log(i, this.table[i].pos, this.table[i].status)
     }
   }
 

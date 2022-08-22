@@ -94,7 +94,7 @@ class TObject11 extends BaseTObject {
       )
     }
 
-    this.text = readWideString(this, this.nText)
+    this.text = readWideString(this, reader, this.nText)
   }
 }
 

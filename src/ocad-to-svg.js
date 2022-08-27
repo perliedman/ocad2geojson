@@ -400,13 +400,14 @@ const objectToSvg = (options, symbols, object) => {
       const [x, y] = object.coordinates[0]
       const fontSize = symbol.fontSize * 3.52778
       const lineHeight = fontSize * 1.2
+      const textColor = options.colors[symbol.fontColor]
 
       node = {
         type: 'text',
         attrs: {
           x,
           y: -y,
-          fill: options.colors[symbol.fontColor].rgb,
+          fill: textColor.rgb,
           'font-family': symbol.fontName,
           'font-style': symbol.italic ? 'italic' : '',
           'font-weight': symbol.weight > 400 ? 'bold' : '',
@@ -419,6 +420,7 @@ const objectToSvg = (options, symbols, object) => {
           verticalAlign,
           lineHeight
         ),
+        order: textColor.renderOrder,
       }
       break
     }

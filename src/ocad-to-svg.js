@@ -343,7 +343,7 @@ const objectToSvg = (options, symbols, object) => {
       }
 
       if (symbol.fillOn) {
-        if (fillColorIndex) {
+        if (fillColorIndex != null) {
           node.children.push(
             areaToPath(object.coordinates, null, options.colors[fillColorIndex])
           )

@@ -4,6 +4,7 @@ const { readOcad, ocadToGeoJson, ocadToSvg } = require('../')
 
 const { Buffer } = require('buffer')
 const { coordEach } = require('@turf/meta')
+const { readdirSync } = require('fs')
 const DOMImplementation = new (require('xmldom').DOMImplementation)()
 
 test('too small files can not be opened', async t => {
@@ -127,4 +128,16 @@ test('can filter symbols', async t => {
   t.is(1, geoJson.features.length)
   geoJson = ocadToGeoJson(map, { includeSymbols: [709004] })
   t.is(0, geoJson.features.length)
+})
+
+test('can open all local test maps', async t => {
+  const localDir = path.join(__dirname, 'data', 'local')
+  const files = readdirSync(localDir).filter(f => f.endsWith('.ocd'))
+  for (const file of files) {
+    try {
+      t.truthy(await readOcad(path.join(localDir, file)))
+    } catch (e) {
+      t.fail(`Failed to read ${file}: ${e}`)
+    }
+  }
 })

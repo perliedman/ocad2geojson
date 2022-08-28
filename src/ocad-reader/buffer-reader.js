@@ -46,6 +46,23 @@ module.exports = class BufferReader {
     return val
   }
 
+  readWideString(unicode, len) {
+    if (len == null) {
+      len = this.readByte()
+    }
+
+    const textChars = []
+    for (let i = 0; i < len * (unicode ? 2 : 4); i++) {
+      const c = unicode ? this.readByte() : this.readWord()
+      if (!c) continue
+      if (c !== 13) {
+        textChars.push(String.fromCharCode(c))
+      }
+    }
+
+    return textChars.join('').trim()
+  }
+
   getSize() {
     return this.offset - this.stack[this.stack.length - 1]
   }

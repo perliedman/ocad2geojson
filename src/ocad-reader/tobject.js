@@ -63,7 +63,7 @@ class TObject10 extends BaseTObject {
       )
     }
 
-    this.text = readWideString(this, this.nText)
+    this.text = reader.readWideString(this.unicode, this.nText)
   }
 }
 
@@ -94,7 +94,7 @@ class TObject11 extends BaseTObject {
       )
     }
 
-    this.text = readWideString(this, reader, this.nText)
+    this.text = reader.readWideString(this.unicode, this.nText)
   }
 }
 
@@ -129,23 +129,13 @@ class TObject12 extends BaseTObject {
       )
     }
 
-    this.text = readWideString(this, reader, this.nText)
-    this.objectString = readWideString(this, reader, this.nObjectString)
-    this.databaseString = readWideString(this, reader, this.nDatabaseString)
+    this.text = reader.readWideString(this.unicode, this.nText)
+    this.objectString = reader.readWideString(this.unicode, this.nObjectString)
+    this.databaseString = reader.readWideString(
+      this.unicode,
+      this.nDatabaseString
+    )
   }
-}
-
-const readWideString = (object, reader, len) => {
-  const textChars = []
-  for (let i = 0; i < len * (object.unicode ? 2 : 4); i++) {
-    const c = object.unicode ? reader.readByte() : reader.readWord()
-    if (!c) continue
-    if (c !== 13) {
-      textChars.push(String.fromCharCode(c))
-    }
-  }
-
-  return textChars.join('').trim()
 }
 
 module.exports = {

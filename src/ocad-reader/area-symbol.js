@@ -14,7 +14,7 @@ class AreaSymbol10 extends Symbol10 {
     this.hatchAngle2 = reader.readSmallInt()
     this.fillOn = !!reader.readByte()
     this.borderOn = !!reader.readByte()
-    this.structMode = reader.readByte()
+    this.structMode = reader.readSmallInt()
     this.structWidth = reader.readSmallInt()
     this.structHeight = reader.readSmallInt()
     this.structAngle = reader.readSmallInt()

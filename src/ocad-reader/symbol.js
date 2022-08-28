@@ -27,21 +27,19 @@ class BaseSymbol {
       try {
         reader.push(reader.offset)
         const element = new SymbolElement(reader)
-        const size = reader.getSize()
-        reader.pop()
-        reader.skip(size)
         elements.push(element)
 
         i += element.numberCoords
       } catch (e) {
         if (e instanceof InvalidSymbolElementException) {
-          const size = reader.getSize()
-          reader.pop()
-          reader.skip(size)
           this.warnings.push(e)
         } else {
           throw e
         }
+      } finally {
+        const size = reader.getSize()
+        reader.pop()
+        reader.skip(size)
       }
     }
 

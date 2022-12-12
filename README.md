@@ -4,19 +4,21 @@
 ![Example Map Output 2](example-images/2.png)
 ![Example Map Output 3](example-images/3.png)
 
-Library and command line tool for exporting [OCAD](https://www.ocad.com/) map files to open formats:
+JavaScript library and command line tool for exporting [OCAD](https://www.ocad.com/) map files to open formats:
 
 - [GeoJSON](http://geojson.org/)
-- [Mapbox Style Spec](https://www.mapbox.com/mapbox-gl-js/style-spec/)
 - SVG
 - PDF
+- [Mapbox Style Spec](https://www.mapbox.com/mapbox-gl-js/style-spec/)
 - [QGIS](https://qgis.org/en/site/) / QML (very rough and incomplete)
 
-You might also want to look at [ocad2tiles](https://github.com/perliedman/ocad2tiles) which uses ocad2geojson to create overview images and tiles for online maps from OCAD files. Also see this short [tutorial on making OCAD maps for the web](https://www.liedman.net/2022/01/05/orienteering-maps-for-the-web/).
-
-Online demo: [OCAD map viewer and converter in your browser](https://www.liedman.net/ocad2geojson/)
-
 You can use this to get geo/GIS data out of an OCAD file. OCAD version 10, 11 and 12 and 2018 files are mostly supported.
+
+## See it in action
+
+* [O-scout](https://o-scout.vercel.app/) - Online app for viewing OCAD maps, course settings and exporting to PDF or SVG
+* [ocad2tiles](https://github.com/perliedman/ocad2tiles/) - command line tool for generating tiled maps or creating images (PNG, JPEG, SVG) from OCAD maps
+* ...or just install `npm install ocad2geojson` and use the library in your own project!
 
 ## Usage
 

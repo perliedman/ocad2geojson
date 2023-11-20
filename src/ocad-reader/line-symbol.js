@@ -1,6 +1,59 @@
+const BufferReader = require('./buffer-reader')
 const { Symbol10, Symbol11 } = require('./symbol')
 
+/**
+ * @typedef {import('./symbol-element')} SymbolElement
+ */
+
+/**
+ * @typedef {Object} DecreaseDef
+ * @property {number} decMode
+ * @property {number} decLast
+ * @property {number} res
+ * @property {number} decSymbolSize
+ */
+
+/**
+ * @typedef {Object} LineSymbol
+ * @property {number} lineColor
+ * @property {number} lineWidth
+ * @property {number} lineStyle
+ * @property {number} distFromStart
+ * @property {number} distToEnd
+ * @property {number} mainLength
+ * @property {number} endLength
+ * @property {number} mainGap
+ * @property {number} secGap
+ * @property {number} endGap
+ * @property {number} minSym
+ * @property {number} nPrimSym
+ * @property {number} primSymDist
+
+ * @property {BaseDoubleLine} doubleLine
+ * @property {DecreaseDef} decrease
+
+ * @property {number} frColor
+ * @property {number} frWidth
+ * @property {number} frStyle
+ * @property {number} primDSize
+ * @property {number} secDSize
+ * @property {number} cornerDSize
+ * @property {number} startDSize
+ * @property {number} endDSize
+ * @property {number} useSymbolFlags
+ * @property {number} reserved
+
+ * @property {SymbolElement[]} primSymElements
+ * @property {SymbolElement[]} secSymElements
+ * @property {SymbolElement[]} cornerSymElements
+ * @property {SymbolElement[]} startSymElements
+ * @property {SymbolElement[]} endSymElements
+ */
+
 class LineSymbol10 extends Symbol10 {
+  /**
+   * @param {BufferReader} reader
+   */
   constructor(reader) {
     super(reader, 2)
 
@@ -9,6 +62,9 @@ class LineSymbol10 extends Symbol10 {
 }
 
 class LineSymbol11 extends Symbol11 {
+  /**
+   * @param {BufferReader} reader
+   */
   constructor(reader) {
     super(reader, 2)
 
@@ -19,7 +75,22 @@ class LineSymbol11 extends Symbol11 {
   }
 }
 
+/**
+ * @property {number} dblMode
+ * @property {number} dblFlags
+ * @property {number} dblFillColor
+ * @property {number} dblLeftColor
+ * @property {number} dblRightColor
+ * @property {number} dblWidth
+ * @property {number} dblLeftWidth
+ * @property {number} dblRightWidth
+ * @property {number} dblLength
+ * @property {number} dblGap
+ */
 class BaseDoubleLine {
+  /**
+   * @param {BufferReader} reader
+   */
   constructor(reader) {
     this.dblMode = reader.readWord()
     this.dblFlags = reader.readWord()
@@ -35,6 +106,9 @@ class BaseDoubleLine {
 }
 
 class DoubleLine10 extends BaseDoubleLine {
+  /**
+   * @param {BufferReader} reader
+   */
   constructor(reader) {
     super(reader)
     this.dblRes = new Array(3)
@@ -45,6 +119,9 @@ class DoubleLine10 extends BaseDoubleLine {
 }
 
 class DoubleLine11 extends BaseDoubleLine {
+  /**
+   * @param {BufferReader} reader
+   */
   constructor(reader) {
     super(reader)
 
@@ -57,6 +134,9 @@ class DoubleLine11 extends BaseDoubleLine {
 }
 
 class Decrease10 {
+  /**
+   * @param {BufferReader} reader
+   */
   constructor(reader) {
     this.decMode = reader.readWord()
     this.decLast = reader.readWord()
@@ -65,6 +145,9 @@ class Decrease10 {
 }
 
 class Decrease11 {
+  /**
+   * @param {BufferReader} reader
+   */
   constructor(reader) {
     this.decMode = reader.readWord()
     this.decSymbolSize = reader.readSmallInt()

@@ -139,6 +139,7 @@ class TObject12 extends BaseTObject {
 }
 
 module.exports = {
+  TObject: BaseTObject,
   10: TObject10,
   11: TObject11,
   12: TObject12,

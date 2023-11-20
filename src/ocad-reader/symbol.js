@@ -1,6 +1,24 @@
 const SymbolElement = require('./symbol-element')
 const InvalidSymbolElementException = require('./invalid-symbol-element-exception')
 
+/**
+ * @typedef {Object} BaseSymbolDef
+ * @property  {string[]} warnings
+ * @property  {number} size
+ * @property  {number} symNum
+ * @property  {number} number
+ * @property  {number} otp
+ * @property  {number} flags
+ * @property  {boolean} selected
+ * @property  {number} status
+ * @property  {number} preferredDrawingTool
+ * @property  {number} csMode
+ * @property  {number} csObjType
+ * @property  {number} csCdFlags
+ * @property  {number} extent
+ * @property  {number} filePos
+ */
+
 class BaseSymbol {
   constructor(reader, symbolType) {
     this.warnings = []

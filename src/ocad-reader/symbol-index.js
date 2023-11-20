@@ -11,12 +11,12 @@ const {
 } = require('./symbol-types')
 
 module.exports = class SymbolIndex {
-  constructor(reader, version, options) {
+  constructor(reader, version, options={}) {
     this.version = version
     this.nextSymbolIndexBlock = reader.readInteger()
     this.symbolPosition = new Array(256)
     this.warnings = []
-    this.options = options || {}
+    this.options = options
     for (let i = 0; i < this.symbolPosition.length; i++) {
       this.symbolPosition[i] = reader.readInteger()
     }

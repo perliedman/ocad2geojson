@@ -5,14 +5,24 @@ const {
 } = require('./ocad-reader/symbol-types')
 
 const defaultOptions = {
-  assignIds: true,
-  applyCrs: true,
   generateSymbolElements: true,
   exportHidden: false,
-  coordinatePrecision: 6,
 }
 
-module.exports = function (ocadFile, createObject, createElement, options) {
+module.exports = transformFeatures
+
+/**
+ * @typedef {Object} TransformFeaturesOptions
+ * @property {boolean?} generateSymbolElements generate features for symbol elements (default: `true`)
+ * @property {boolean?} exportHidden export hidden objects (default: `false`)
+ * @property {number[]?} includeSymbols only export features from the given symbols;
+ *    symbols are identified by their OCAD internal symbol number (for example `40015`, not `400.15`);
+ *    if undefined, all symbols will be exported
+ * @property {import("./ocad-reader/tobject").TObject} objects only export the given objects;
+ *    if undefined, all objects, filtered by the `exportHidden` option, will be exported
+ */
+
+function transformFeatures(ocadFile, createObject, createElement, options) {
   options = {
     ...defaultOptions,
     ...options,

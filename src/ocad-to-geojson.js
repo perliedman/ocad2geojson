@@ -1,5 +1,6 @@
 const { coordEach } = require('@turf/meta')
-const Bezier = require('bezier-js')
+const { featureCollection } = require('@turf/helpers')
+const { Bezier } = require('bezier-js')
 const flatten = require('arr-flatten')
 const {
   PointObjectType,
@@ -19,14 +20,30 @@ const transformFeatures = require('./transform-features')
 const TdPoly = require('./ocad-reader/td-poly')
 
 const defaultOptions = {
-  assignIds: true,
   applyCrs: true,
   generateSymbolElements: true,
   exportHidden: false,
   coordinatePrecision: 6,
 }
 
-module.exports = function (ocadFile, options) {
+module.exports = ocadToGeoJson
+
+/**
+ * @typedef {import("./transform-features").TransformFeaturesOptions} TransformFeaturesOptions
+ *
+ * @typedef {Object} OcadToGeoJsonOptions
+ * @extends TransformFeaturesOptions
+ * @property {boolean?} applyCrs transform coordinates to the file's geographic coordinates (default: `true`)
+ * @property {number?} coordinatePrecision number of digits after the decimal point (default: `6`)
+ */
+
+/**
+ * Given an `OcadFile` object, returns a GeoJSON `FeatureCollection` of the file's objects.
+ * @param {import("./ocad-reader/ocad-file")} ocadFile the OCAD file
+ * @param {OcadToGeoJsonOptions} options options
+ * @returns {import("@turf/helpers").FeatureCollection}
+ */
+function ocadToGeoJson(ocadFile, options) {
   options = { ...defaultOptions, ...options }
 
   const features = transformFeatures(
@@ -35,28 +52,25 @@ module.exports = function (ocadFile, options) {
     createElement,
     options
   )
-  const featureCollection = {
-    type: 'FeatureCollection',
-    features,
-  }
+  const result = featureCollection(features)
 
   if (options.applyCrs) {
-    applyCrs(featureCollection, ocadFile.getCrs())
+    applyCrs(result, ocadFile.getCrs())
   }
 
-  coordEach(featureCollection, c => {
+  coordEach(result, c => {
     c[0] = formatNum(c[0], options.coordinatePrecision)
     c[1] = formatNum(c[1], options.coordinatePrecision)
   })
 
-  return featureCollection
+  return result
 }
 
 const tObjectToGeoJson = (options, symbols, object, i) => {
   const symbol = symbols[object.sym]
   if (!symbol || (!options.exportHidden && symbol.isHidden())) return
 
-  var geometry
+  let geometry
   switch (object.objType) {
     case PointObjectType:
       geometry = {
@@ -145,7 +159,7 @@ const createElement = (
   object,
   objectId
 ) => {
-  var geometry
+  let geometry
   const coords = extractCoords(element.coords)
   const rotatedCoords = angle ? coords.map(lc => lc.rotate(angle)) : coords
   const translatedCoords = rotatedCoords.map(lc => lc.add(c))
@@ -193,7 +207,7 @@ const applyCrs = (featureCollection, crs) => {
 }
 
 function formatNum(num, digits) {
-  var pow = Math.pow(10, digits === undefined ? 6 : digits)
+  const pow = Math.pow(10, digits === undefined ? 6 : digits)
   return Math.round(num * pow) / pow
 }
 

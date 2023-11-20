@@ -4,7 +4,7 @@ const { readOcad, ocadToGeoJson, ocadToSvg } = require('../')
 
 const { Buffer } = require('buffer')
 const { coordEach } = require('@turf/meta')
-const { readdirSync } = require('fs')
+const { readdirSync, existsSync } = require('fs')
 const DOMImplementation = new (require('xmldom').DOMImplementation)()
 
 test('too small files can not be opened', async t => {
@@ -132,6 +132,11 @@ test('can filter symbols', async t => {
 
 test('can open all local test maps', async t => {
   const localDir = path.join(__dirname, 'data', 'local')
+  if (!existsSync(localDir)) {
+    console.warn('No local test maps found in ', localDir)
+    t.pass()
+    return
+  }
   const files = readdirSync(localDir).filter(f => f.endsWith('.ocd'))
   for (const file of files) {
     try {

@@ -4,7 +4,7 @@
   "description": "Convert OCAD files to GeoJSON",
   "main": "src/index.js",
   "scripts": {
-    "test": "npm run lint && ava",
+    "test": "tsc && npm run lint && ava",
     "lint": "eslint src/",
     "prepublishOnly": "npm test"
   },
@@ -17,12 +17,14 @@
     "gis",
     "orienteering"
   ],
+  "typings": "types",
   "author": "Per Liedman <per@liedman.net>",
   "license": "AGPL-3.0-or-later",
   "repository": "https://github.com/perliedman/ocad2geojson",
   "homepage": "https://github.com/perliedman/ocad2geojson",
   "devDependencies": {
     "@babel/core": "^7.18.2",
+    "@types/node": "^20.10.6",
     "ava": "^4.2.0",
     "eslint": "^8.16.0",
     "eslint-config-prettier": "^8.5.0",
@@ -31,7 +33,8 @@
     "eslint-plugin-n": "^15.2.0",
     "eslint-plugin-node": "^11.1.0",
     "eslint-plugin-promise": "^6.0.0",
-    "eslint-plugin-standard": "^5.0.0"
+    "eslint-plugin-standard": "^5.0.0",
+    "typescript": "^5.5.4"
   },
   "dependencies": {
     "@turf/line-offset": "^6.5.0",

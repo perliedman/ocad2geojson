@@ -4,6 +4,11 @@
     Released under the Apache 2.0 license:
     https://github.com/mozilla/pdf.js/blob/master/LICENSE
 */
+/**
+ *
+ * @param {[number,number,number,number]} src CMYK values (0-100)
+ * @returns {Uint8ClampedArray} RGB values (0-255)
+ */
 module.exports = function convertToRgb(src) {
   const toFraction = 1 / 100
   const rgb = new Uint8ClampedArray(3)

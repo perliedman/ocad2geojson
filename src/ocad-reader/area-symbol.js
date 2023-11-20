@@ -1,9 +1,120 @@
 const { Symbol10, Symbol11 } = require('./symbol')
 
+/**
+ * @typedef {import('./buffer-reader')} BufferReader
+ */
+
+/**
+ * @typedef {import('./symbol-element')} SymbolElement
+ */
+
+/**
+ * @typedef {object} AreaSymbolProps
+ *
+ * @property {3} type
+ * @property {number} borderSym
+ * @property {number} fillColor
+ * @property {number} hatchMode
+ * @property {number} hatchColor
+ * @property {number} hatchLineWidth
+ * @property {number} hatchDist
+ * @property {number} hatchAngle1
+ * @property {number} hatchAngle2
+ * @property {boolean} fillOn
+ * @property {boolean} borderOn
+ * @property {number} structMode
+ * @property {number} structWidth
+ * @property {number} structHeight
+ * @property {number} structAngle
+ * @property {number} structRes
+ * @property {number} dataSize
+ * @property {SymbolElement[]} elements
+ */
+
+/** @typedef {import('./symbol').BaseSymbolProps & AreaSymbolProps} AreaSymbolDef */
+
+/** @implements {AreaSymbolDef} */
 class AreaSymbol10 extends Symbol10 {
-  constructor(reader) {
-    super(reader, 3)
+  /**
+   * @type {3}
+   */
+  type
+  /**
+   * @type {number}
+   */
+  borderSym
+  /**
+   * @type {number}
+   */
+  fillColor
+  /**
+   * @type {number}
+   */
+  hatchMode
+  /**
+   * @type {number}
+   */
+  hatchColor
+  /**
+   * @type {number}
+   */
+  hatchLineWidth
+  /**
+   * @type {number}
+   */
+  hatchDist
+  /**
+   * @type {number}
+   */
+  hatchAngle1
+  /**
+   * @type {number}
+   */
+  hatchAngle2
+  /**
+   * @type {boolean}
+   */
+  fillOn
+  /**
+   * @type {boolean}
+   */
+  borderOn
+  /**
+   * @type {number}
+   */
+  structMode
+  /**
+   * @type {number}
+   */
+  structWidth
+  /**
+   * @type {number}
+   */
+  structHeight
+  /**
+   * @type {number}
+   */
+  structAngle
+  /**
+   * @type {number}
+   */
+  structRes
+  /**
+   * @type {number}
+   */
+  dataSize
+  /**
+   * @type {SymbolElement[]}
+   */
+  elements
 
+  /**
+   * @param {BufferReader} reader
+   */
+  constructor(reader) {
+    super(reader)
+
+    this.type = 3
     this.borderSym = reader.readInteger()
     this.fillColor = reader.readSmallInt()
     this.hatchMode = reader.readSmallInt()
@@ -25,13 +136,23 @@ class AreaSymbol10 extends Symbol10 {
   }
 }
 
+/** @implements {AreaSymbolDef} */
 class AreaSymbol11 extends Symbol11 {
+  /**
+   * @type {3}
+   */
+  type
+
+  /**
+   * @param {BufferReader} reader
+   */
   constructor(reader) {
-    super(reader, 3)
+    super(reader)
 
     // TODO: why?
     reader.skip(64)
 
+    this.type = 3
     this.borderSym = reader.readInteger()
     this.fillColor = reader.readSmallInt()
     this.hatchMode = reader.readSmallInt()
@@ -53,13 +174,23 @@ class AreaSymbol11 extends Symbol11 {
   }
 }
 
+/** @implements {AreaSymbolDef} */
 class AreaSymbol12 extends Symbol11 {
+  /**
+   * @type {3}
+   */
+  type
+
+  /**
+   * @param {BufferReader} reader
+   */
   constructor(reader) {
-    super(reader, 3)
+    super(reader)
 
     // TODO: why?
     reader.skip(64)
 
+    this.type = 3
     this.borderSym = reader.readInteger()
     this.fillColor = reader.readSmallInt()
     this.hatchMode = reader.readSmallInt()

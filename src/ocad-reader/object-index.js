@@ -2,7 +2,46 @@ const InvalidObjectIndexBlockException = require('./invalid-object-index-block-e
 const LRect = require('./lrect')
 const TObject = require('./tobject')
 
-module.exports = class ObjectIndex {
+/**
+ * @typedef {import('./tobject')} TObject
+ */
+
+/**
+ * @typedef {import('./buffer-reader')} BufferReader
+ */
+
+/**
+ * @typedef {Object} ObjectIndex
+ * @property {LRect} rc
+ * @property {number} pos
+ * @property {number} len
+ * @property {number} sym
+ * @property {number} objType
+ * @property {number} encryptedMode
+ * @property {number} status
+ * @property {number} viewType
+ * @property {number} color
+ * @property {number} group
+ * @property {number} impLayer
+ * @property {number} dbDatasetHash
+ * @property {number} dbKeyHash
+ */
+
+/**
+ * @typedef {Object} ObjectIndexBlock
+ */
+module.exports = class ObjectIndexBlock {
+  /** @type {number} */
+  version
+  /** @type {number} */
+  nextObjectIndexBlock
+  /** @type {ObjectIndex[]} */
+  table
+
+  /**
+   * @param {BufferReader} reader
+   * @param {number} version
+   */
   constructor(reader, version) {
     this.version = version
 
@@ -39,14 +78,19 @@ module.exports = class ObjectIndex {
     }
   }
 
-  parseObjects(reader) {
+  /**
+   * Reads the objects contained in this object index.
+   * @param {BufferReader} reader
+   * @returns {TObject[]}
+   */
+  readObjects(reader) {
     return this.table
       .filter(o => o.status > 0 && o.status < 3) // Remove deleted objects, keep normal and hidden objects.
-      .map(o => this.parseObject(reader, o))
+      .map(o => this.readObject(reader, o))
       .filter(o => o)
   }
 
-  parseObject(reader, objIndex) {
+  readObject(reader, objIndex) {
     if (!objIndex.pos) return
 
     reader.push(objIndex.pos)

@@ -10,18 +10,43 @@ const {
   RectangleSymbolType,
 } = require('./symbol-types')
 
-module.exports = class SymbolIndex {
-  constructor(reader, version, options) {
+/** @typedef {import('./buffer-reader')} BufferReader */
+/** @typedef {import('./symbol').BaseSymbolDef} Symbol */
+
+module.exports = class SymbolIndexBlock {
+  /**
+   * @type {number}
+   */
+  nextSymbolIndexBlock
+  /**
+   * @type {number[]}
+   */
+  symbolPosition
+  /**
+   * @type {string[]}
+   */
+  warnings
+
+  /**
+   * @param {BufferReader} reader
+   * @param {number} version
+   * @param {import('./').ReadOcadOptions} options
+   */
+  constructor(reader, version, options = {}) {
     this.version = version
     this.nextSymbolIndexBlock = reader.readInteger()
     this.symbolPosition = new Array(256)
     this.warnings = []
-    this.options = options || {}
+    this.options = options
     for (let i = 0; i < this.symbolPosition.length; i++) {
       this.symbolPosition[i] = reader.readInteger()
     }
   }
 
+  /**
+   * @param {BufferReader} reader
+   * @returns {Symbol[]}
+   */
   parseSymbols(reader) {
     return this.symbolPosition
       .filter(sp => sp > 0)
@@ -29,6 +54,11 @@ module.exports = class SymbolIndex {
       .filter(s => s)
   }
 
+  /**
+   * @param {BufferReader} reader
+   * @param {number} offset
+   * @returns {Symbol}
+   */
   parseSymbol(reader, offset) {
     if (!offset) return
 
@@ -75,6 +105,7 @@ module.exports = class SymbolIndex {
     }
 
     reader.pop()
+
     return symbol
   }
 }

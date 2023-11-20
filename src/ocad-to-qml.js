@@ -14,6 +14,14 @@ const defaultOptions = {
   exportHidden: false,
 }
 
+/**
+ * @typedef {object} NodeDef
+//  * @property {string=} id
+//  * @property {string} type
+//  * @property {Record<string, string|number>=} attrs
+//  * @property {NodeDef[]=} children
+ */
+
 module.exports = function ocadToQml(ocadFile, options) {
   options = { ...defaultOptions, ...options }
 
@@ -93,17 +101,27 @@ module.exports = function ocadToQml(ocadFile, options) {
   return createXmlNode(doc, root)
 }
 
+/**
+ *
+ * @param {Document} document
+ * @param {NodeDef} n
+ * @returns {HTMLElement}
+ */
 const createXmlNode = (document, n) => {
   const node = document.createElement(n.type)
-  n.id && (node.id = n.id)
-  n.attrs &&
-    Object.keys(n.attrs).forEach(attrName =>
-      node.setAttribute(attrName, n.attrs[attrName])
-    )
-  n.children &&
-    n.children.forEach(child =>
+  if (n.id) {
+    node.id = n.id
+  }
+  if (n.attrs) {
+    for (const attrName in n.attrs) {
+      node.setAttribute(attrName, n.attrs[attrName].toString())
+    }
+  }
+  if (n.children) {
+    for (const child of n.children) {
       node.appendChild(createXmlNode(document, child))
-    )
+    }
+  }
 
   return node
 }
@@ -122,11 +140,21 @@ const usedSymbolNumbers = ocadFile =>
     { symbolNums: [], idSet: new Set() }
   ).symbolNums
 
+/**
+ * Transform a symbol to QML
+ * @param {number} scale
+ * @param {*} colors
+ * @param {import("./ocad-reader/symbol").BaseSymbolDef} sym
+ * @returns {{children: NodeDef[]}}
+ */
 const symbolToQml = (scale, colors, sym) => {
+  /** @type {NodeDef[]} */
   let children
 
   switch (sym.type) {
     case LineSymbolType: {
+      if (sym.type !== 2)
+        throw new Error('Symbol mismatch: area object with non-area symbol')
       const lineColor = colors[sym.lineColor]
       if (lineColor) {
         const baseMainGap = sym.mainGap
@@ -170,6 +198,8 @@ const symbolToQml = (scale, colors, sym) => {
       break
     }
     case AreaSymbolType: {
+      if (sym.type !== 3)
+        throw new Error('Symbol mismatch: area object with non-area symbol')
       const fillColor = colors[sym.fillColor]
       const hasPatternFill = sym.hatchMode || sym.structMode
       children = []
@@ -207,11 +237,16 @@ const symbolToQml = (scale, colors, sym) => {
   }
 }
 
+/**
+ *
+ * @param {number} scale
+ * @param {import('./ocad-reader/ocad-file').Color} fillColor
+ * @param {NodeDef} pattern
+ * @returns {NodeDef}
+ */
 const svgPatternToFill = (scale, fillColor, pattern) => {
   const { width, height, patternTransform } = pattern.attrs
-  const angle = patternTransform
-    ? Number(/rotate\((.*)\)/.exec(patternTransform)[1])
-    : 0
+  const angle = getPatternRotation(patternTransform)
   const svgDoc = DOMImplementation.createDocument(
     'http://www.w3.org/2000/svg',
     'svg',
@@ -220,7 +255,12 @@ const svgPatternToFill = (scale, fillColor, pattern) => {
   svgDoc.firstChild.setAttribute('width', width)
   svgDoc.firstChild.setAttribute('height', height)
   pattern.children.forEach(c =>
-    svgDoc.firstChild.appendChild(createSvgNode(svgDoc, c))
+    svgDoc.firstChild.appendChild(
+      createSvgNode(
+        svgDoc,
+        /** @type {import('./ocad-to-svg').SvgNodeDef} */ (c)
+      )
+    )
   )
   const serializedSvg = new XMLSerializer().serializeToString(svgDoc)
   const patternBase64 =
@@ -288,4 +328,14 @@ function getGlobal() {
   } else {
     return {}
   }
+}
+
+function getPatternRotation(patternTransform) {
+  if (patternTransform) {
+    const rotationMatch = /rotate\((.*)\)/.exec(patternTransform)
+    if (rotationMatch) {
+      return Number(rotationMatch[1])
+    }
+  }
+  return 0
 }

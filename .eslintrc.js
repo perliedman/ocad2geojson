@@ -1,13 +1,12 @@
 module.exports = {
   env: {
     node: true,
-    es6: true,
+    es2019: true,
   },
   extends: ['standard', 'prettier'],
   globals: {},
   parserOptions: {
     ecmaFeatures: {},
-    ecmaVersion: 2018,
     sourceType: 'script',
   },
   plugins: [],

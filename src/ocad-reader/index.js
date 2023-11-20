@@ -1,18 +1,31 @@
 const fs = require('fs')
 const { Buffer } = require('buffer')
-const getRgb = require('../cmyk-to-rgb')
 
 const FileHeader = require('./file-header')
 const SymbolIndex = require('./symbol-index')
 const ObjectIndex = require('./object-index')
 const StringIndex = require('./string-index')
-const Crs = require('./crs')
 const BufferReader = require('./buffer-reader')
 const InvalidObjectIndexBlockException = require('./invalid-object-index-block-exception')
+const OcadFile = require('./ocad-file')
 
-module.exports = async (path, options) => {
-  options = options || {}
+module.exports = readOcad
 
+/**
+ * @typedef {Object} ReadOcadOptions
+ * @property {boolean=} bypassVersionCheck bypass the version check and read the file anyway
+ * @property {boolean=} quietWarnings do not print warnings to console
+ * @property {boolean=} failOnWarning throw an error if a warning is encountered
+ */
+
+/**
+ * Reads an OCAD file from the given path or `Buffer` object into an `OcadFile` object.
+ *
+ * @param {string|Buffer} path the path of the OCAD file or a binary buffer of the OCAD file contents
+ * @param {ReadOcadOptions?} options
+ * @returns {Promise<OcadFile>} a promise that resolves to an `OcadFile` object
+ */
+async function readOcad(path, options = {}) {
   if (Buffer.isBuffer(path)) {
     return parseOcadBuffer(path, options)
   } else {
@@ -44,6 +57,9 @@ function parseOcadBuffer(buffer, options) {
     )
   }
 
+  /**
+   * @type {import('./symbol-index').Symbol[]}
+   */
   const symbols = []
   let symbolIndexOffset = header.symbolIndexBlock
   while (symbolIndexOffset) {
@@ -63,7 +79,7 @@ function parseOcadBuffer(buffer, options) {
     try {
       const objectIndex = new ObjectIndex(reader, header.version)
       reader.pop()
-      Array.prototype.push.apply(objects, objectIndex.parseObjects(reader))
+      Array.prototype.push.apply(objects, objectIndex.readObjects(reader))
 
       objectIndexOffset = objectIndex.nextObjectIndexBlock
     } catch (e) {
@@ -73,6 +89,9 @@ function parseOcadBuffer(buffer, options) {
     }
   }
 
+  /**
+   * @type {Object.<number, import('./parameter-string').ParameterStringValues[]>}
+   */
   const parameterStrings = {}
   let stringIndexOffset = header.stringIndexBlock
   while (stringIndexOffset) {
@@ -81,12 +100,13 @@ function parseOcadBuffer(buffer, options) {
     reader.pop()
     const strings = stringIndex.getStrings(reader)
 
-    Object.keys(strings).reduce((a, recType) => {
+    for (const recType of Object.keys(strings)) {
       const typeStrings = strings[recType]
-      const concatStrings = a[recType] || []
-      a[recType] = concatStrings.concat(typeStrings.map(s => s.values))
-      return a
-    }, parameterStrings)
+      const concatStrings = parameterStrings[recType] || []
+      parameterStrings[recType] = concatStrings.concat(
+        typeStrings.map(s => s.values)
+      )
+    }
 
     stringIndexOffset = stringIndex.nextStringIndexBlock
   }
@@ -96,66 +116,4 @@ function parseOcadBuffer(buffer, options) {
   }
 
   return new OcadFile(header, parameterStrings, objects, symbols, warnings)
-}
-
-class OcadFile {
-  constructor(header, parameterStrings, objects, symbols, warnings) {
-    this.header = header
-    this.parameterStrings = parameterStrings
-    this.objects = objects
-    this.symbols = symbols
-    this.warnings = warnings
-
-    this.colors = parameterStrings[9]
-      ? parameterStrings[9]
-          .map((colorDef, i) => {
-            const cmyk = [
-              colorDef.c || 0,
-              colorDef.m || 0,
-              colorDef.y || 0,
-              colorDef.k || 0,
-            ].map(Number)
-            const rgb = getRgb(cmyk)
-            return {
-              number: colorDef.n,
-              cmyk: cmyk,
-              name: colorDef._first,
-              rgb: `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`,
-              renderOrder: i,
-              rgbArray: rgb,
-            }
-          })
-          .reduce((a, c) => {
-            a[c.number] = c
-            return a
-          }, [])
-      : {}
-  }
-
-  getCrs() {
-    const scalePar = this.parameterStrings['1039']
-      ? this.parameterStrings['1039'][0]
-      : { x: 0, y: 0, m: 1 }
-    return new Crs(scalePar)
-  }
-
-  getBounds(projection = v => v) {
-    const bounds = [
-      Number.MAX_VALUE,
-      Number.MAX_VALUE,
-      -Number.MAX_VALUE,
-      -Number.MAX_VALUE,
-    ]
-  
-    for (const [[x1, y1], [x2, y2]] of this.objects
-      .map(o => Object.values(o.objIndex.rc).map(projection))) {
-      bounds[0] = Math.min(x1, x2, bounds[0])
-      bounds[1] = Math.min(y1, y2, bounds[1])
-      bounds[2] = Math.max(x1, x2, bounds[2])
-      bounds[3] = Math.max(y1, y2, bounds[3])
-    }
-  
-    return bounds
-  }
-  
 }

@@ -1,4 +1,29 @@
+/**
+ * Represents a TDPoly, which is a coordinate pair with optional flags.
+ * The class is an array of X and Y coordinates, with the flags stored in
+ * the `xFlags` and `yFlags` properties.
+ *
+ * OCAD coordinates use 1/100 mm units, unmanipulated coordinates from an OCAD
+ * file are 24 bit signed integers.
+ *
+ * @extends {Array<number>}
+ */
 class TdPoly extends Array {
+  /**
+   * @type {number}
+   */
+  xFlags
+  /**
+   * @type {number}
+   */
+  yFlags
+
+  /**
+   * @param {number} ocadX
+   * @param {number} ocadY
+   * @param {number} [xFlags]
+   * @param {number} [yFlags]
+   */
   constructor(ocadX, ocadY, xFlags, yFlags) {
     super(
       xFlags === undefined ? ocadX >> 8 : ocadX,
@@ -9,11 +34,11 @@ class TdPoly extends Array {
   }
 
   isFirstBezier() {
-    return this.xFlags & 0x01
+    return !!(this.xFlags & 0x01)
   }
 
   isSecondBezier() {
-    return this.xFlags & 0x02
+    return !!(this.xFlags & 0x02)
   }
 
   hasNoLeftLine() {
@@ -21,15 +46,15 @@ class TdPoly extends Array {
   }
 
   isBorderOrVirtualLine() {
-    return this.xFlags & 0x08
+    return !!(this.xFlags & 0x08)
   }
 
   isCornerPoint() {
-    return this.yFlags & 0x01
+    return !!(this.yFlags & 0x01)
   }
 
   isFirstHolePoint() {
-    return this.yFlags & 0x02
+    return !!(this.yFlags & 0x02)
   }
 
   hasNoRightLine() {
@@ -37,7 +62,7 @@ class TdPoly extends Array {
   }
 
   isDashPoint() {
-    return this.yFlags & 0x08
+    return !!(this.yFlags & 0x08)
   }
 
   vLength() {
@@ -81,6 +106,12 @@ class TdPoly extends Array {
   }
 }
 
+/**
+ * Instantiate a TdPoly from a pair of coordinates.
+ * @param {number} x
+ * @param {number} y
+ * @returns {TdPoly}
+ */
 TdPoly.fromCoords = (x, y) => new TdPoly(x << 8, y << 8)
 
 module.exports = TdPoly

@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 const fs = require('fs')
 const http = require('http')
 const mkdirp = require('mkdirp')

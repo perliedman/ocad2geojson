@@ -23,23 +23,23 @@ export function ocadToMapboxGlStyle(
 export function ocadToQml(ocadFile: OcadFile, options?: OcadToQmlOptions): any
 
 export interface ReadOcadOptions {
-  bypassVersionCheck: boolean
-  quietWarnings: boolean
-  failOnWarning: boolean
+  bypassVersionCheck?: boolean
+  quietWarnings?: boolean
+  failOnWarning?: boolean
 }
 
 export interface OcadToGeoJsonOptions {
-  assignIds: boolean
-  applyCrs: boolean
-  generateSymbolElements: boolean
-  exportHidden: boolean
-  coordinatePrecision: number
+  assignIds?: boolean
+  applyCrs?: boolean
+  generateSymbolElements?: boolean
+  exportHidden?: boolean
+  coordinatePrecision?: number
 }
 
 export interface OcadToSvgOptions {
-  generateSymbolElements: boolean
-  exportHidden: boolean
-  fill: 'transparent'
+  generateSymbolElements?: boolean
+  exportHidden?: boolean
+  fill?: 'transparent'
 }
 
 export interface OcadFile {
@@ -52,10 +52,10 @@ export interface OcadFile {
 }
 
 export interface OcadToMapboxGlStyleOptions {
-  scaleFactor: number
+  scaleFactor?: number
 }
 
 export interface OcadToQmlOptions {
-  generateSymbolElements: boolean
-  exportHidden: boolean
+  generateSymbolElements?: boolean
+  exportHidden?: boolean
 }

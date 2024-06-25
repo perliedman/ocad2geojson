@@ -95,7 +95,7 @@ readOcad(filePath).then(ocadFile => {
 })
 ```
 
-I will try to write some docs, in the meantime, check out the [demo directory](demo) for some examples of how to use this module.
+I will try to write some docs, in the meantime, check out the [examples directory](examples) for some examples of how to use this module.
 
 ## Missing features
 

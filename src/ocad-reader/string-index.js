@@ -1,6 +1,28 @@
 const ParameterString = require('./parameter-string')
 
-module.exports = class StringIndex {
+/** @typedef {import("./buffer-reader")} BufferReader */
+
+/**
+ * @typedef {Object} TStringIndex
+ * @property {number} pos
+ * @property {number} len
+ * @property {number} recType
+ * @property {number} objIndex
+ */
+
+module.exports = class StringIndexBlock {
+  /**
+   * @type {number}
+   */
+  nextStringIndexBlock
+  /**
+   * @type {TStringIndex[]}
+   */
+  table
+
+  /**
+   * @type {Object.<number, { pos: number, len: number, recType: number, objIndex: number }>}
+   */
   constructor(reader) {
     this.nextStringIndexBlock = reader.readInteger()
     this.table = new Array(256)
@@ -14,6 +36,10 @@ module.exports = class StringIndex {
     }
   }
 
+  /**
+   * @param {BufferReader} reader
+   * @returns {Object.<number, ParameterString[]>}
+   */
   getStrings(reader) {
     const strings = this.table
       .filter(si => si.recType > 0)

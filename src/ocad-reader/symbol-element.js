@@ -1,7 +1,50 @@
 const TdPoly = require('./td-poly')
 const InvalidSymbolElementException = require('./invalid-symbol-element-exception')
 
+/**
+ * @class SymbolElement
+ * @property {number} type
+ * @property {number} flags
+ * @property {number} color
+ * @property {number} lineWidth
+ * @property {number} diameter
+ * @property {number} numberCoords
+ * @property {TdPoly[]} coords
+ */
+
 module.exports = class SymbolElement {
+  /**
+   * @type {number}
+   */
+  type
+  /**
+   * @type {number}
+   */
+  flags
+  /**
+   * @type {number}
+   */
+  color
+  /**
+   * @type {number}
+   */
+  lineWidth
+  /**
+   * @type {number}
+   */
+  diameter
+  /**
+   * @type {number}
+   */
+  numberCoords
+  /**
+   * @type {TdPoly[]}
+   */
+  coords
+
+  /**
+   * @param {import('./buffer-reader')} reader
+   */
   constructor(reader) {
     this.type = reader.readSmallInt()
     this.flags = reader.readWord()

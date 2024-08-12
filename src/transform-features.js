@@ -5,14 +5,50 @@ const {
 } = require('./ocad-reader/symbol-types')
 
 const defaultOptions = {
-  assignIds: true,
-  applyCrs: true,
   generateSymbolElements: true,
   exportHidden: false,
-  coordinatePrecision: 6,
 }
 
-module.exports = function (ocadFile, createObject, createElement, options) {
+module.exports = transformFeatures
+
+/** @typedef {import('./ocad-reader/symbol').BaseSymbolDef} Symbol */
+/** @typedef {import('./ocad-reader/symbol-element')} SymbolElement */
+/** @typedef {import('./ocad-reader/tobject').TObject} TObject */
+/** @typedef {import("./ocad-reader/ocad-file")} OcadFile */
+
+/**
+ * @typedef {Object} TransformFeaturesOptions
+ * @property {boolean=} generateSymbolElements generate features for symbol elements (default: `true`)
+ * @property {boolean=} exportHidden export hidden objects (default: `false`)
+ * @property {number[]=} includeSymbols only export features from the given symbols;
+ *    symbols are identified by their OCAD internal symbol number (for example `40015`, not `400.15`);
+ *    if undefined, all symbols will be exported
+ * @property {TObject[]=} objects only export the given objects;
+ *    if undefined, all objects, filtered by the `exportHidden` option, will be exported
+ * @property {import('./ocad-reader/ocad-file').Color[]=} [colors] the colors of the OCAD file
+ * @property {number=} [idCount] the current id count
+ */
+
+/**
+ * @template {Object} T
+ * @typedef {function(TransformFeaturesOptions, Record<number, Symbol>, TObject, number): T|null|undefined} CreateObject
+ */
+
+/**
+ * @template {Object} U
+ * @typedef {(symbol: Symbol, name: string, index: number, element: SymbolElement, c: import('./ocad-reader/td-poly'), angle: number, options: TransformFeaturesOptions, object: TObject, objectId: number) => U|null|undefined} CreateElement
+ */
+
+/**
+ * @template {Object} T result type
+ * @template {Object} U element result type
+ * @param {OcadFile} ocadFile
+ * @param {CreateObject<T>} createObject
+ * @param {CreateElement<U>} createElement
+ * @param {TransformFeaturesOptions} options
+ * @returns {T[]}
+ */
+function transformFeatures(ocadFile, createObject, createElement, options) {
   options = {
     ...defaultOptions,
     ...options,

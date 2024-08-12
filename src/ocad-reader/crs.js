@@ -6,6 +6,43 @@ const TdPoly = require('./td-poly')
 const hundredsMmToMeter = 1 / (100 * 1000)
 
 module.exports = class Crs {
+  /**
+   * @type {number}
+   */
+  easting
+  /**
+   * @type {number}
+   **/
+  northing
+  /**
+   * @type {number}
+   **/
+  scale
+  /**
+   * @type {number}
+   **/
+  gridId
+  /**
+   * @type {number}
+   * @description Grivation in radians
+   **/
+  grivation
+  /**
+   * @type {number}
+   */
+  code
+  /**
+   * @type {string}
+   */
+  catalog
+  /**
+   * @type {string}
+   **/
+  name
+
+  /**
+   * @param {import('./parameter-string').ParameterStringValues} scalePar
+   */
   constructor(scalePar) {
     const {
       x: easting,
@@ -28,8 +65,13 @@ module.exports = class Crs {
     this.name = name
   }
 
-  // Converts a map coordinate (OCAD paper coordinates) to
-  // the a coordinate in this CRS
+  /**
+   * Converts an OCAD map coordinate (paper coordinates) to
+   * a coordinate in this CRS.
+   * @param {TdPoly|number[]} coord
+   * @returns {TdPoly|number[]} the projected coordinate;
+   * if the input is a TdPoly, the output is a TdPoly instance, otherwise just a coordinate array
+   */
   toProjectedCoord(coord) {
     coord = rotate(coord, -this.grivation)
 
@@ -42,8 +84,12 @@ module.exports = class Crs {
       : projected
   }
 
-  // Converts a CRS coordinate to
-  // map coordinate (OCAD paper coordinates)
+  /**
+   * Converts a coordinate in this CRS to an OCAD map coordinate (paper coordinates).
+   * @param {TdPoly|number[]} coord
+   * @returns {TdPoly|number[]} the map coordinate;
+   * if the input is a TdPoly, the output is a TdPoly instance, otherwise just a coordinate array
+   */
   toMapCoord(coord) {
     const map = [
       (coord[0] - this.easting) / hundredsMmToMeter / this.scale,
@@ -56,6 +102,14 @@ module.exports = class Crs {
   }
 }
 
+/**
+ * Rotates a coordinate around the origin.
+ *
+ * @param {number[]|TdPoly} c the coordinate to rotate
+ * @param {number} theta rotation angle in radians
+ * @returns {number[]|TdPoly} the rotated coordinate;
+ * if the input is a TdPoly, the output is a TdPoly instance, otherwise just a coordinate array
+ */
 function rotate(c, theta) {
   if (c instanceof TdPoly) {
     return c.rotate(theta)

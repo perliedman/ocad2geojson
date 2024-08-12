@@ -16,7 +16,11 @@ const transformFeatures = require('./transform-features')
 const flatten = require('arr-flatten')
 // TODO: there must be a better way to make Webpack handle this?
 const _lineOffset = require('@turf/line-offset')
-const lineOffset = _lineOffset.default || _lineOffset
+const lineOffset =
+  _lineOffset.default ||
+  /** @type {import('@turf/line-offset').default} */ (
+    /** @type {unknown} */ (_lineOffset)
+  )
 const TdPoly = require('./ocad-reader/td-poly')
 const {
   HorizontalAlignCenter,
@@ -150,6 +154,22 @@ const patternToSvg = (colors, s) => {
   return patterns
 }
 
+/**
+ * @typedef {object} SvgNodeDef
+ * @property {string} type
+ * @property {string=} text
+ * @property {string=} id
+ * @property {number=} order
+ * @property {Record<string, string>=} attrs
+ * @property {SvgNodeDef[]=} children
+ */
+
+/**
+ *
+ * @param {Document} document
+ * @param {SvgNodeDef} n
+ * @returns
+ */
 const createSvgNode = (document, n) => {
   let node
   if (n.text === undefined) {
@@ -160,15 +180,15 @@ const createSvgNode = (document, n) => {
     for (const [ns, uri] of xmlnss) {
       node.setAttributeNS('http://www.w3.org/2000/xmlns/', ns, uri)
     }
+    n.id && (node.id = n.id)
+    n.attrs &&
+      Object.keys(n.attrs).forEach(attrName =>
+        node.setAttribute(attrName, n.attrs[attrName])
+      )
   } else {
     node = document.createTextNode(n.text)
   }
-  n.id && (node.id = n.id)
 
-  n.attrs &&
-    Object.keys(n.attrs).forEach(attrName =>
-      node.setAttribute(attrName, n.attrs[attrName])
-    )
   n.children &&
     n.children
       .filter(Boolean)
@@ -178,6 +198,12 @@ const createSvgNode = (document, n) => {
 }
 
 module.exports = {
+  /**
+   *
+   * @param {import('./ocad-reader/ocad-file')} ocadFile
+   * @param {*} options
+   * @returns
+   */
   ocadToSvg: function (ocadFile, options) {
     options = { ...defaultOptions, ...options }
     const objects = options.objects || ocadFile.objects
@@ -188,7 +214,12 @@ module.exports = {
 
     const patterns = flatten(
       usedSymbols
-        .filter(s => s.type === AreaSymbolType && (s.hatchMode || s.structMode))
+        .filter(
+          s =>
+            s.type === AreaSymbolType &&
+            'hatchMode' in s &&
+            (s.hatchMode || s.structMode)
+        )
         .map(patternToSvg.bind(null, ocadFile.colors))
     )
 
@@ -241,14 +272,28 @@ const usedSymbolNumbers = objects =>
     }, new Set())
   )
 
+/**
+ *
+ * @param {*} options
+ * @param {Record<number, import('./ocad-reader/symbol').BaseSymbolDef>} symbols
+ * @param {import('./ocad-reader/tobject').TObject} object
+ * @returns
+ */
 const objectToSvg = (options, symbols, object) => {
   const symNum = options.sym || object.sym
   const symbol = symbols[symNum]
   if (!symbol || (!options.exportHidden && symbol.isHidden())) return
 
+  /** @type {SvgNodeDef} */
   let node
   switch (options.objType || object.objType) {
     case LineObjectType: {
+      if (symbol.type !== 2)
+        throw new Error(
+          `Symbol mismatch: line object with non-line symbol (${JSON.stringify(
+            symbol
+          )})`
+        )
       // doubleLine is possibly undefined since symbol might
       // be an AreaSymbol when used for drawing area boundary.
       const dblMode = symbol.doubleLine && symbol.doubleLine.dblMode
@@ -300,9 +345,7 @@ const objectToSvg = (options, symbols, object) => {
               dbl.dblWidth + dbl.dblRightWidth / 2,
             ].map((offset, i) =>
               lineToPath(
-                offsetLineCoordinates(object.coordinates, offset, {
-                  units: 'degrees',
-                }),
+                offsetLineCoordinates(object.coordinates, offset),
                 i === 0 ? dbl.dblLeftWidth : dbl.dblRightWidth,
                 options.colors[i === 0 ? dbl.dblLeftColor : dbl.dblRightColor],
                 dblGap,
@@ -328,12 +371,14 @@ const objectToSvg = (options, symbols, object) => {
       break
     }
     case AreaObjectType: {
+      if (symbol.type !== 3)
+        throw new Error('Symbol mismatch: area object with non-area symbol')
       const fillColorIndex =
         symbol.fillOn !== undefined
           ? symbol.fillOn
             ? symbol.fillColor
             : symbol.colors[0]
-          : symbol.color
+          : symbol.colors[0]
       const fillPattern =
         (symbol.hatchMode && `url(#hatch-fill-${symbol.symNum}-1)`) ||
         (symbol.structMode && `url(#struct-fill-${symbol.symNum})`)
@@ -395,6 +440,9 @@ const objectToSvg = (options, symbols, object) => {
     case UnformattedTextObjectType:
     case FormattedTextObjectType:
     case LineTextObjectType: {
+      if (symbol.type !== 4)
+        throw new Error('Symbol mismatch: text object with non-text symbol')
+
       const horizontalAlign = symbol.getHorizontalAlignment()
       const verticalAlign = symbol.getVerticalAlignment()
       const [x, y] = object.coordinates[0]
@@ -405,13 +453,13 @@ const objectToSvg = (options, symbols, object) => {
       node = {
         type: 'text',
         attrs: {
-          x,
-          y: -y,
+          x: x.toString(),
+          y: (-y).toString(),
           fill: textColor.rgb,
           'font-family': symbol.fontName,
           'font-style': symbol.italic ? 'italic' : '',
           'font-weight': symbol.weight > 400 ? 'bold' : '',
-          'font-size': fontSize, // pt to millimeters * 10
+          'font-size': fontSize.toString(), // pt to millimeters * 10
         },
         children: ocadTextToSvg(
           object.coordinates[0],
@@ -428,10 +476,11 @@ const objectToSvg = (options, symbols, object) => {
       return
   }
 
-  if (node) {
-    node.geometry = { coordinates: object.coordinates }
-    node.properties = { sym: object.sym }
-  }
+  // TODO: remove(?) I think this is some old debug code
+  // if (node) {
+  //   node.geometry = { coordinates: object.coordinates }
+  //   node.properties = { sym: object.sym }
+  // }
 
   return node
 }
@@ -548,9 +597,15 @@ const areaToPath = (coordinates, fillPattern, color) => ({
   order: color.renderOrder,
 })
 
+/**
+ *
+ * @param {import('./ocad-reader/td-poly')[]} coords
+ * @param {boolean=} closePath
+ * @returns {string}
+ */
 const coordsToPath = (coords, closePath) => {
-  if (coords === []) {
-    return []
+  if (coords.length === 0) {
+    return ''
   }
   const cs = []
   let cp1

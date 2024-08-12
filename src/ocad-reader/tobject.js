@@ -1,45 +1,82 @@
 const TdPoly = require('./td-poly')
 
+/** @typedef {import('./buffer-reader')} BufferReader */
+/** @typedef {import('./object-index').ObjectIndex} ObjectIndex */
+
 class BaseTObject {
+  /** @type {ObjectIndex} */
+  objIndex
+  /** @type {number} */
+  objType
+  /** @type {number} */
+  sym
+  /** @type {number} */
+  otp
+  /** @type {boolean} */
+  unicode
+  /** @type {number} */
+  ang
+  /** @type {number} */
+  col
+  /** @type {number} */
+  lineWidth
+  /** @type {number} */
+  diamFlags
+  /** @type {number} */
+  serverObjectId
+  /** @type {number} */
+  height
+  /** @type {number} */
+  creationDate
+  /** @type {number} */
+  multirepresentationId
+  /** @type {number} */
+  modificationDate
+  /** @type {number} */
+  nItem
+  /** @type {number} */
+  nText
+  /** @type {number} */
+  nObjectString
+  /** @type {number} */
+  nDatabaseString
+  /** @type {number} */
+  objectStringType
+  /** @type {number} */
+  res1
+  /** @type {string} */
+  text
+  /** @type {string|undefined} */
+  objectString
+  /** @type {string|undefined} */
+  databaseString
+  /** @type {TdPoly[]} */
+  coordinates
+
+  /**
+   * @param {BufferReader} reader
+   * @param {ObjectIndex} objIndex
+   */
   constructor(reader, objIndex) {
     this.objIndex = objIndex
     this.objType = objIndex.objType
   }
-
-  getProperties() {
-    return {
-      sym: this.sym,
-      otp: this.otp,
-      unicode: this.unicode,
-      ang: this.ang,
-      col: this.col,
-      lineWidth: this.lineWidth,
-      diamFlags: this.diamFlags,
-      serverObjectId: this.serverObjectId,
-      height: this.height,
-      creationDate: this.creationDate,
-      multirepresentationId: this.multirepresentationId,
-      modificationDate: this.modificationDate,
-      nItem: this.nItem,
-      nText: this.nText,
-      nObjectString: this.nObjectString,
-      nDatabaseString: this.nDatabaseString,
-      objectStringType: this.objectStringType,
-      res1: this.res1,
-      text: this.text,
-      objectString: this.objectString,
-      databaseString: this.databaseString,
-    }
-  }
 }
 
+/**
+ * OCAD version 10 TObject structure.
+ */
 class TObject10 extends BaseTObject {
+  /**
+   * @param {BufferReader} reader
+   * @param {ObjectIndex} objIndex
+   */
   constructor(reader, objIndex) {
     super(reader, objIndex)
 
     this.sym = reader.readInteger()
     this.otp = reader.readByte()
-    this.unicode = reader.readByte()
+    this.unicode = !!reader.readByte()
     this.ang = reader.readSmallInt()
     this.nItem = reader.readCardinal()
     this.nText = reader.readWord()
@@ -67,13 +104,20 @@ class TObject10 extends BaseTObject {
   }
 }
 
+/**
+ * OCAD version 11 TObject structure.
+ */
 class TObject11 extends BaseTObject {
+  /**
+   * @param {BufferReader} reader
+   * @param {ObjectIndex} objIndex
+   */
   constructor(reader, objIndex) {
     super(reader, objIndex)
 
     this.sym = reader.readInteger()
     this.otp = reader.readByte()
-    this.unicode = reader.readByte()
+    this.unicode = !!reader.readByte()
     this.ang = reader.readSmallInt()
     this.nItem = reader.readCardinal()
     this.nText = reader.readWord()
@@ -98,13 +142,20 @@ class TObject11 extends BaseTObject {
   }
 }
 
+/**
+ * OCAD version 12 and 2018 TObject structure.
+ */
 class TObject12 extends BaseTObject {
+  /**
+   * @param {BufferReader} reader
+   * @param {ObjectIndex} objIndex
+   */
   constructor(reader, objIndex) {
     super(reader, objIndex)
 
     this.sym = reader.readInteger()
     this.otp = reader.readByte()
-    this.unicode = reader.readByte()
+    this.unicode = !!reader.readByte()
     this.ang = reader.readSmallInt()
     this.col = reader.readInteger()
     this.lineWidth = reader.readSmallInt()
@@ -139,6 +190,7 @@ class TObject12 extends BaseTObject {
 }
 
 module.exports = {
+  TObject: BaseTObject,
   10: TObject10,
   11: TObject11,
   12: TObject12,

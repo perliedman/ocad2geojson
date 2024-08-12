@@ -1,10 +1,141 @@
 const SymbolElement = require('./symbol-element')
 const InvalidSymbolElementException = require('./invalid-symbol-element-exception')
 
+/**
+ * @typedef {import('./buffer-reader')} BufferReader
+ */
+
+/**
+ * @typedef {import('./symbol-types').SymbolType} SymbolType
+ */
+
+/**
+ * @typedef {Object} BaseSymbolProps
+ * @property  {Error[]} warnings
+ * @property  {number} size
+ * @property  {number} symNum
+ * @property  {string} number
+ * @property  {number} otp
+ * @property  {number} flags
+ * @property  {boolean} selected
+ * @property  {number} status
+ * @property  {number} preferredDrawingTool
+ * @property  {number} csMode
+ * @property  {number} csObjType
+ * @property  {number} csCdFlags
+ * @property  {number} extent
+ * @property  {number} filePos
+ * @property  {number} group
+ * @property  {number} nColors
+ * @property  {number[]} colors
+ * @property  {string} description
+ * @property  {number[]} iconBits
+ * @property {() => boolean} isHidden
+ */
+
+/**
+ * @typedef {import('./area-symbol').AreaSymbolDef} AreaSymbol
+ */
+
+/**
+ * @typedef {import('./line-symbol').LineSymbol} LineSymbol
+ */
+
+/**
+ * @typedef {import('./point-symbol').PointSymbolDef} PointSymbol
+ */
+
+/**
+ * @typedef {import('./text-symbol').TextSymbolDef} TextSymbol
+ */
+
+/**
+ * @typedef {AreaSymbol|LineSymbol|PointSymbol|TextSymbol} BaseSymbolDef
+ */
+
 class BaseSymbol {
-  constructor(reader, symbolType) {
+  /**
+   * @type {Error[]}
+   */
+  warnings
+  /**
+   * @type {number}
+   */
+  size
+  /**
+   * @type {number}
+   */
+  symNum
+  /**
+   * @type {string}
+   */
+  number
+  /**
+   * @type {number}
+   */
+  otp
+  /**
+   * @type {number}
+   */
+  flags
+  /**
+   * @type {boolean}
+   */
+  selected
+  /**
+   * @type {number}
+   */
+  status
+  /**
+   * @type {number}
+   */
+  preferredDrawingTool
+  /**
+   * @type {number}
+   */
+  csMode
+  /**
+   * @type {number}
+   */
+  csObjType
+  /**
+   * @type {number}
+   */
+  csCdFlags
+  /**
+   * @type {number}
+   */
+  extent
+  /**
+   * @type {number}
+   */
+  filePos
+  /**
+   * @type {number}
+   */
+  group
+  /**
+   * @type {number}
+   */
+  nColors
+  /**
+   * @type {number[]}
+   */
+  colors
+  /**
+   * @type {string}
+   */
+  description
+  /**
+   * @type {number[]}
+   */
+  iconBits
+
+  /**
+   * @param {BufferReader} reader
+   */
+  constructor(reader) {
     this.warnings = []
-    this.type = symbolType
     this.size = reader.readInteger()
     this.symNum = reader.readInteger()
     this.number = `${Math.floor(this.symNum / 1000)}.${this.symNum % 1000}`
@@ -20,6 +151,11 @@ class BaseSymbol {
     this.filePos = reader.readCardinal()
   }
 
+  /**
+   * @param {BufferReader} reader
+   * @param {number} dataSize
+   * @returns {SymbolElement[]}
+   */
   readElements(reader, dataSize) {
     const elements = []
 
@@ -52,8 +188,11 @@ class BaseSymbol {
 }
 
 class Symbol10 extends BaseSymbol {
-  constructor(reader, symbolType) {
-    super(reader, symbolType)
+  /**
+   * @param {BufferReader} reader
+   */
+  constructor(reader) {
+    super(reader)
 
     this.group = reader.readSmallInt()
     this.nColors = reader.readSmallInt()
@@ -77,8 +216,11 @@ class Symbol10 extends BaseSymbol {
 }
 
 class Symbol11 extends BaseSymbol {
-  constructor(reader, symbolType) {
-    super(reader, symbolType)
+  /**
+   * @param {BufferReader} reader
+   */
+  constructor(reader) {
+    super(reader)
 
     reader.readByte() // notUsed1
     reader.readByte() // notUsed2
@@ -89,6 +231,7 @@ class Symbol11 extends BaseSymbol {
     }
     this.description = ''
     // UTF-16 string, 64 bytes
+    // TODO: replace with BufferReader.readWideString()
     for (let i = 0; i < 64 / 2; i++) {
       const c = reader.readWord()
       if (c) {

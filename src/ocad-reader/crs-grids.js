@@ -3,6 +3,11 @@
 //
 // OCAD-Grid-ID;CRS-Code;CRS-Catalog;Name;Comment
 
+/** @typedef {[number, number, string, string]} GridDef */
+
+/**
+ * @type {GridDef[]}
+ */
 module.exports = [
   [-2060, 32760, 'EPSG', 'WGS 84 / UTM zone 60S'],
   [-2059, 32759, 'EPSG', 'WGS 84 / UTM zone 59S'],

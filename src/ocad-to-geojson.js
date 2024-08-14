@@ -1,6 +1,6 @@
 const { coordEach } = require('@turf/meta')
 const { featureCollection } = require('@turf/helpers')
-const { Bezier } = require('bezier-js')
+const Bezier = require('bezier-js')
 const flatten = require('arr-flatten')
 const {
   PointObjectType,

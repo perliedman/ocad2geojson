@@ -74,10 +74,12 @@ function parseOcadBuffer(buffer, options) {
 
   const objects = []
   let objectIndexOffset = header.objectIndexBlock
+  let startIndex = 0
   while (objectIndexOffset) {
     reader.push(objectIndexOffset)
     try {
-      const objectIndex = new ObjectIndex(reader, header.version)
+      const objectIndex = new ObjectIndex(reader, startIndex, header.version)
+      startIndex += 256
       reader.pop()
       Array.prototype.push.apply(objects, objectIndex.readObjects(reader))
 

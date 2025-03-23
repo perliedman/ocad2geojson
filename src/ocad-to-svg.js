@@ -298,15 +298,6 @@ const objectToSvg = (options, symbols, object) => {
       // be an AreaSymbol when used for drawing area boundary.
       const dblMode = symbol.doubleLine && symbol.doubleLine.dblMode
       const isDoubleLine = symbol.doubleLine && dblMode
-      node = lineToPath(
-        object.coordinates,
-        symbol.lineWidth,
-        options.colors[symbol.lineColor],
-        symbol.mainGap,
-        symbol.mainLength,
-        symbol.lineStyle,
-        options.closePath
-      )
       if (isDoubleLine) {
         const dbl = symbol.doubleLine
         node = {
@@ -316,14 +307,20 @@ const objectToSvg = (options, symbols, object) => {
         const dblGap = dblMode !== 1 ? dbl.dblGap : undefined
         const dblLength = dblMode !== 1 ? dbl.dblLength : undefined
         if (dbl.dblFlags & DblFillColorOn) {
+          const dashPattern = getDashPattern(
+            dblGap,
+            null,
+            dblLength,
+            null,
+            null
+          )
           if (dbl.dblLeftWidth > 0 && dbl.dblRightWidth > 0) {
             node.children = node.children.concat([
               lineToPath(
                 object.coordinates,
                 dbl.dblLeftWidth + dbl.dblRightWidth + dbl.dblWidth,
                 options.colors[dbl.dblLeftColor],
-                dblGap,
-                dblLength,
+                dashPattern,
                 symbol.lineStyle,
                 options.closePath
               ),
@@ -331,14 +328,20 @@ const objectToSvg = (options, symbols, object) => {
                 object.coordinates,
                 dbl.dblWidth,
                 options.colors[dbl.dblFillColor],
-                dblGap,
-                dblLength,
+                dashPattern,
                 symbol.lineStyle,
                 options.closePath
               ),
             ])
           }
         } else {
+          const dashPattern = getDashPattern(
+            dblGap,
+            null,
+            dblLength,
+            null,
+            null
+          )
           node.children = node.children.concat(
             [
               -dbl.dblWidth - dbl.dblLeftWidth / 2,
@@ -348,8 +351,7 @@ const objectToSvg = (options, symbols, object) => {
                 offsetLineCoordinates(object.coordinates, offset),
                 i === 0 ? dbl.dblLeftWidth : dbl.dblRightWidth,
                 options.colors[i === 0 ? dbl.dblLeftColor : dbl.dblRightColor],
-                dblGap,
-                dblLength,
+                dashPattern,
                 symbol.lineStyle,
                 options.closePath
               )
@@ -367,6 +369,22 @@ const objectToSvg = (options, symbols, object) => {
             node.children.map(n => n.order)
           )
         }
+      } else {
+        const dashPattern = getDashPattern(
+          symbol.mainGap,
+          symbol.secGap,
+          symbol.mainLength,
+          symbol.endLength,
+          symbol.endGap
+        )
+        node = lineToPath(
+          object.coordinates,
+          symbol.lineWidth,
+          options.colors[symbol.lineColor],
+          dashPattern,
+          symbol.lineStyle,
+          options.closePath
+        )
       }
       break
     }
@@ -498,8 +516,13 @@ const elementToSvg = (symbol, name, index, element, c, angle, options) => {
         translatedCoords,
         element.lineWidth,
         options.colors[element.color],
-        element.mainGap,
-        element.mainLength
+        getDashPattern(
+          element.mainGap,
+          element.secGap,
+          element.mainLength,
+          element.endLength,
+          element.endGap
+        )
       )
       break
     case AreaElementType:
@@ -529,29 +552,81 @@ const elementToSvg = (symbol, name, index, element, c, angle, options) => {
   return node
 }
 
-const lineToPath = (
+function lineToPath(
   coordinates,
   width,
   color,
-  baseMainGap,
-  baseMainLength,
+  dashPattern,
   lineStyle,
   closePath
-) =>
-  width > 0 && {
-    type: 'path',
-    attrs: {
-      d: coordsToPath(coordinates, closePath),
-      style: `stroke: ${color.rgb}; stroke-width: ${width}; ${
-        baseMainGap && baseMainLength
-          ? `stroke-dasharray: ${baseMainLength} ${baseMainGap};`
-          : ''
-      } stroke-linejoin: ${linejoin(lineStyle)}; stroke-linecap: ${linecap(
-        lineStyle
-      )};`,
-    },
-    order: color.renderOrder,
+) {
+  if (width > 0) {
+    return {
+      type: 'path',
+      attrs: {
+        d: coordsToPath(coordinates, closePath),
+        style: `stroke: ${color.rgb}; stroke-width: ${width}; ${
+          dashPattern ? `stroke-dasharray: ${dashPattern};` : ''
+        } stroke-linejoin: ${linejoin(lineStyle)}; stroke-linecap: ${linecap(
+          lineStyle
+        )};`,
+      },
+      order: color.renderOrder,
+    }
   }
+}
+
+// Heavily inspired from
+// https://github.com/OpenOrienteering/mapper/blob/69da0d0218e3e46ce8e85976ccd12a3d2b4b8f0c/src/fileformats/ocd_file_import.cpp#L1267
+function getDashPattern(mainGap, secGap, mainLength, endLength, endGap) {
+  let dashLength
+  let breakLength
+  // let halfOuterDashes = false
+  let dashesInGroup
+  let inGroupBreakLength
+
+  if (mainGap || secGap) {
+    if (!mainLength) {
+      // TODO: warning
+    } else if (secGap && !mainGap) {
+      dashLength = mainLength - secGap
+      breakLength = secGap
+
+      if (endLength) {
+        // TODO: warning
+      }
+    } else {
+      dashLength = mainLength
+      breakLength = mainGap
+
+      if (endLength && endLength !== mainLength) {
+        if (mainLength && endLength / mainLength < 0.75) {
+          // halfOuterDashes = true
+        }
+
+        if (Math.abs(mainLength - 2 * endLength) > 1) {
+          // TODO: warn
+        }
+      }
+
+      if (secGap) {
+        dashesInGroup = 2
+        inGroupBreakLength = secGap
+        dashLength = (dashLength - inGroupBreakLength) / 2
+      }
+    }
+  }
+
+  if (dashLength) {
+    if (dashesInGroup) {
+      return `${dashLength} ${inGroupBreakLength} ${dashLength} ${breakLength}`
+    } else {
+      return `${dashLength} ${breakLength}`
+    }
+  } else {
+    return null
+  }
+}
 
 function linejoin(lineStyle) {
   lineStyle = lineStyle || 0

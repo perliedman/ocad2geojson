@@ -78,6 +78,7 @@ module.exports = ocadToGeoJson
  * @property {string} text
  * @property {string|undefined} objectString
  * @property {string|undefined} databaseString
+ * @property {number} objectIndex
  */
 
 /**
@@ -333,5 +334,6 @@ function getProperties(object) {
     text: object.text,
     objectString: object.objectString,
     databaseString: object.databaseString,
+    objectIndex: object.objIndex._index,
   }
 }

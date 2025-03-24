@@ -25,6 +25,7 @@ const TObject = require('./tobject')
  * @property {number} impLayer
  * @property {number} dbDatasetHash
  * @property {number} dbKeyHash
+ * @property {number} _index
  */
 
 /**
@@ -40,9 +41,10 @@ module.exports = class ObjectIndexBlock {
 
   /**
    * @param {BufferReader} reader
+   * @param {number} startIndex
    * @param {number} version
    */
-  constructor(reader, version) {
+  constructor(reader, startIndex, version) {
     this.version = version
 
     // Ignore pointers that do not point to a valid location in the file.
@@ -74,6 +76,7 @@ module.exports = class ObjectIndexBlock {
         impLayer: reader.readSmallInt(),
         dbDatasetHash: reader.readByte(),
         dbKeyHash: reader.readByte(),
+        _index: startIndex + i,
       }
     }
   }

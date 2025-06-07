@@ -1,3 +1,4 @@
+
 const { AreaSymbolType, DblFillColorOn } = require('./ocad-reader/symbol-types')
 const {
   LineObjectType,
@@ -294,100 +295,78 @@ const objectToSvg = (options, symbols, object) => {
             symbol
           )})`
         )
-      // doubleLine is possibly undefined since symbol might
-      // be an AreaSymbol when used for drawing area boundary.
-      const dblMode = symbol.doubleLine && symbol.doubleLine.dblMode
-      const isDoubleLine = symbol.doubleLine && dblMode
-      if (isDoubleLine) {
-        const dbl = symbol.doubleLine
-        node = {
-          type: 'g',
-          children: [node],
-        }
-        const dblGap = dblMode !== 1 ? dbl.dblGap : undefined
-        const dblLength = dblMode !== 1 ? dbl.dblLength : undefined
-        if (dbl.dblFlags & DblFillColorOn) {
-          const dashPattern = getDashPattern(
-            dblGap,
-            null,
-            dblLength,
-            null,
-            null
-          )
-          if (dbl.dblLeftWidth > 0 && dbl.dblRightWidth > 0) {
-            node.children = node.children.concat([
-              lineToPath(
-                object.coordinates,
-                dbl.dblLeftWidth + dbl.dblRightWidth + dbl.dblWidth,
-                options.colors[dbl.dblLeftColor],
-                dashPattern,
-                symbol.lineStyle,
-                options.closePath
-              ),
-              lineToPath(
-                object.coordinates,
-                dbl.dblWidth,
-                options.colors[dbl.dblFillColor],
-                dashPattern,
-                symbol.lineStyle,
-                options.closePath
-              ),
-            ])
-          }
-        } else {
-          const dashPattern = getDashPattern(
-            dblGap,
-            null,
-            dblLength,
-            null,
-            null
-          )
-          node.children = node.children.concat(
-            [
-              -dbl.dblWidth - dbl.dblLeftWidth / 2,
-              dbl.dblWidth + dbl.dblRightWidth / 2,
-            ].map((offset, i) =>
-              lineToPath(
-                offsetLineCoordinates(object.coordinates, offset),
-                i === 0 ? dbl.dblLeftWidth : dbl.dblRightWidth,
-                options.colors[i === 0 ? dbl.dblLeftColor : dbl.dblRightColor],
-                dashPattern,
-                symbol.lineStyle,
-                options.closePath
-              )
-            )
-          )
-        }
+    
+      const dashPattern = getDashPattern(
+        symbol.mainGap,
+        symbol.secGap,
+        symbol.mainLength,
+        symbol.endLength,
+        symbol.endGap
+      )
+    
+      node = {
+        type: 'g',
+        children: [],
+      }
+    
+      const dbl = symbol.doubleLine
+      const dblMode = dbl?.dblMode ?? 0
+      const hasFill = (dbl?.dblFlags ?? 0) & DblFillColorOn
 
-        node.children = node.children.filter(x => x)
-        if (node.children.length === 0) {
-          node = null
-        } else {
-          // TODO: should probably separate children to allow different order
-          node.order = Math.max.apply(
-            Math,
-            node.children.map(n => n.order)
+      //Detta känns inte korrekt???? Jag är ruskigt osäker hur denna ska vara
+      const totalFillWidth =
+        (dbl?.dblLeftWidth ?? 0) + (dbl?.dblWidth ?? 0) + (dbl?.dblRightWidth ?? 0)
+    
+    
+      if (dblMode === 1 && hasFill && totalFillWidth > 0 && dbl.dblFillColor != null) {
+        node.children.push(
+          lineToPath(
+            object.coordinates,
+            totalFillWidth,
+            options.colors[dbl.dblFillColor],
+            null,
+            symbol.lineStyle,
+            options.closePath
           )
-        }
-      } else {
-        const dashPattern = getDashPattern(
-          symbol.mainGap,
-          symbol.secGap,
-          symbol.mainLength,
-          symbol.endLength,
-          symbol.endGap
-        )
-        node = lineToPath(
-          object.coordinates,
-          symbol.lineWidth,
-          options.colors[symbol.lineColor],
-          dashPattern,
-          symbol.lineStyle,
-          options.closePath
         )
       }
+    
+      if (dblMode === 2 && dbl.dblFillColor != null && totalFillWidth > 0) {
+        node.children.push(
+          lineToPath(
+            object.coordinates,
+            totalFillWidth,
+            options.colors[dbl.dblFillColor],
+            null,
+            symbol.lineStyle,
+            options.closePath
+          )
+        )
+      }
+    
+      if (symbol.lineWidth > 0) {
+        node.children.push(
+          lineToPath(
+            object.coordinates,
+            symbol.lineWidth,
+            options.colors[symbol.lineColor],
+            dashPattern,
+            symbol.lineStyle,
+            options.closePath
+          )
+        )
+      }
+    
+      node.children = node.children.filter(Boolean)
+      if (node.children.length === 0) {
+        node = null
+      } else {
+        node.order = Math.max(...node.children.map(n => n.order ?? 0))
+      }
+    
       break
     }
+    
     case AreaObjectType: {
       if (symbol.type !== 3)
         throw new Error('Symbol mismatch: area object with non-area symbol')

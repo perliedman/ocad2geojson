@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 const fs = require('fs')
-const http = require('http')
+const https = require('https')
 const mkdirp = require('mkdirp')
 const { program } = require('commander')
 const { toWgs84 } = require('reproject')
@@ -291,7 +291,7 @@ function getProj4Def(crs) {
       host: 'epsg.io',
       path: `/${crs}.proj4`,
     }
-    const request = http.request(options, function (res) {
+    const request = https.request(options, function (res) {
       let data = ''
       res.on('data', function (chunk) {
         data += chunk

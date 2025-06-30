@@ -5,7 +5,8 @@ const { readOcad, ocadToGeoJson, ocadToSvg } = require('../')
 const { Buffer } = require('buffer')
 const { coordEach } = require('@turf/meta')
 const { readdirSync, existsSync } = require('fs')
-const DOMImplementation = new (require('xmldom').DOMImplementation)()
+const xmldom = require('xmldom')
+const DOMImplementation = new xmldom.DOMImplementation()
 
 test('too small files can not be opened', async t => {
   await t.throwsAsync(() => readOcad(Buffer.alloc(10)))
@@ -81,6 +82,7 @@ test('can convert to SVG', async t => {
   const svgDoc = ocadToSvg(map, {
     document: DOMImplementation.createDocument(null, 'xml', null),
   })
+  console.log(new xmldom.XMLSerializer().serializeToString(svgDoc))
 
   t.is('svg', svgDoc.tagName)
   t.is('defs', svgDoc.firstChild.tagName)
@@ -91,13 +93,14 @@ test('can convert to SVG', async t => {
   const mainGroup = svgDoc.childNodes[1]
   t.is('g', mainGroup.tagName)
   t.is(2, mainGroup.childNodes.length)
-  t.is('path', mainGroup.childNodes[0].tagName)
-  t.is('g', mainGroup.childNodes[1].tagName)
-  t.truthy(
-    Array.from(mainGroup.childNodes[1].childNodes).every(
-      x => x.tagName === 'path'
-    )
-  )
+  const subgroup1 = mainGroup.childNodes[0]
+  t.is('g', subgroup1.tagName)
+  t.is('path', subgroup1.childNodes[0].tagName)
+  const subgroup2 = mainGroup.childNodes[1]
+  t.is('g', subgroup2.tagName)
+  t.is('path', subgroup2.childNodes[0].tagName)
+  t.is('path', subgroup2.childNodes[1].tagName)
+  t.is('g', subgroup2.childNodes[2].tagName)
 })
 
 test('can get CRS', async t => {

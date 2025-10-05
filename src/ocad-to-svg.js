@@ -475,7 +475,7 @@ const objectToSvg = (options, symbols, object) => {
 
       node.order = Math.max.apply(
         Math,
-        node.children.map(n => n.order)
+        node.children.filter(Boolean).map(n => n.order)
       )
 
       break

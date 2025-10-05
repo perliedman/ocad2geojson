@@ -289,13 +289,17 @@ const objectToSvg = (options, symbols, object) => {
   let node
   switch (options.objType || object.objType) {
     case LineObjectType: {
-      if (symbol.type !== 2)
-        throw new Error(
-          `Symbol mismatch: line object with non-line symbol (${JSON.stringify(
-            symbol
-          )})`
-        )
-    
+      if (symbol.type !== 2) {
+        // This somehow seems to happen in some otherwise
+        // normal OCAD files; ignore such objects for now.
+        // throw new Error(
+        //   `Symbol mismatch: line object with non-line symbol (${JSON.stringify(
+        //     symbol
+        //   )})`
+        // )
+        return
+      }
+
       const dashPattern = getDashPattern(
         symbol.mainGap,
         symbol.secGap,

@@ -82,7 +82,6 @@ test('can convert to SVG', async t => {
   const svgDoc = ocadToSvg(map, {
     document: DOMImplementation.createDocument(null, 'xml', null),
   })
-  console.log(new xmldom.XMLSerializer().serializeToString(svgDoc))
 
   t.is('svg', svgDoc.tagName)
   t.is('defs', svgDoc.firstChild.tagName)

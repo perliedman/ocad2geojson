@@ -142,9 +142,16 @@ test('can open all local test maps', async t => {
   const files = readdirSync(localDir).filter(f => f.endsWith('.ocd'))
   for (const file of files) {
     try {
-      t.truthy(await readOcad(path.join(localDir, file)))
+      const ocadFile = await readOcad(path.join(localDir, file))
+      t.truthy(ocadFile)
+      t.truthy(
+        ocadToSvg(ocadFile, {
+          document: DOMImplementation.createDocument(null, 'xml', null),
+        })
+      )
     } catch (e) {
-      t.fail(`Failed to read ${file}: ${e}`)
+      console.error(`Failed to read ${file}: ${e}`)
+      throw e
     }
   }
 })

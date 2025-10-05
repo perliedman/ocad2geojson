@@ -90,7 +90,7 @@ module.exports = ocadToGeoJson
 /**
  * Given an `OcadFile` object, returns a GeoJSON `FeatureCollection` of the file's objects.
  * @param {import("./ocad-reader/ocad-file")} ocadFile the OCAD file
- * @param {OcadToGeoJsonOptions} options options
+ * @param {OcadToGeoJsonOptions=} options options
  * @returns {FeatureCollection<Geometry, OcadObjectProperties>}
  */
 function ocadToGeoJson(ocadFile, options) {

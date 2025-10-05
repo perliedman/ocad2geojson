@@ -8,6 +8,7 @@ const {
   AreaSymbolType,
   TextSymbolType,
   RectangleSymbolType,
+  LineTextSymbolType,
 } = require('./symbol-types')
 
 /** @typedef {import('./buffer-reader')} BufferReader */
@@ -81,6 +82,13 @@ module.exports = class SymbolIndexBlock {
         case TextSymbolType:
           Cls = TextSymbol[this.version]
           break
+        case LineTextSymbolType:
+          this.warnings.push(
+            `Ignoring line text symbol ${reader.buffer.readInt32LE(
+              offset + 4
+            )}.`
+          )
+          return null
         case RectangleSymbolType:
           this.warnings.push(
             `Ignoring rectangle symbol ${reader.buffer.readInt32LE(

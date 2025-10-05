@@ -95,13 +95,17 @@ module.exports = class BufferReader {
     const textChars = []
     for (let i = 0; i < len * (unicode ? 2 : 4); i++) {
       const c = unicode ? this.readByte() : this.readWord()
-      if (!c) continue
-      if (c !== 13) {
-        textChars.push(String.fromCharCode(c))
-      }
+      if (!c) break
+      textChars.push(String.fromCharCode(c))
     }
 
-    return textChars.join('').trim()
+    return (
+      textChars
+        // Filter carriage returns
+        .filter(c => c !== '\r')
+        .join('')
+        .trim()
+    )
   }
 
   /**

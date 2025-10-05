@@ -1,4 +1,3 @@
-
 const { AreaSymbolType, DblFillColorOn } = require('./ocad-reader/symbol-types')
 const {
   LineObjectType,
@@ -307,21 +306,27 @@ const objectToSvg = (options, symbols, object) => {
         symbol.endLength,
         symbol.endGap
       )
-    
+
       node = {
         type: 'g',
         children: [],
       }
-    
+
       const dbl = symbol.doubleLine
       const dblMode = dbl?.dblMode ?? 0
       const hasFill = (dbl?.dblFlags ?? 0) & DblFillColorOn
 
       const totalFillWidth =
-        (dbl?.dblLeftWidth ?? 0) + (dbl?.dblWidth ?? 0) + (dbl?.dblRightWidth ?? 0)
-    
-    
-      if (dblMode === 1 && hasFill && totalFillWidth > 0 && dbl.dblFillColor != null) {
+        (dbl?.dblLeftWidth ?? 0) +
+        (dbl?.dblWidth ?? 0) +
+        (dbl?.dblRightWidth ?? 0)
+
+      if (
+        dblMode === 1 &&
+        hasFill &&
+        totalFillWidth > 0 &&
+        dbl.dblFillColor != null
+      ) {
         node.children.push(
           lineToPath(
             object.coordinates,
@@ -333,7 +338,7 @@ const objectToSvg = (options, symbols, object) => {
           )
         )
       }
-    
+
       if (dblMode === 2 && dbl.dblFillColor != null && totalFillWidth > 0) {
         node.children.push(
           lineToPath(
@@ -346,48 +351,48 @@ const objectToSvg = (options, symbols, object) => {
           )
         )
       }
-      
-      if (dbl.dblLeftWidth > 0 && dbl.dblRightWidth > 0 && dbl.dblFlags & DblFillColorOn) {
-            node.children = node.children.concat([
-              lineToPath(
-                object.coordinates,
-                dbl.dblLeftWidth + dbl.dblRightWidth + dbl.dblWidth,
-                options.colors[dbl.dblLeftColor],
-                dashPattern,
-                symbol.lineStyle,
-                options.closePath
-              ),
-              lineToPath(
-                object.coordinates,
-                dbl.dblWidth,
-                options.colors[dbl.dblFillColor],
-                dashPattern,
-                symbol.lineStyle,
-                options.closePath
-              ),
-            ])
-          }
 
-      else if (dblMode === 1 && !(dbl?.dblFlags & DblFillColorOn)) {
-          node.children = node.children.concat(
+      if (
+        dbl.dblLeftWidth > 0 &&
+        dbl.dblRightWidth > 0 &&
+        dbl.dblFlags & DblFillColorOn
+      ) {
+        node.children = node.children.concat([
+          lineToPath(
+            object.coordinates,
+            dbl.dblLeftWidth + dbl.dblRightWidth + dbl.dblWidth,
+            options.colors[dbl.dblLeftColor],
+            dashPattern,
+            symbol.lineStyle,
+            options.closePath
+          ),
+          lineToPath(
+            object.coordinates,
+            dbl.dblWidth,
+            options.colors[dbl.dblFillColor],
+            dashPattern,
+            symbol.lineStyle,
+            options.closePath
+          ),
+        ])
+      } else if (dblMode === 1 && !(dbl?.dblFlags & DblFillColorOn)) {
+        node.children = node.children.concat(
           [
-            -dbl.dblWidth/2 - dbl.dblLeftWidth / 2,
-            dbl.dblWidth/2 + dbl.dblRightWidth / 2,
+            -dbl.dblWidth / 2 - dbl.dblLeftWidth / 2,
+            dbl.dblWidth / 2 + dbl.dblRightWidth / 2,
           ].map((offset, i) =>
             lineToPath(
               offsetLineCoordinates(object.coordinates, offset),
               i === 0 ? dbl.dblLeftWidth : dbl.dblRightWidth,
-              options.colors[
-                i === 0 ? dbl.dblLeftColor : dbl.dblRightColor
-              ],
+              options.colors[i === 0 ? dbl.dblLeftColor : dbl.dblRightColor],
               dashPattern,
               symbol.lineStyle,
               options.closePath
             )
           )
         )
-      }  
-    
+      }
+
       if (symbol.lineWidth > 0) {
         node.children.push(
           lineToPath(
@@ -401,18 +406,16 @@ const objectToSvg = (options, symbols, object) => {
         )
       }
 
-      
-    
       node.children = node.children.filter(Boolean)
       if (node.children.length === 0) {
         node = null
       } else {
         node.order = Math.max(...node.children.map(n => n.order ?? 0))
       }
-    
+
       break
     }
-    
+
     case AreaObjectType: {
       if (symbol.type !== 3)
         throw new Error('Symbol mismatch: area object with non-area symbol')

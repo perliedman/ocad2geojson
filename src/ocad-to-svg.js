@@ -224,6 +224,24 @@ module.exports = {
     )
 
     const bounds = ocadFile.getBounds()
+    const childNodes = transformFeatures(
+      ocadFile,
+      objectToSvg,
+      elementToSvg,
+      options
+    )
+    let children
+    if (options.fromColor == null && options.toColor == null) {
+      children = childNodes
+    } else {
+      children = childNodes.filter(
+        node =>
+          (options.fromColor == null || node.order >= options.fromColor) &&
+          (options.toColor == null || node.order <= options.toColor)
+      )
+    }
+
+    children.sort((a, b) => b.order - a.order)
     const root = {
       type: 'svg',
       attrs: {
@@ -248,12 +266,7 @@ module.exports = {
             xmlns: svgNamespace,
             transform: `translate(0, ${bounds[1] + bounds[3]})`,
           },
-          children: transformFeatures(
-            ocadFile,
-            objectToSvg,
-            elementToSvg,
-            options
-          ).sort((a, b) => b.order - a.order),
+          children,
         },
       ]),
     }

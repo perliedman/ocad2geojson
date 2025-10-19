@@ -756,6 +756,7 @@ const coordsToPath = (coords, closePath) => {
   const cs = []
   let cp1
   let cp2
+  let ringStart = coords[0]
   // Move to the start of the path
   cs.push(`M ${coords[0][0]} ${-coords[0][1]}`)
 
@@ -767,6 +768,10 @@ const coordsToPath = (coords, closePath) => {
     } else if (c.isSecondBezier()) {
       cp2 = c
     } else if (c.isFirstHolePoint()) {
+      if (closePath) {
+        cs.push(`L ${ringStart[0]} ${-ringStart[1]}`)
+      }
+      ringStart = c
       cs.push(`M ${c[0]} ${-c[1]}`)
     } else if (cp1 && cp2) {
       const bezier = `C ${cp1[0]} ${-cp1[1]} ${cp2[0]} ${-cp2[1]} ${
@@ -780,7 +785,7 @@ const coordsToPath = (coords, closePath) => {
   }
 
   if (closePath) {
-    cs.push(`L ${coords[0][0]} ${-coords[0][1]}`)
+    cs.push(`L ${ringStart[0]} ${-ringStart[1]}`)
   }
 
   return cs.join(' ')

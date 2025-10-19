@@ -294,6 +294,9 @@ const usedSymbolNumbers = objects =>
  */
 const objectToSvg = (options, symbols, object) => {
   const symNum = options.sym || object.sym
+  if (symNum === 102001) {
+    console.log(object)
+  }
   const symbol = symbols[symNum]
   if (!symbol || (!options.exportHidden && symbol.isHidden())) return
 
@@ -402,6 +405,19 @@ const objectToSvg = (options, symbols, object) => {
               symbol.lineStyle,
               options.closePath
             )
+          )
+        )
+      }
+
+      if (symbol.frWidth > 0) {
+        node.children.push(
+          lineToPath(
+            object.coordinates,
+            symbol.frWidth,
+            options.colors[symbol.frColor],
+            dashPattern,
+            symbol.frStyle,
+            options.closePath
           )
         )
       }
@@ -540,6 +556,9 @@ const objectToSvg = (options, symbols, object) => {
   //   node.geometry = { coordinates: object.coordinates }
   //   node.properties = { sym: object.sym }
   // }
+  if (symNum === 102002) {
+    console.log(node)
+  }
 
   return node
 }

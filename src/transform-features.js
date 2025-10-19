@@ -184,6 +184,52 @@ const generateSymbolElements = (
           )
         }
       }
+
+      if (symbol.startSymElements.length > 0 && object.coordinates.length > 1) {
+        const coords = object.coordinates
+        const c0 = coords[0]
+        const c1 = coords[1]
+        const v = c1.sub(c0)
+        const angle = Math.atan2(v[1], v[0])
+        elements = elements.concat(
+          symbol.startSymElements.map((e, i) =>
+            createElement(
+              symbol,
+              'start',
+              i,
+              e,
+              object.coordinates[0],
+              angle,
+              options,
+              object,
+              objectIndex
+            )
+          )
+        )
+      }
+
+      if (symbol.endSymElements.length > 0 && object.coordinates.length > 1) {
+        const coords = object.coordinates
+        const c0 = coords[coords.length - 2]
+        const c1 = coords[coords.length - 1]
+        const v = c1.sub(c0)
+        const angle = Math.atan2(v[1], v[0])
+        elements = elements.concat(
+          symbol.endSymElements.map((e, i) =>
+            createElement(
+              symbol,
+              'start',
+              i,
+              e,
+              c1,
+              angle,
+              options,
+              object,
+              objectIndex
+            )
+          )
+        )
+      }
   }
 
   return elements

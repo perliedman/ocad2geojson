@@ -294,9 +294,6 @@ const usedSymbolNumbers = objects =>
  */
 const objectToSvg = (options, symbols, object) => {
   const symNum = options.sym || object.sym
-  if (symNum === 102001) {
-    console.log(object)
-  }
   const symbol = symbols[symNum]
   if (!symbol || (!options.exportHidden && symbol.isHidden())) return
 
@@ -556,9 +553,6 @@ const objectToSvg = (options, symbols, object) => {
   //   node.geometry = { coordinates: object.coordinates }
   //   node.properties = { sym: object.sym }
   // }
-  if (symNum === 102002) {
-    console.log(node)
-  }
 
   return node
 }

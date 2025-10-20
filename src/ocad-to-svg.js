@@ -297,8 +297,8 @@ const objectToSvg = (options, symbols, object) => {
   const symbol = symbols[symNum]
   if (!symbol || (!options.exportHidden && symbol.isHidden())) return
 
-  /** @type {SvgNodeDef} */
-  let node
+  /** @type {SvgNodeDef[]} */
+  const nodes = []
   switch (options.objType || object.objType) {
     case LineObjectType: {
       if (symbol.type !== 2) {
@@ -309,7 +309,7 @@ const objectToSvg = (options, symbols, object) => {
         //     symbol
         //   )})`
         // )
-        return
+        return nodes
       }
 
       const dashPattern = getDashPattern(
@@ -320,7 +320,7 @@ const objectToSvg = (options, symbols, object) => {
         symbol.endGap
       )
 
-      node = {
+      const node = {
         type: 'g',
         children: [],
       }
@@ -407,7 +407,7 @@ const objectToSvg = (options, symbols, object) => {
       }
 
       if (symbol.frWidth > 0) {
-        node.children.push(
+        nodes.push(
           lineToPath(
             object.coordinates,
             symbol.frWidth,
@@ -433,10 +433,9 @@ const objectToSvg = (options, symbols, object) => {
       }
 
       node.children = node.children.filter(Boolean)
-      if (node.children.length === 0) {
-        node = null
-      } else {
+      if (node.children.length > 0) {
         node.order = Math.max(...node.children.map(n => n.order ?? 0))
+        nodes.push(node)
       }
 
       break
@@ -454,7 +453,7 @@ const objectToSvg = (options, symbols, object) => {
       const fillPattern =
         (symbol.hatchMode && `url(#hatch-fill-${symbol.symNum}-1)`) ||
         (symbol.structMode && `url(#struct-fill-${symbol.symNum})`)
-      node = {
+      const node = {
         type: 'g',
         children: [],
       }
@@ -489,7 +488,7 @@ const objectToSvg = (options, symbols, object) => {
 
       if (symbol.borderSym) {
         node.children.push(
-          objectToSvg(
+          ...objectToSvg(
             {
               ...options,
               sym: symbol.borderSym,
@@ -506,6 +505,7 @@ const objectToSvg = (options, symbols, object) => {
         Math,
         node.children.filter(Boolean).map(n => n.order)
       )
+      nodes.push(node)
 
       break
     }
@@ -522,7 +522,7 @@ const objectToSvg = (options, symbols, object) => {
       const lineHeight = fontSize * 1.2
       const textColor = options.colors[symbol.fontColor]
 
-      node = {
+      const node = {
         type: 'text',
         attrs: {
           x: x.toString(),
@@ -542,19 +542,12 @@ const objectToSvg = (options, symbols, object) => {
         ),
         order: textColor.renderOrder,
       }
+      nodes.push(node)
       break
     }
-    default:
-      return
   }
 
-  // TODO: remove(?) I think this is some old debug code
-  // if (node) {
-  //   node.geometry = { coordinates: object.coordinates }
-  //   node.properties = { sym: object.sym }
-  // }
-
-  return node
+  return nodes
 }
 
 const elementToSvg = (symbol, name, index, element, c, angle, options) => {
@@ -576,7 +569,8 @@ const elementToSvg = (symbol, name, index, element, c, angle, options) => {
           element.mainLength,
           element.endLength,
           element.endGap
-        )
+        ),
+        element.flags === 1 ? 1 : 0
       )
       break
     case AreaElementType:

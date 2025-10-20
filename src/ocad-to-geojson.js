@@ -122,7 +122,7 @@ function ocadToGeoJson(ocadFile, options) {
  * @param {Record<number, import('./ocad-reader/symbol').BaseSymbolDef>} symbols
  * @param {TObject} object
  * @param {number} i
- * @returns {Feature<Geometry, OcadObjectProperties>}
+ * @returns {Feature<Geometry, OcadObjectProperties>[]}
  */
 const tObjectToGeoJson = (options, symbols, object, i) => {
   const symbol = symbols[object.sym]
@@ -170,12 +170,14 @@ const tObjectToGeoJson = (options, symbols, object, i) => {
       return
   }
 
-  return {
-    type: 'Feature',
-    properties: getProperties(object),
-    id: i + 1,
-    geometry,
-  }
+  return [
+    {
+      type: 'Feature',
+      properties: getProperties(object),
+      id: i + 1,
+      geometry,
+    },
+  ]
 }
 
 const extractCoords = coords => {

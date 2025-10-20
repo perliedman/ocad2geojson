@@ -1,4 +1,3 @@
-const flatten = require('arr-flatten')
 const {
   PointSymbolType,
   LineSymbolType,
@@ -31,7 +30,7 @@ module.exports = transformFeatures
 
 /**
  * @template {Object} T
- * @typedef {function(TransformFeaturesOptions, Record<number, Symbol>, TObject, number): T|null|undefined} CreateObject
+ * @typedef {function(TransformFeaturesOptions, Record<number, Symbol>, TObject, number): T[]|null|undefined} CreateObjects
  */
 
 /**
@@ -43,12 +42,12 @@ module.exports = transformFeatures
  * @template {Object} T result type
  * @template {Object} U element result type
  * @param {OcadFile} ocadFile
- * @param {CreateObject<T>} createObject
+ * @param {CreateObjects<T>} createObjects
  * @param {CreateElement<U>} createElement
  * @param {TransformFeaturesOptions} options
  * @returns {T[]}
  */
-function transformFeatures(ocadFile, createObject, createElement, options) {
+function transformFeatures(ocadFile, createObjects, createElement, options) {
   options = {
     ...defaultOptions,
     ...options,
@@ -69,15 +68,16 @@ function transformFeatures(ocadFile, createObject, createElement, options) {
 
   const objects = options.objects || ocadFile.objects
   let features = objects
-    .map(createObject.bind(null, options, symbols))
-    .filter(f => f)
+    .map(createObjects.bind(null, options, symbols))
+    .flat()
+    .filter(Boolean)
 
   if (options.generateSymbolElements) {
-    const elementFeatures = objects.map(
-      generateSymbolElements.bind(null, createElement, options, symbols)
-    )
+    const elementFeatures = objects
+      .map(generateSymbolElements.bind(null, createElement, options, symbols))
+      .flat()
 
-    features = features.concat(flatten(elementFeatures)).filter(f => f)
+    features = features.concat(elementFeatures).filter(Boolean)
   }
 
   return features

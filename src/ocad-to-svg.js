@@ -447,11 +447,18 @@ const objectToSvg = (options, symbols, object) => {
       }
 
       if (fillPattern) {
+        const patternColor = symbol.hatchMode
+          ? symbol.hatchColor
+          : symbol.elements.length
+          ? Math.min(...symbol.elements.map(e => e.color))
+          : // This is a fallback because apparently there are symbols
+            // with structMode set but no elements (?!)
+            symbol.fillColor
         nodes.push(
           areaToPath(
             object.coordinates,
             fillPattern,
-            options.colors[fillColorIndex]
+            options.colors[patternColor]
           )
         )
 
@@ -460,7 +467,7 @@ const objectToSvg = (options, symbols, object) => {
             areaToPath(
               object.coordinates,
               `url(#hatch-fill-${symbol.symNum}-2)`,
-              options.colors[fillColorIndex]
+              options.colors[patternColor]
             )
           )
         }

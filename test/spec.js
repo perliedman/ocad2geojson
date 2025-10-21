@@ -91,15 +91,12 @@ test('can convert to SVG', async t => {
   )
   const mainGroup = svgDoc.childNodes[1]
   t.is('g', mainGroup.tagName)
-  t.is(2, mainGroup.childNodes.length)
-  const subgroup1 = mainGroup.childNodes[0]
-  t.is('g', subgroup1.tagName)
-  t.is('path', subgroup1.childNodes[0].tagName)
-  const subgroup2 = mainGroup.childNodes[1]
-  t.is('g', subgroup2.tagName)
-  t.is('path', subgroup2.childNodes[0].tagName)
-  t.is('path', subgroup2.childNodes[1].tagName)
-  t.is('g', subgroup2.childNodes[2].tagName)
+  const children = mainGroup.childNodes
+  t.is(4, children.length)
+  t.is('path', children[0].tagName)
+  t.is('path', children[1].tagName)
+  t.is('path', children[2].tagName)
+  t.is('path', children[3].tagName)
 })
 
 test('SVG can filter colors', async t => {
@@ -120,7 +117,7 @@ test('SVG can filter colors', async t => {
   })
   mainGroup = svgDoc.childNodes[1]
   t.is('g', mainGroup.tagName)
-  t.is(1, mainGroup.childNodes.length)
+  t.is(3, mainGroup.childNodes.length)
 
   svgDoc = ocadToSvg(map, {
     document: DOMImplementation.createDocument(null, 'xml', null),
@@ -129,7 +126,7 @@ test('SVG can filter colors', async t => {
   })
   mainGroup = svgDoc.childNodes[1]
   t.is('g', mainGroup.tagName)
-  t.is(1, mainGroup.childNodes.length)
+  t.is(3, mainGroup.childNodes.length)
 
   svgDoc = ocadToSvg(map, {
     document: DOMImplementation.createDocument(null, 'xml', null),
@@ -147,7 +144,7 @@ test('SVG can filter colors', async t => {
   })
   mainGroup = svgDoc.childNodes[1]
   t.is('g', mainGroup.tagName)
-  t.is(2, mainGroup.childNodes.length)
+  t.is(4, mainGroup.childNodes.length)
 })
 
 test('can get CRS', async t => {

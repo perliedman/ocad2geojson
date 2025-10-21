@@ -320,11 +320,6 @@ const objectToSvg = (options, symbols, object) => {
         symbol.endGap
       )
 
-      const node = {
-        type: 'g',
-        children: [],
-      }
-
       const dbl = symbol.doubleLine
       const dblMode = dbl?.dblMode ?? 0
       const hasFill = (dbl?.dblFlags ?? 0) & DblFillColorOn
@@ -340,7 +335,7 @@ const objectToSvg = (options, symbols, object) => {
         totalFillWidth > 0 &&
         dbl.dblFillColor != null
       ) {
-        node.children.push(
+        nodes.push(
           lineToPath(
             object.coordinates,
             totalFillWidth,
@@ -353,7 +348,7 @@ const objectToSvg = (options, symbols, object) => {
       }
 
       if (dblMode === 2 && dbl.dblFillColor != null && totalFillWidth > 0) {
-        node.children.push(
+        nodes.push(
           lineToPath(
             object.coordinates,
             totalFillWidth,
@@ -370,7 +365,7 @@ const objectToSvg = (options, symbols, object) => {
         dbl.dblRightWidth > 0 &&
         dbl.dblFlags & DblFillColorOn
       ) {
-        node.children = node.children.concat([
+        nodes.push(
           lineToPath(
             object.coordinates,
             dbl.dblLeftWidth + dbl.dblRightWidth + dbl.dblWidth,
@@ -386,11 +381,11 @@ const objectToSvg = (options, symbols, object) => {
             dashPattern,
             symbol.lineStyle,
             options.closePath
-          ),
-        ])
+          )
+        )
       } else if (dblMode === 1 && !(dbl?.dblFlags & DblFillColorOn)) {
-        node.children = node.children.concat(
-          [
+        nodes.push(
+          ...[
             -dbl.dblWidth / 2 - dbl.dblLeftWidth / 2,
             dbl.dblWidth / 2 + dbl.dblRightWidth / 2,
           ].map((offset, i) =>
@@ -420,7 +415,7 @@ const objectToSvg = (options, symbols, object) => {
       }
 
       if (symbol.lineWidth > 0) {
-        node.children.push(
+        nodes.push(
           lineToPath(
             object.coordinates,
             symbol.lineWidth,
@@ -432,42 +427,27 @@ const objectToSvg = (options, symbols, object) => {
         )
       }
 
-      node.children = node.children.filter(Boolean)
-      if (node.children.length > 0) {
-        node.order = Math.max(...node.children.map(n => n.order ?? 0))
-        nodes.push(node)
-      }
-
       break
     }
 
     case AreaObjectType: {
       if (symbol.type !== 3)
         throw new Error('Symbol mismatch: area object with non-area symbol')
-      const fillColorIndex =
-        symbol.fillOn !== undefined
-          ? symbol.fillOn
-            ? symbol.fillColor
-            : symbol.colors[0]
-          : symbol.colors[0]
+      const fillColorIndex = symbol.fillOn ? symbol.fillColor : symbol.colors[0]
       const fillPattern =
         (symbol.hatchMode && `url(#hatch-fill-${symbol.symNum}-1)`) ||
         (symbol.structMode && `url(#struct-fill-${symbol.symNum})`)
-      const node = {
-        type: 'g',
-        children: [],
-      }
 
       if (symbol.fillOn) {
         if (fillColorIndex != null) {
-          node.children.push(
+          nodes.push(
             areaToPath(object.coordinates, null, options.colors[fillColorIndex])
           )
         }
       }
 
       if (fillPattern) {
-        node.children.push(
+        nodes.push(
           areaToPath(
             object.coordinates,
             fillPattern,
@@ -476,7 +456,7 @@ const objectToSvg = (options, symbols, object) => {
         )
 
         if (symbol.hatchMode === 2) {
-          node.children.push(
+          nodes.push(
             areaToPath(
               object.coordinates,
               `url(#hatch-fill-${symbol.symNum}-2)`,
@@ -487,7 +467,7 @@ const objectToSvg = (options, symbols, object) => {
       }
 
       if (symbol.borderSym) {
-        node.children.push(
+        nodes.push(
           ...objectToSvg(
             {
               ...options,
@@ -500,12 +480,6 @@ const objectToSvg = (options, symbols, object) => {
           )
         )
       }
-
-      node.order = Math.max.apply(
-        Math,
-        node.children.filter(Boolean).map(n => n.order)
-      )
-      nodes.push(node)
 
       break
     }

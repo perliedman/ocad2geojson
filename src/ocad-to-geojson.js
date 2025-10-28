@@ -32,17 +32,17 @@ module.exports = ocadToGeoJson
  * @typedef {import("./ocad-reader/tobject").TObject} TObject
  */
 
-/** @typedef {import("@turf/helpers").Geometry} Geometry */
+/** @typedef {import("geojson").Geometry} Geometry */
 /**
- * @template {Object} TGeometry
+ * @template {Geometry} TGeometry
  * @template {Object} TProperties
- * @typedef {import("@turf/helpers").FeatureCollection<TGeometry, TProperties>} FeatureCollection<TGeometry, TProperties>
+ * @typedef {import("geojson").FeatureCollection<TGeometry, TProperties>} FeatureCollection<TGeometry, TProperties>
  */
 
 /**
- * @template {Object} TGeometry
+ * @template {Geometry} TGeometry
  * @template {Object} TProperties
- * @typedef {import("@turf/helpers").Feature<TGeometry, TProperties>} Feature<TGeometry, TProperties>
+ * @typedef {import("geojson").Feature<TGeometry, TProperties>} Feature<TGeometry, TProperties>
  */
 
 /**
@@ -128,6 +128,7 @@ const tObjectToGeoJson = (options, symbols, object, i) => {
   const symbol = symbols[object.sym]
   if (!symbol || (!options.exportHidden && symbol.isHidden())) return
 
+  /** @type Geometry */
   let geometry
   switch (object.objType) {
     case PointObjectType:
@@ -234,6 +235,7 @@ const createElement = (
   object,
   objectId
 ) => {
+  /** @type Geometry */
   let geometry
   const coords = extractCoords(element.coords)
   const rotatedCoords = angle ? coords.map(lc => lc.rotate(angle)) : coords

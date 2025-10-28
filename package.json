@@ -37,8 +37,8 @@
     "typescript": "^5.5.4"
   },
   "dependencies": {
-    "@turf/line-offset": "^6.5.0",
-    "@turf/meta": "^6.5.0",
+    "@turf/line-offset": "^7.2.0",
+    "@turf/meta": "^7.2.0",
     "@types/geojson": "^7946.0.13",
     "arr-flatten": "^1.1.0",
     "bezier-js": "^2.4.0",

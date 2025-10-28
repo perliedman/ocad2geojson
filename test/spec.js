@@ -177,6 +177,56 @@ test('can filter symbols', async t => {
   t.is(0, geoJson.features.length)
 })
 
+test('renders double line correctly', async t => {
+  const map = await readOcad(path.join(__dirname, 'data', 'double-line.ocd'))
+  const svgDoc = ocadToSvg(map, {
+    document: DOMImplementation.createDocument(null, 'xml', null),
+  })
+
+  t.is('svg', svgDoc.tagName)
+  const mainGroup = svgDoc.childNodes[1]
+  t.is('g', mainGroup.tagName)
+
+  // Should render exactly 3 paths for the double line with fill
+  const paths = Array.from(mainGroup.childNodes).filter(
+    n => n.tagName === 'path'
+  )
+  t.is(3, paths.length, 'Should render exactly 3 paths')
+
+  // Extract stroke widths and colors from the style attributes
+  const pathStyles = paths.map(p => {
+    const style = p.getAttribute('style')
+    const widthMatch = style.match(/stroke-width:\s*(\d+)/)
+    const colorMatch = style.match(/stroke:\s*rgb\(([^)]+)\)/)
+    return {
+      width: widthMatch ? parseInt(widthMatch[1]) : null,
+      color: colorMatch ? colorMatch[1] : null,
+    }
+  })
+
+  // Verify the three paths have the expected structure:
+  // 1. Outer border (width 78, color 44, 46, 53 = dblLeftColor)
+  // 2. Main line (width 64, color 242, 178, 127 = lineColor)
+  // 3. Inner fill (width 50, color 242, 178, 127 = dblFillColor)
+
+  t.is(64, pathStyles[0].width, 'Main line should have width 64')
+  t.is(
+    '242, 178, 127',
+    pathStyles[0].color,
+    'Main line should be color 242, 178, 127'
+  )
+
+  t.is(78, pathStyles[1].width, 'Outer border should have width 78')
+  t.true(pathStyles[1].color === '44, 46, 53', 'First path should be border')
+
+  t.is(50, pathStyles[2].width, 'Inner fill should have width 50')
+  t.is(
+    '242, 178, 127',
+    pathStyles[2].color,
+    'Inner fill should be color 242, 178, 127'
+  )
+})
+
 test('can open all local test maps', async t => {
   const localDir = path.join(__dirname, 'data', 'local')
   if (!existsSync(localDir)) {

@@ -322,31 +322,18 @@ const objectToSvg = (options, symbols, object) => {
 
       const dbl = symbol.doubleLine
       const dblMode = dbl?.dblMode ?? 0
-      const hasFill = (dbl?.dblFlags ?? 0) & DblFillColorOn
 
       const totalFillWidth =
         (dbl?.dblLeftWidth ?? 0) +
         (dbl?.dblWidth ?? 0) +
         (dbl?.dblRightWidth ?? 0)
 
-      if (
-        dblMode === 1 &&
-        hasFill &&
-        totalFillWidth > 0 &&
-        dbl.dblFillColor != null
-      ) {
-        nodes.push(
-          lineToPath(
-            object.coordinates,
-            totalFillWidth,
-            options.colors[dbl.dblFillColor],
-            null,
-            symbol.lineStyle,
-            options.closePath
-          )
-        )
-      }
+      // Handle double line rendering based on mode
+      // dblMode 0: No double line (handled by regular line rendering below)
+      // dblMode 1: True double line (two separate lines with optional fill between)
+      // dblMode 2: Full-width filled line (single wide line)
 
+      // dblMode 2: Render as a single wide line with fill color
       if (dblMode === 2 && dbl.dblFillColor != null && totalFillWidth > 0) {
         nodes.push(
           lineToPath(
@@ -360,7 +347,11 @@ const objectToSvg = (options, symbols, object) => {
         )
       }
 
+      // dblMode 1 with fill color: Render using overlay technique
+      // First draw a wide line in the border color, then a narrower line in fill color on top
+      // This creates the appearance of left border + fill + right border
       if (
+        dblMode === 1 &&
         dbl.dblLeftWidth > 0 &&
         dbl.dblRightWidth > 0 &&
         dbl.dblFlags & DblFillColorOn
@@ -384,6 +375,7 @@ const objectToSvg = (options, symbols, object) => {
           )
         )
       } else if (dblMode === 1 && !(dbl?.dblFlags & DblFillColorOn)) {
+        // dblMode 1 without fill color: Render as two separate offset parallel lines
         nodes.push(
           ...[
             -dbl.dblWidth / 2 - dbl.dblLeftWidth / 2,

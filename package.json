@@ -1,6 +1,6 @@
 {
   "name": "ocad2geojson",
-  "version": "2.1.17",
+  "version": "2.1.18",
   "description": "Convert OCAD files to GeoJSON",
   "main": "src/index.js",
   "scripts": {

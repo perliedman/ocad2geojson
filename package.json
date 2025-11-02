@@ -24,6 +24,7 @@
   "homepage": "https://github.com/perliedman/ocad2geojson",
   "devDependencies": {
     "@babel/core": "^7.18.2",
+    "@turf/kinks": "^7.2.0",
     "@types/node": "^20.10.6",
     "ava": "^4.2.0",
     "eslint": "^8.16.0",

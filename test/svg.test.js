@@ -8,6 +8,7 @@ const { readOcad, ocadToSvg } = require('..')
 
 const { readdirSync, existsSync } = require('fs')
 const xmldom = require('xmldom')
+const { default: kinks } = require('@turf/kinks')
 const DOMImplementation = new xmldom.DOMImplementation()
 
 test('can convert to SVG', async (/** @type {ExecutionContext} */ t) => {
@@ -142,6 +143,43 @@ test('renders double line correctly', async (/** @type {ExecutionContext} */ t) 
   const c2 = /** @type {string} */ (pathStyles[2].color)
   t.is(50, w2, 'Inner fill should have width 50')
   t.is('242, 178, 127', c2, 'Inner fill should be color 242, 178, 127')
+})
+
+test('renders house with offset outline without kinks', async (/** @type {ExecutionContext} */ t) => {
+  const map = await readOcad(
+    path.join(__dirname, 'data', 'myggfritt_byggnad2.ocd')
+  )
+  const svgDoc = ocadToSvg(map, {
+    document: DOMImplementation.createDocument(null, 'xml', null),
+  })
+  const mainGroup = /** @type {Element} */ (svgDoc.childNodes[1])
+  t.is('g', mainGroup.tagName)
+
+  const paths = Array.from(mainGroup.childNodes)
+    .filter(n => n.nodeType === 1)
+    .map(n => /** @type {Element} */ (n))
+    .filter(n => n.tagName === 'path')
+
+  for (const path of paths) {
+    const pathStr = path.getAttribute('d') || ''
+    const coordMatches = pathStr.matchAll(/(\w) ([-\d.]+ [-\d.]+)/g)
+    /** @type {number[][]} */
+    let currentRing = []
+    const rings = []
+    for (const coordMatch of coordMatches) {
+      const c = coordMatch[2].split(' ').map(Number)
+      if (coordMatch[1] === 'M') {
+        currentRing = [c]
+        rings.push(currentRing)
+      } else {
+        currentRing.push(c)
+      }
+    }
+    /** @type {import('geojson').Polygon} */
+    const geometry = { type: 'Polygon', coordinates: rings }
+    const pathKinks = kinks(geometry)
+    t.is(0, pathKinks.features.length)
+  }
 })
 
 test('can open all local test maps', async (/** @type {ExecutionContext} */ t) => {

@@ -104,6 +104,15 @@ class TdPoly extends Array {
       this.yFlags
     )
   }
+
+  /**
+   * Compare the coordinates of this `TdPoly` to another `TdPoly`.
+   * @param {TdPoly} other
+   * @returns `true` if the X and Y of both coordinates are equal
+   */
+  equalCoords(other) {
+    return this[0] === other[0] && this[1] === other[1]
+  }
 }
 
 /**

@@ -378,18 +378,34 @@ const objectToSvg = (options, symbols, object) => {
         // dblMode 1 without fill color: Render as two separate offset parallel lines
         nodes.push(
           ...[
-            -dbl.dblWidth / 2 - dbl.dblLeftWidth / 2,
-            dbl.dblWidth / 2 + dbl.dblRightWidth / 2,
-          ].map((offset, i) =>
-            lineToPath(
-              offsetLineCoordinates(object.coordinates, offset),
-              i === 0 ? dbl.dblLeftWidth : dbl.dblRightWidth,
-              options.colors[i === 0 ? dbl.dblLeftColor : dbl.dblRightColor],
-              dashPattern,
-              symbol.lineStyle,
-              options.closePath
-            )
-          )
+            [
+              -dbl.dblWidth / 2 - dbl.dblLeftWidth / 2,
+              dbl.dblLeftWidth,
+              dbl.dblLeftColor,
+            ],
+            [
+              dbl.dblWidth / 2 + dbl.dblRightWidth / 2,
+              dbl.dblRightWidth,
+              dbl.dblRightColor,
+            ],
+          ]
+            .map(([offset, width, color]) => {
+              return offsetLineCoordinates(
+                object.coordinates,
+                offset,
+                options.closePath
+              ).map(lineCoords => {
+                return lineToPath(
+                  lineCoords,
+                  width,
+                  options.colors[color],
+                  dashPattern,
+                  symbol.lineStyle,
+                  options.closePath
+                )
+              })
+            })
+            .flat()
         )
       }
 
@@ -729,7 +745,7 @@ const coordsToPath = (coords, closePath) => {
     } else if (c.isSecondBezier()) {
       cp2 = c
     } else if (c.isFirstHolePoint()) {
-      if (closePath) {
+      if (closePath && !isClosed(c, ringStart)) {
         cs.push(`L ${ringStart[0]} ${-ringStart[1]}`)
       }
       ringStart = c
@@ -740,31 +756,74 @@ const coordsToPath = (coords, closePath) => {
       } ${-c[1]}`
       cp1 = cp2 = undefined
       cs.push(bezier)
-    } else {
+    } else if (i > 0) {
       cs.push(`L ${c[0]} ${-c[1]}`)
     }
   }
 
-  if (closePath) {
+  if (closePath && !isClosed(coords[coords.length - 1], ringStart)) {
     cs.push(`L ${ringStart[0]} ${-ringStart[1]}`)
   }
 
   return cs.join(' ')
+
+  function isClosed(cFirst, cLast) {
+    return cFirst[0] === cLast[0] && cFirst[1] === cLast[1]
+  }
 }
 
-const offsetLineCoordinates = (coordinates, offset) => {
-  const offsetCoordinates = lineOffset(
-    {
-      type: 'LineString',
-      coordinates,
-    },
-    offset,
-    { units: 'degrees' }
-  ).geometry.coordinates
-  return offsetCoordinates.map(
-    (c, i) =>
-      new TdPoly(c[0], c[1], coordinates[i].xFlags, coordinates[i].yFlags)
-  )
+/**
+ * Given an array of `TdPoly`, splits it into LineStrings where there are holes,
+ * and offsets each LineString by the specified number of units.
+ *
+ * @param {TdPoly[]} coordinates
+ * @param {number} offset
+ * @returns {TdPoly[][]}
+ */
+const offsetLineCoordinates = (coordinates, offset, isArea) => {
+  /** @type {TdPoly[][]} */
+  const result = []
+  /** @type {TdPoly[]} */
+  let current = []
+
+  for (let i = 0; i < coordinates.length; i++) {
+    const c = coordinates[i]
+    if (!c.isFirstHolePoint()) {
+      current.push(c)
+    } else {
+      result.push(offsetLineString(current))
+      current = [c]
+    }
+  }
+
+  if (current.length > 0) {
+    result.push(offsetLineString(current))
+  }
+
+  return result
+
+  /**
+   *
+   * @param {TdPoly[]} coordinates
+   * @returns {TdPoly[]}
+   */
+  function offsetLineString(coordinates) {
+    const cs =
+      isArea && coordinates[0].equalCoords(coordinates[coordinates.length - 1])
+        ? coordinates.slice(0, coordinates.length - 1)
+        : coordinates
+    return lineOffset(
+      {
+        type: 'LineString',
+        coordinates: cs,
+      },
+      offset,
+      { units: 'degrees' }
+    ).geometry.coordinates.map(
+      (c, i) =>
+        new TdPoly(c[0], c[1], coordinates[i].xFlags, coordinates[i].yFlags)
+    )
+  }
 }
 
 const ocadTextToSvg = (

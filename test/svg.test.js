@@ -145,6 +145,68 @@ test('renders double line correctly', async (/** @type {ExecutionContext} */ t) 
   t.is('242, 178, 127', c2, 'Inner fill should be color 242, 178, 127')
 })
 
+test('jarnvag: renders patterned dashed double line correctly', async (/** @type {ExecutionContext} */ t) => {
+  const map = await readOcad(path.join(__dirname, 'data', 'jarnvag.ocd'))
+  const svgDoc = ocadToSvg(map, {
+    document: DOMImplementation.createDocument(null, 'xml', null),
+  })
+
+  // Root svg element presence
+  t.is('svg', /** @type {Element} */ (svgDoc).tagName)
+  const mainGroup = /** @type {Element} */ (svgDoc.childNodes[1])
+  t.is('g', mainGroup.tagName)
+
+  // Collect path elements
+  const paths = Array.from(mainGroup.childNodes)
+    .filter(n => n.nodeType === 1)
+    .map(n => /** @type {Element} */ (n))
+    .filter(n => n.tagName === 'path')
+
+  // We expect four path elements: two dark outer strokes, two white dashed inner strokes
+  t.is(4, paths.length, 'Expected four path elements')
+
+  // Helper to parse style into key/value map
+  /**
+   * @param {string} style
+   * @returns {Record<string,string>}
+   */
+  const parseStyle = style => {
+    return Object.fromEntries(
+      style
+        .split(';')
+        .map((s /** @type {string} */) => s.trim())
+        .filter(Boolean)
+        .map(part => {
+          const [k, v] = part.split(':').map(x => x.trim())
+          return [k, v]
+        })
+    )
+  }
+
+  const styleInfos = paths.map(p => parseStyle(p.getAttribute('style') || ''))
+
+  // Extract matching groups
+  const darkStrokes = styleInfos.filter(s => s.stroke === 'rgb(44, 46, 53)')
+  const whiteStrokes = styleInfos.filter(s => s.stroke === 'rgb(255, 255, 255)')
+
+  t.is(2, darkStrokes.length, 'Should have two dark border strokes')
+  t.is(2, whiteStrokes.length, 'Should have two white dashed strokes')
+
+  // Verify stroke widths
+  darkStrokes.forEach(s => t.is('45', s['stroke-width']))
+  whiteStrokes.forEach(s => t.is('25', s['stroke-width']))
+
+  // Verify dashed pattern exists only on white strokes
+  darkStrokes.forEach(s => t.falsy(s['stroke-dasharray']))
+  whiteStrokes.forEach(s => t.is('100 150', s['stroke-dasharray']))
+
+  // Verify line join & cap for all
+  styleInfos.forEach(s => {
+    t.is('bevel', s['stroke-linejoin'])
+    t.is('butt', s['stroke-linecap'])
+  })
+})
+
 test('renders house with offset outline without kinks', async (/** @type {ExecutionContext} */ t) => {
   const map = await readOcad(
     path.join(__dirname, 'data', 'myggfritt_byggnad2.ocd')

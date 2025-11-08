@@ -350,26 +350,25 @@ const objectToSvg = (options, symbols, object) => {
       // dblMode 1 with fill color: Render using overlay technique
       // First draw a wide line in the border color, then a narrower line in fill color on top
       // This creates the appearance of left border + fill + right border
-      if (
-        dblMode === 1 &&
-        dbl.dblLeftWidth > 0 &&
-        dbl.dblRightWidth > 0 &&
-        dbl.dblFlags & DblFillColorOn
-      ) {
+      if (dblMode === 1 && dbl.dblFlags & DblFillColorOn) {
+        if (dbl.dblLeftWidth > 0 && dbl.dblRightWidth > 0) {
+          nodes.push(
+            lineToPath(
+              object.coordinates,
+              dbl.dblLeftWidth + dbl.dblRightWidth + dbl.dblWidth,
+              options.colors[dbl.dblLeftColor],
+              null,
+              symbol.lineStyle,
+              options.closePath
+            )
+          )
+        }
         nodes.push(
-          lineToPath(
-            object.coordinates,
-            dbl.dblLeftWidth + dbl.dblRightWidth + dbl.dblWidth,
-            options.colors[dbl.dblLeftColor],
-            dashPattern,
-            symbol.lineStyle,
-            options.closePath
-          ),
           lineToPath(
             object.coordinates,
             dbl.dblWidth,
             options.colors[dbl.dblFillColor],
-            dashPattern,
+            null,
             symbol.lineStyle,
             options.closePath
           )
@@ -390,20 +389,32 @@ const objectToSvg = (options, symbols, object) => {
             ],
           ]
             .map(([offset, width, color]) => {
+              const a = object.coordinates.map(c => ({
+                type: 'circle',
+                attrs: {
+                  cx: c[0].toString(),
+                  cy: (-c[1]).toString(),
+                  r: '3',
+                  fill: 'red',
+                },
+              }))
+
               return offsetLineCoordinates(
                 object.coordinates,
                 offset,
                 options.closePath
-              ).map(lineCoords => {
-                return lineToPath(
-                  lineCoords,
-                  width,
-                  options.colors[color],
-                  dashPattern,
-                  symbol.lineStyle,
-                  options.closePath
-                )
-              })
+              )
+                .map(lineCoords => {
+                  return lineToPath(
+                    lineCoords,
+                    width,
+                    options.colors[color],
+                    null,
+                    symbol.lineStyle,
+                    options.closePath
+                  )
+                })
+                .concat(a)
             })
             .flat()
         )

@@ -688,7 +688,9 @@ function getDashPattern(mainGap, secGap, mainLength, endLength, endGap) {
 }
 
 function linejoin(lineStyle) {
-  lineStyle = lineStyle || 0
+  // According to docs, line style 2 is used as bitmask for "pointed end", so
+  // mask that out first.
+  lineStyle = (lineStyle || 0) & (0xff - 2)
   switch (lineStyle) {
     case 0:
       return 'bevel'
@@ -705,7 +707,10 @@ function linejoin(lineStyle) {
 }
 
 function linecap(lineStyle) {
-  lineStyle = lineStyle || 0
+  // According to docs, line style 2 is used as bitmask for "pointed end", so
+  // mask that out first.
+  // TODO: support "pointed end" line cap
+  lineStyle = (lineStyle || 0) & (0xff - 2)
   switch (lineStyle) {
     case 0:
       return 'butt'

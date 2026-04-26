@@ -10,6 +10,7 @@ declare namespace _exports {
     let AreaSymbolType: number;
     type TextSymbolType = 4;
     let TextSymbolType: number;
+    let LineTextSymbolType: number;
     type RectangleSymbolType = 7;
     let RectangleSymbolType: number;
     let DblFillColorOn: number;

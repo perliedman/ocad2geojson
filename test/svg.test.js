@@ -7,7 +7,7 @@ const test = require('ava')
 const { readOcad, ocadToSvg } = require('..')
 
 const { readdirSync, existsSync } = require('fs')
-const xmldom = require('xmldom')
+const xmldom = require('@xmldom/xmldom')
 const { default: kinks } = require('@turf/kinks')
 const DOMImplementation = new xmldom.DOMImplementation()
 

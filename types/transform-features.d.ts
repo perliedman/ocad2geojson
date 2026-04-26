@@ -17,7 +17,7 @@ export = transformFeatures;
  */
 /**
  * @template {Object} T
- * @typedef {function(TransformFeaturesOptions, Record<number, Symbol>, TObject, number): T|null|undefined} CreateObject
+ * @typedef {function(TransformFeaturesOptions, Record<number, Symbol>, TObject, number): T[]|null|undefined} CreateObjects
  */
 /**
  * @template {Object} U
@@ -27,14 +27,14 @@ export = transformFeatures;
  * @template {Object} T result type
  * @template {Object} U element result type
  * @param {OcadFile} ocadFile
- * @param {CreateObject<T>} createObject
+ * @param {CreateObjects<T>} createObjects
  * @param {CreateElement<U>} createElement
  * @param {TransformFeaturesOptions} options
  * @returns {T[]}
  */
-declare function transformFeatures<T extends unknown, U extends unknown>(ocadFile: OcadFile, createObject: CreateObject<T>, createElement: CreateElement<U>, options: TransformFeaturesOptions): T[];
+declare function transformFeatures<T extends unknown, U extends unknown>(ocadFile: OcadFile, createObjects: CreateObjects<T>, createElement: CreateElement<U>, options: TransformFeaturesOptions): T[];
 declare namespace transformFeatures {
-    export { Symbol, SymbolElement, TObject, OcadFile, TransformFeaturesOptions, CreateObject, CreateElement };
+    export { Symbol, SymbolElement, TObject, OcadFile, TransformFeaturesOptions, CreateObjects, CreateElement };
 }
 type Symbol = import("./ocad-reader/symbol").BaseSymbolDef;
 type SymbolElement = import("./ocad-reader/symbol-element");
@@ -94,5 +94,5 @@ type TransformFeaturesOptions = {
      */
     idCount?: number | undefined;
 };
-type CreateObject<T extends unknown> = (arg0: TransformFeaturesOptions, arg1: Record<number, Symbol>, arg2: TObject, arg3: number) => T | null | undefined;
+type CreateObjects<T extends unknown> = (arg0: TransformFeaturesOptions, arg1: Record<number, Symbol>, arg2: TObject, arg3: number) => T[] | null | undefined;
 type CreateElement<U extends unknown> = (symbol: Symbol, name: string, index: number, element: SymbolElement, c: import("./ocad-reader/td-poly"), angle: number, options: TransformFeaturesOptions, object: TObject, objectId: number) => U | null | undefined;

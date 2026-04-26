@@ -1,13 +1,13 @@
 const { LineSymbolType, AreaSymbolType } = require('./ocad-reader/symbol-types')
 const { patternToSvg, createSvgNode } = require('./ocad-to-svg')
-const uuidv4 = require('uuid/v4')
+const { v4: uuidv4 } = require('uuid')
 const _global = getGlobal()
 const DOMImplementation = _global.DOMImplementation
   ? _global.DOMImplementation
-  : new (require('xmldom').DOMImplementation)()
+  : new (require('@xmldom/xmldom').DOMImplementation)()
 const XMLSerializer = _global.XMLSerializer
   ? _global.XMLSerializer
-  : require('xmldom').XMLSerializer
+  : require('@xmldom/xmldom').XMLSerializer
 
 const defaultOptions = {
   generateSymbolElements: true,

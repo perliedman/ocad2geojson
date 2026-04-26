@@ -2,9 +2,10 @@ export = ObjectIndexBlock;
 declare class ObjectIndexBlock {
     /**
      * @param {BufferReader} reader
+     * @param {number} startIndex
      * @param {number} version
      */
-    constructor(reader: BufferReader, version: number);
+    constructor(reader: BufferReader, startIndex: number, version: number);
     /** @type {number} */
     version: number;
     /** @type {number} */
@@ -182,6 +183,7 @@ type ObjectIndex = {
     impLayer: number;
     dbDatasetHash: number;
     dbKeyHash: number;
+    _index: number;
 };
 type ObjectIndexBlock = any;
 import TObject = require("./tobject");

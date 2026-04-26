@@ -39,6 +39,12 @@ declare class TdPoly extends Array<number> {
     mul(f: any): TdPoly;
     unit(): TdPoly;
     rotate(theta: any): TdPoly;
+    /**
+     * Compare the coordinates of this `TdPoly` to another `TdPoly`.
+     * @param {TdPoly} other
+     * @returns `true` if the X and Y of both coordinates are equal
+     */
+    equalCoords(other: TdPoly): boolean;
 }
 declare namespace TdPoly {
     /**

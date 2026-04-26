@@ -6,7 +6,7 @@ const { program } = require('commander')
 const { toWgs84 } = require('reproject')
 const geojsonvt = require('geojson-vt')
 const vtpbf = require('vt-pbf')
-const { XMLSerializer, DOMImplementation } = require('xmldom')
+const { XMLSerializer, DOMImplementation } = require('@xmldom/xmldom')
 const {
   readOcad,
   ocadToGeoJson,
@@ -201,7 +201,7 @@ async function exportMap(path, outputPath, options) {
       break
     case 'qml':
       output = new XMLSerializer().serializeToString(
-        ocadToQml(ocadFile, outputOptions)
+        /** @type {any} */ (ocadToQml(ocadFile, outputOptions))
       )
       break
     case 'mvt':
@@ -282,7 +282,7 @@ function toSvg(ocadFile, outputOptions) {
     document: new DOMImplementation().createDocument(null, 'xml', null),
   })
   fixIds(svgDoc)
-  return new XMLSerializer().serializeToString(svgDoc)
+  return new XMLSerializer().serializeToString(/** @type {any} */ (svgDoc))
 }
 
 function getProj4Def(crs) {

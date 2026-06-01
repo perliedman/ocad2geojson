@@ -103,12 +103,12 @@ test('renders double line correctly', async (/** @type {ExecutionContext} */ t) 
   const mainGroup = /** @type {Element} */ (svgDoc.childNodes[1])
   t.is('g', mainGroup.tagName)
 
-  // Should render exactly 3 paths for the double line with fill
+  // Should render exactly 4 paths for the double line with fill
   const paths = Array.from(mainGroup.childNodes)
     .filter(n => n.nodeType === 1)
     .map(n => /** @type {Element} */ (n))
     .filter(n => n.tagName === 'path')
-  t.is(3, paths.length, 'Should render exactly 3 paths')
+  t.is(4, paths.length, 'Should render exactly 4 paths')
 
   // Extract stroke widths and colors from the style attributes
   const pathStyles = paths.map(p => {
@@ -135,12 +135,12 @@ test('renders double line correctly', async (/** @type {ExecutionContext} */ t) 
   t.truthy(pathStyles[1].width != null && pathStyles[1].color != null)
   const w1 = /** @type {number} */ (pathStyles[1].width)
   const c1 = /** @type {string} */ (pathStyles[1].color)
-  t.is(78, w1, 'Outer border should have width 78')
+  t.is(14, w1, 'Outer border should have width 14')
   t.true(c1 === '44, 46, 53', 'First path should be border')
 
   t.truthy(pathStyles[2].width != null && pathStyles[2].color != null)
-  const w2 = /** @type {number} */ (pathStyles[2].width)
-  const c2 = /** @type {string} */ (pathStyles[2].color)
+  const w2 = /** @type {number} */ (pathStyles[3].width)
+  const c2 = /** @type {string} */ (pathStyles[3].color)
   t.is(50, w2, 'Inner fill should have width 50')
   t.is('242, 178, 127', c2, 'Inner fill should be color 242, 178, 127')
 })
@@ -164,24 +164,6 @@ test('jarnvag: renders patterned dashed double line correctly', async (/** @type
 
   // We expect four path elements: two dark outer strokes, two white dashed inner strokes
   t.is(4, paths.length, 'Expected four path elements')
-
-  // Helper to parse style into key/value map
-  /**
-   * @param {string} style
-   * @returns {Record<string,string>}
-   */
-  const parseStyle = style => {
-    return Object.fromEntries(
-      style
-        .split(';')
-        .map((s /** @type {string} */) => s.trim())
-        .filter(Boolean)
-        .map(part => {
-          const [k, v] = part.split(':').map(x => x.trim())
-          return [k, v]
-        })
-    )
-  }
 
   const styleInfos = paths.map(p => parseStyle(p.getAttribute('style') || ''))
 
@@ -244,6 +226,38 @@ test('renders house with offset outline without kinks', async (/** @type {Execut
   }
 })
 
+test('renders stair with all symbols', async (/** @type {ExecutionContext} */ t) => {
+  const map = await readOcad(path.join(__dirname, 'data', 'sprint-stair.ocd'))
+  const svgDoc = ocadToSvg(map, {
+    document: DOMImplementation.createDocument(null, 'xml', null),
+  })
+  const mainGroup = /** @type {Element} */ (svgDoc.childNodes[1])
+  t.is('g', mainGroup.tagName)
+
+  const paths = Array.from(mainGroup.childNodes)
+    .filter(n => n.nodeType === 1)
+    .map(n => /** @type {Element} */ (n))
+    .filter(n => n.tagName === 'path')
+
+  t.is(
+    6,
+    paths.length,
+    'Should render exactly 6 paths (left edge, right edge, center, three rungs'
+  )
+
+  const firstStyle = parseStyle(paths[0].getAttribute('style') || '')
+  t.is(firstStyle.stroke, 'rgb(243, 200, 171)', 'center rendered first')
+  t.true(
+    paths
+      .slice(1)
+      .every(
+        path =>
+          parseStyle(path.getAttribute('style') || '').stroke ===
+          'rgb(44, 46, 53)'
+      )
+  )
+})
+
 test('can open all local test maps', async (/** @type {ExecutionContext} */ t) => {
   const localDir = path.join(__dirname, 'data', 'local')
   if (!existsSync(localDir)) {
@@ -267,3 +281,21 @@ test('can open all local test maps', async (/** @type {ExecutionContext} */ t) =
     }
   }
 })
+
+// Helper to parse style into key/value map
+/**
+ * @param {string} style
+ * @returns {Record<string,string>}
+ */
+const parseStyle = style => {
+  return Object.fromEntries(
+    style
+      .split(';')
+      .map((s /** @type {string} */) => s.trim())
+      .filter(Boolean)
+      .map(part => {
+        const [k, v] = part.split(':').map(x => x.trim())
+        return [k, v]
+      })
+  )
+}

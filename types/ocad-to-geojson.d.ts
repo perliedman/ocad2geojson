@@ -2,16 +2,16 @@ export = ocadToGeoJson;
 /**
  * @typedef {import("./ocad-reader/tobject").TObject} TObject
  */
-/** @typedef {import("@turf/helpers").Geometry} Geometry */
+/** @typedef {import("geojson").Geometry} Geometry */
 /**
- * @template {Object} TGeometry
+ * @template {Geometry} TGeometry
  * @template {Object} TProperties
- * @typedef {import("@turf/helpers").FeatureCollection<TGeometry, TProperties>} FeatureCollection<TGeometry, TProperties>
+ * @typedef {import("geojson").FeatureCollection<TGeometry, TProperties>} FeatureCollection<TGeometry, TProperties>
  */
 /**
- * @template {Object} TGeometry
+ * @template {Geometry} TGeometry
  * @template {Object} TProperties
- * @typedef {import("@turf/helpers").Feature<TGeometry, TProperties>} Feature<TGeometry, TProperties>
+ * @typedef {import("geojson").Feature<TGeometry, TProperties>} Feature<TGeometry, TProperties>
  */
 /**
  * @typedef {import("./transform-features").TransformFeaturesOptions} TransformFeaturesOptions
@@ -45,6 +45,7 @@ export = ocadToGeoJson;
  * @property {string} text
  * @property {string|undefined} objectString
  * @property {string|undefined} databaseString
+ * @property {number} objectIndex
  */
 /**
  * @typedef {Object} ElementProperties
@@ -54,10 +55,10 @@ export = ocadToGeoJson;
 /**
  * Given an `OcadFile` object, returns a GeoJSON `FeatureCollection` of the file's objects.
  * @param {import("./ocad-reader/ocad-file")} ocadFile the OCAD file
- * @param {OcadToGeoJsonOptions} options options
+ * @param {OcadToGeoJsonOptions=} options options
  * @returns {FeatureCollection<Geometry, OcadObjectProperties>}
  */
-declare function ocadToGeoJson(ocadFile: import("./ocad-reader/ocad-file"), options: OcadToGeoJsonOptions): FeatureCollection<Geometry, OcadObjectProperties>;
+declare function ocadToGeoJson(ocadFile: import("./ocad-reader/ocad-file"), options?: OcadToGeoJsonOptions | undefined): FeatureCollection<Geometry, OcadObjectProperties>;
 declare namespace ocadToGeoJson {
     export { TObject, Geometry, FeatureCollection, Feature, TransformFeaturesOptions, OcadToGeoJsonOptionsProps, OcadToGeoJsonOptions, OcadObjectProperties, ElementProperties };
 }
@@ -87,15 +88,15 @@ type TObject = {
     databaseString: string | undefined;
     coordinates: TdPoly[];
 };
-type Geometry = import("@turf/helpers").Geometry;
+type Geometry = import("geojson").Geometry;
 /**
  * <TGeometry, TProperties>
  */
-type FeatureCollection<TGeometry extends unknown, TProperties extends unknown> = import("@turf/helpers").FeatureCollection<TGeometry, TProperties>;
+type FeatureCollection<TGeometry extends Geometry, TProperties extends unknown> = import("geojson").FeatureCollection<TGeometry, TProperties>;
 /**
  * <TGeometry, TProperties>
  */
-type Feature<TGeometry extends unknown, TProperties extends unknown> = import("@turf/helpers").Feature<TGeometry, TProperties>;
+type Feature<TGeometry extends Geometry, TProperties extends unknown> = import("geojson").Feature<TGeometry, TProperties>;
 type TransformFeaturesOptions = import("./transform-features").TransformFeaturesOptions;
 type OcadToGeoJsonOptionsProps = {
     /**
@@ -130,6 +131,7 @@ type OcadObjectProperties = {
     text: string;
     objectString: string | undefined;
     databaseString: string | undefined;
+    objectIndex: number;
 };
 type ElementProperties = {
     element: string;

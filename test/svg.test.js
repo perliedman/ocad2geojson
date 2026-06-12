@@ -242,7 +242,7 @@ test('renders stair with all symbols', async (/** @type {ExecutionContext} */ t)
   t.is(
     6,
     paths.length,
-    'Should render exactly 6 paths (left edge, right edge, center, three rungs'
+    'Should render exactly 6 paths (left edge, right edge, center, three rungs)'
   )
 
   const firstStyle = parseStyle(paths[0].getAttribute('style') || '')
@@ -255,6 +255,35 @@ test('renders stair with all symbols', async (/** @type {ExecutionContext} */ t)
           parseStyle(path.getAttribute('style') || '').stroke ===
           'rgb(44, 46, 53)'
       )
+  )
+})
+
+test('renders fences with correct number of fence lines', async (/** @type {ExecutionContext} */ t) => {
+  const map = await readOcad(path.join(__dirname, 'data', 'fences.ocd'))
+  const svgDoc = ocadToSvg(map, {
+    document: DOMImplementation.createDocument(null, 'xml', null),
+  })
+  const mainGroup = /** @type {Element} */ (svgDoc.childNodes[1])
+  t.is('g', mainGroup.tagName)
+
+  const paths = Array.from(mainGroup.childNodes)
+    .filter(n => n.nodeType === 1)
+    .map(n => /** @type {Element} */ (n))
+    .filter(n => n.tagName === 'path')
+
+  t.is(8, paths.length, 'Should render exactly 8 paths (2 main + 6 small)')
+
+  t.is(
+    2,
+    paths.filter(
+      p => parseStyle(p.getAttribute('style') || '')?.['stroke-width'] === '40'
+    ).length
+  )
+  t.is(
+    6,
+    paths.filter(
+      p => parseStyle(p.getAttribute('style') || '')?.['stroke-width'] === '14'
+    ).length
   )
 })
 

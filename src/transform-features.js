@@ -116,89 +116,18 @@ const generateSymbolElements = (
     }
     case LineSymbolType:
       if (symbol.primSymElements.length > 0 && symbol.mainLength > 0) {
-        const coords = object.coordinates
-        const endLength = symbol.endLength
-        const mainLength = symbol.mainLength
-        const spotDist = symbol.primSymDist
-        const nPrimSym = symbol.nPrimSym || 1
-
-        // Total length of the polyline.
-        let totalLength = 0
-        for (let i = 1; i < coords.length; i++) {
-          totalLength += coords[i].sub(coords[i - 1]).vLength()
-        }
-
-        // Length occupied by the symbols inside a single group.
-        const groupLength = (nPrimSym - 1) * spotDist
-        // Length available for distributing the symbol groups, i.e. the line
-        // minus the empty space at each end.
-        const span = totalLength - 2 * endLength
-
-        // OCAD does not place primary symbols at a fixed `mainLength` stride;
-        // it distributes the groups evenly so that the line both starts and
-        // ends `endLength` away from a symbol, stretching or compressing the
-        // main length to fit a whole number of groups. Build the list of
-        // distances (measured from the start of the line) at which an
-        // individual primary symbol should be placed.
-        const distances = []
-        if (span <= groupLength) {
-          // The line is too short for the configured spacing: draw the minimum
-          // number of groups, centered on the line.
-          const nGroups = Math.max(1, symbol.minSym + 1)
-          const groupSpacing = nGroups > 1 ? totalLength / (nGroups - 1) : 0
-          const start = nGroups > 1 ? 0 : (totalLength - groupLength) / 2
-          for (let g = 0; g < nGroups; g++) {
-            for (let k = 0; k < nPrimSym; k++) {
-              distances.push(start + g * groupSpacing + k * spotDist)
-            }
-          }
-        } else {
-          const nGaps = Math.max(
-            1,
-            Math.round((span - groupLength) / mainLength)
-          )
-          const nGroups = Math.max(symbol.minSym + 1, nGaps + 1)
-          const groupSpacing = (span - groupLength) / (nGroups - 1)
-          for (let g = 0; g < nGroups; g++) {
-            const groupStart = endLength + g * groupSpacing
-            for (let k = 0; k < nPrimSym; k++) {
-              distances.push(groupStart + k * spotDist)
-            }
+        let coords = []
+        for (let i = 0; i < object.coordinates.length; i++) {
+          const coord = object.coordinates[i]
+          coords.push(coord)
+          if (coord.isCornerPoint()) {
+            addPrimSymsAlongLine(coords, symbol)
+            coords = [coord]
           }
         }
 
-        // Walk the polyline and place a symbol at each precomputed distance.
-        let di = 0
-        let segStart = 0
-        for (let i = 1; i < coords.length && di < distances.length; i++) {
-          const c0 = coords[i - 1]
-          const c1 = coords[i]
-          const v = c1.sub(c0)
-          const angle = Math.atan2(v[1], v[0])
-          const u = v.unit()
-          const segEnd = segStart + v.vLength()
-
-          while (di < distances.length && distances[di] <= segEnd + 1e-6) {
-            const c = c0.add(u.mul(distances[di] - segStart))
-            elements = elements.concat(
-              symbol.primSymElements.map((e, idx) =>
-                createElement(
-                  symbol,
-                  'prim',
-                  idx,
-                  e,
-                  c,
-                  angle,
-                  options,
-                  object,
-                  objectIndex
-                )
-              )
-            )
-            di++
-          }
-
-          segStart = segEnd
+        if (coords.length > 1) {
+          addPrimSymsAlongLine(coords, symbol)
         }
       }
 
@@ -275,7 +204,97 @@ const generateSymbolElements = (
           )
         )
       }
+
+      return elements
   }
 
-  return elements
+  /**
+   * @param {import('./ocad-reader/td-poly')[]} coords
+   * @param {import('./ocad-reader/symbol').LineSymbol} symbol
+   */
+  function addPrimSymsAlongLine(coords, symbol) {
+    const endLength = symbol.endLength
+    const mainLength = symbol.mainLength
+    const spotDist = symbol.primSymDist
+    const nPrimSym = symbol.nPrimSym || 1
+
+    // Total length of the polyline.
+    let totalLength = 0
+    for (let i = 1; i < coords.length; i++) {
+      totalLength += coords[i].sub(coords[i - 1]).vLength()
+    }
+
+    // Length occupied by the symbols inside a single group.
+    const groupLength = (nPrimSym - 1) * spotDist
+    // Length available for distributing the symbol groups, i.e. the line
+    // minus the empty space at each end.
+    const span = totalLength - 2 * endLength
+
+    // OCAD does not place primary symbols at a fixed `mainLength` stride;
+    // it distributes the groups evenly so that the line both starts and
+    // ends `endLength` away from a symbol, stretching or compressing the
+    // main length to fit a whole number of groups. Build the list of
+    // distances (measured from the start of the line) at which an
+    // individual primary symbol should be placed.
+    const distances = []
+    if (span <= groupLength) {
+      // The line is too short for the configured spacing: draw the minimum
+      // number of groups, centered on the line.
+      const nGroups = Math.max(1, symbol.minSym + 1)
+      const groupSpacing = nGroups > 1 ? totalLength / (nGroups - 1) : 0
+      const start = nGroups > 1 ? 0 : (totalLength - groupLength) / 2
+      for (let g = 0; g < nGroups; g++) {
+        for (let k = 0; k < nPrimSym; k++) {
+          distances.push(start + g * groupSpacing + k * spotDist)
+        }
+      }
+    } else {
+      const nGaps = Math.max(
+        symbol.minSym,
+        Math.round((span - groupLength) / mainLength)
+      )
+      const nGroups = nGaps + 1
+      const groupSpacing = nGroups > 1 ? (span - groupLength) / nGaps : 0
+      for (let g = 0; g < nGroups; g++) {
+        const groupStart = endLength + g * groupSpacing
+        for (let k = 0; k < nPrimSym; k++) {
+          distances.push(groupStart + k * spotDist)
+        }
+      }
+    }
+
+    // Walk the polyline and place a symbol at each precomputed distance.
+    let di = 0
+    let segStart = 0
+    for (let i = 1; i < coords.length && di < distances.length; i++) {
+      const c0 = coords[i - 1]
+      const c1 = coords[i]
+      const v = c1.sub(c0)
+      const angle = Math.atan2(v[1], v[0])
+      const u = v.unit()
+      const segEnd = segStart + v.vLength()
+
+      while (di < distances.length && distances[di] <= segEnd + 1e-6) {
+        const c = c0.add(u.mul(distances[di] - segStart))
+        elements = elements.concat(
+          symbol.primSymElements.map((e, idx) =>
+            createElement(
+              symbol,
+              'prim',
+              idx,
+              e,
+              c,
+              angle,
+              options,
+              object,
+              objectIndex
+            )
+          )
+        )
+        di++
+      }
+
+      segStart = segEnd
+    }
+  }
 }

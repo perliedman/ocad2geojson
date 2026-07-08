@@ -204,9 +204,9 @@ const generateSymbolElements = (
           )
         )
       }
-
-      return elements
   }
+
+  return elements
 
   /**
    * @param {import('./ocad-reader/td-poly')[]} coords

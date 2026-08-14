@@ -241,7 +241,15 @@ module.exports = {
       )
     }
 
-    children.sort((a, b) => b.order - a.order)
+    // Sort so that nodes with a higher color render order (further down the
+    // OCAD color table) are painted first, i.e. end up below. Nodes without a
+    // valid order are painted first (bottom); a NaN comparison here would make
+    // the comparator inconsistent and scramble the whole draw order.
+    const nodeOrder = n =>
+      typeof n.order === 'number' && !Number.isNaN(n.order)
+        ? n.order
+        : Number.MAX_SAFE_INTEGER
+    children.sort((a, b) => nodeOrder(b) - nodeOrder(a))
     const root = {
       type: 'svg',
       attrs: {
@@ -389,32 +397,20 @@ const objectToSvg = (options, symbols, object) => {
             ],
           ]
             .map(([offset, width, color]) => {
-              const a = object.coordinates.map(c => ({
-                type: 'circle',
-                attrs: {
-                  cx: c[0].toString(),
-                  cy: (-c[1]).toString(),
-                  r: '3',
-                  fill: 'red',
-                },
-              }))
-
               return offsetLineCoordinates(
                 object.coordinates,
                 offset,
                 options.closePath
-              )
-                .map(lineCoords => {
-                  return lineToPath(
-                    lineCoords,
-                    width,
-                    options.colors[color],
-                    null,
-                    symbol.lineStyle,
-                    options.closePath
-                  )
-                })
-                .concat(a)
+              ).map(lineCoords => {
+                return lineToPath(
+                  lineCoords,
+                  width,
+                  options.colors[color],
+                  null,
+                  symbol.lineStyle,
+                  options.closePath
+                )
+              })
             })
             .flat()
         )

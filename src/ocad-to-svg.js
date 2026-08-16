@@ -355,33 +355,7 @@ const objectToSvg = (options, symbols, object) => {
         )
       }
 
-      // dblMode 1 with fill color: Render using overlay technique
-      // First draw a wide line in the border color, then a narrower line in fill color on top
-      // This creates the appearance of left border + fill + right border
-      if (dblMode === 1 && dbl.dblFlags & DblFillColorOn) {
-        if (dbl.dblLeftWidth > 0 && dbl.dblRightWidth > 0) {
-          nodes.push(
-            lineToPath(
-              object.coordinates,
-              dbl.dblLeftWidth + dbl.dblRightWidth + dbl.dblWidth,
-              options.colors[dbl.dblLeftColor],
-              null,
-              symbol.lineStyle,
-              options.closePath
-            )
-          )
-        }
-        nodes.push(
-          lineToPath(
-            object.coordinates,
-            dbl.dblWidth,
-            options.colors[dbl.dblFillColor],
-            null,
-            symbol.lineStyle,
-            options.closePath
-          )
-        )
-      } else if (dblMode === 1 && !(dbl?.dblFlags & DblFillColorOn)) {
+      if (dblMode === 1) {
         // dblMode 1 without fill color: Render as two separate offset parallel lines
         nodes.push(
           ...[
@@ -414,6 +388,18 @@ const objectToSvg = (options, symbols, object) => {
             })
             .flat()
         )
+        if (dbl.dblFlags & DblFillColorOn) {
+          nodes.push(
+            lineToPath(
+              object.coordinates,
+              dbl.dblWidth,
+              options.colors[dbl.dblFillColor],
+              null,
+              symbol.lineStyle,
+              options.closePath
+            )
+          )
+        }
       }
 
       if (symbol.frWidth > 0) {
@@ -465,10 +451,10 @@ const objectToSvg = (options, symbols, object) => {
         const patternColor = symbol.hatchMode
           ? symbol.hatchColor
           : symbol.elements.length
-          ? Math.min(...symbol.elements.map(e => e.color))
-          : // This is a fallback because apparently there are symbols
-            // with structMode set but no elements (?!)
-            symbol.fillColor
+            ? Math.min(...symbol.elements.map(e => e.color))
+            : // This is a fallback because apparently there are symbols
+              // with structMode set but no elements (?!)
+              symbol.fillColor
         nodes.push(
           areaToPath(
             object.coordinates,
@@ -684,7 +670,9 @@ function getDashPattern(mainGap, secGap, mainLength, endLength, endGap) {
 }
 
 function linejoin(lineStyle) {
-  lineStyle = lineStyle || 0
+  // According to docs, line style 2 is used as bitmask for "pointed end", so
+  // mask that out first.
+  lineStyle = (lineStyle || 0) & (0xff - 2)
   switch (lineStyle) {
     case 0:
       return 'bevel'
@@ -701,7 +689,10 @@ function linejoin(lineStyle) {
 }
 
 function linecap(lineStyle) {
-  lineStyle = lineStyle || 0
+  // According to docs, line style 2 is used as bitmask for "pointed end", so
+  // mask that out first.
+  // TODO: support "pointed end" line cap
+  lineStyle = (lineStyle || 0) & (0xff - 2)
   switch (lineStyle) {
     case 0:
       return 'butt'
@@ -845,8 +836,8 @@ const ocadTextToSvg = (
     verticalAlign === VerticalAlignTop
       ? lineHeight
       : verticalAlign === VerticalAlignBottom
-      ? 0
-      : 0.5 * lineHeight
+        ? 0
+        : 0.5 * lineHeight
 
   return lines.map((l, i) => ({
     type: 'tspan',
@@ -857,8 +848,8 @@ const ocadTextToSvg = (
         horizontalAlign === HorizontalAlignCenter
           ? 'middle'
           : horizontalAlign === HorizontalAlignLeft
-          ? 'start'
-          : 'end',
+            ? 'start'
+            : 'end',
     },
     children: [{ text: l }],
   }))

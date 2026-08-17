@@ -241,7 +241,15 @@ module.exports = {
       )
     }
 
-    children.sort((a, b) => b.order - a.order)
+    // Sort so that nodes with a higher color render order (further down the
+    // OCAD color table) are painted first, i.e. end up below. Nodes without a
+    // valid order are painted first (bottom); a NaN comparison here would make
+    // the comparator inconsistent and scramble the whole draw order.
+    const nodeOrder = n =>
+      typeof n.order === 'number' && !Number.isNaN(n.order)
+        ? n.order
+        : Number.MAX_SAFE_INTEGER
+    children.sort((a, b) => nodeOrder(b) - nodeOrder(a))
     const root = {
       type: 'svg',
       attrs: {

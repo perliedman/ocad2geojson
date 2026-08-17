@@ -8,7 +8,7 @@ declare class OcadFile {
      * @param {string[]} warnings
      */
     constructor(header: OcadHeader, parameterStrings: {
-        [x: number]: ParameterStringValues[];
+        [x: number]: import("./parameter-string").ParameterStringValues[];
     }, objects: import("./object-index").TObject[], symbols: Symbol[], warnings: string[]);
     /**
      * @type {OcadHeader}
@@ -18,7 +18,7 @@ declare class OcadFile {
      * @type {Object.<number, ParameterStringValues[]>}
      */
     parameterStrings: {
-        [x: number]: ParameterStringValues[];
+        [x: number]: import("./parameter-string").ParameterStringValues[];
     };
     /**
      * @type {TObject[]}

@@ -7,7 +7,7 @@ const test = require('ava')
 const { readOcad, ocadToSvg } = require('..')
 
 const { readdirSync, existsSync } = require('fs')
-const xmldom = require('xmldom')
+const xmldom = require('@xmldom/xmldom')
 const { default: kinks } = require('@turf/kinks')
 const DOMImplementation = new xmldom.DOMImplementation()
 
@@ -187,6 +187,115 @@ test('jarnvag: renders patterned dashed double line correctly', async (/** @type
     t.is('bevel', s['stroke-linejoin'])
     t.is('butt', s['stroke-linecap'])
   })
+
+  // Regression: the no-fill double-line branch used to emit leftover debug
+  // circles (fill="red") without a render order. Sorting nodes by order then
+  // compared NaN, which is an inconsistent comparator and scrambled the
+  // z-order of unrelated map objects (e.g. area fills covering lines).
+  const circles = Array.from(mainGroup.childNodes)
+    .filter(n => n.nodeType === 1)
+    .map(n => /** @type {Element} */ (n))
+    .filter(n => n.tagName === 'circle')
+  t.is(0, circles.length, 'Double lines must not emit debug circles')
+})
+
+test('double line without fill emits no debug artifacts and keeps render order', async (/** @type {ExecutionContext} */ t) => {
+  // Minimal synthetic map: one no-fill double-line object (like ISOM 215
+  // "trench") plus one area fill whose color renders below the line color.
+  // The double-line branch used to emit debug circles (fill="red") without
+  // an `order`, poisoning the z-order sort with NaN comparisons so that
+  // area fills could end up painted on top of lines.
+  const TdPoly = require('../src/ocad-reader/td-poly')
+
+  const lineSymbol = {
+    symNum: 215000,
+    type: 2,
+    isHidden: () => false,
+    lineWidth: 0,
+    lineColor: 0,
+    frWidth: 0,
+    lineStyle: 0,
+    mainGap: 0,
+    secGap: 0,
+    mainLength: 0,
+    endLength: 0,
+    endGap: 0,
+    doubleLine: {
+      dblMode: 1,
+      dblFlags: 0,
+      dblWidth: 30,
+      dblLeftWidth: 5,
+      dblRightWidth: 5,
+      dblLeftColor: 0,
+      dblRightColor: 0,
+      dblFillColor: 0,
+    },
+    primSymElements: [],
+    cornerSymElements: [],
+    startSymElements: [],
+    endSymElements: [],
+  }
+  const areaSymbol = {
+    symNum: 401000,
+    type: 3,
+    isHidden: () => false,
+    fillOn: true,
+    fillColor: 1,
+    hatchMode: 0,
+    structMode: 0,
+    borderSym: 0,
+    elements: [],
+  }
+  const ocadFile = {
+    // Lower renderOrder paints on top; the line color must end up above the fill.
+    colors: [
+      { number: 0, rgb: 'rgb(44, 46, 53)', renderOrder: 0 },
+      { number: 1, rgb: 'rgb(255, 189, 86)', renderOrder: 1 },
+    ],
+    symbols: [lineSymbol, areaSymbol],
+    objects: [
+      { objType: 2, sym: 215000, coordinates: [new TdPoly(0, 0), new TdPoly(100, 100)] },
+      {
+        objType: 3,
+        sym: 401000,
+        coordinates: [
+          new TdPoly(-50, -50),
+          new TdPoly(150, -50),
+          new TdPoly(150, 150),
+          new TdPoly(-50, 150),
+          new TdPoly(-50, -50),
+        ],
+      },
+    ],
+    getBounds: () => [-50, -50, 150, 150],
+  }
+
+  const svgDoc = ocadToSvg(ocadFile, {
+    document: DOMImplementation.createDocument(null, 'xml', null),
+  })
+  const mainGroup = /** @type {Element} */ (svgDoc.childNodes[1])
+  const children = Array.from(mainGroup.childNodes)
+    .filter(n => n.nodeType === 1)
+    .map(n => /** @type {Element} */ (n))
+
+  t.is(
+    0,
+    children.filter(n => n.tagName === 'circle').length,
+    'No debug circles should be emitted'
+  )
+
+  const styles = children.map(n => n.getAttribute('style') || '')
+  const fillIndex = styles.findIndex(s => s.includes('fill: rgb(255, 189, 86)'))
+  const lastLineIndex = styles.reduce(
+    (acc, s, i) => (s.includes('stroke: rgb(44, 46, 53)') ? i : acc),
+    -1
+  )
+  t.true(fillIndex >= 0, 'Area fill should be rendered')
+  t.true(lastLineIndex >= 0, 'Double line strokes should be rendered')
+  t.true(
+    fillIndex < lastLineIndex,
+    'Area fill must be painted below the line strokes'
+  )
 })
 
 test('renders house with offset outline without kinks', async (/** @type {ExecutionContext} */ t) => {

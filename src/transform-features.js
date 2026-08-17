@@ -51,7 +51,15 @@ function transformFeatures(ocadFile, createObjects, createElement, options) {
   options = {
     ...defaultOptions,
     ...options,
-    colors: ocadFile.colors,
+    colors: new Proxy(ocadFile.colors, {
+      get(target, prop, receiver) {
+        const val = Reflect.get(target, prop, receiver)
+        if (val === undefined && typeof prop === 'string' && /^\d+$/.test(prop)) {
+          return { rgb: '#000000', renderOrder: 0 }
+        }
+        return val
+      },
+    }),
     idCount: ocadFile.objects.length,
   }
 

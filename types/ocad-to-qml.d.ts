@@ -1,7 +1,7 @@
 declare namespace _exports {
     export { NodeDef };
 }
-declare function _exports(ocadFile: any, options: any): HTMLElement;
+declare function _exports(ocadFile: any, options: any): import("./mini-dom").Element;
 export = _exports;
 /**
  * //  *

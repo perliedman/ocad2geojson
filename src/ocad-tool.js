@@ -6,7 +6,6 @@ const { program } = require('commander')
 const { toWgs84 } = require('reproject')
 const geojsonvt = require('geojson-vt')
 const vtpbf = require('vt-pbf')
-const { XMLSerializer, DOMImplementation } = require('xmldom')
 const {
   readOcad,
   ocadToGeoJson,
@@ -14,6 +13,7 @@ const {
   ocadToQml,
   ocadToSvg,
 } = require('./')
+const { Document, XMLSerializer } = require('./mini-dom')
 
 program
   .command('info <path>')
@@ -201,7 +201,7 @@ async function exportMap(path, outputPath, options) {
       break
     case 'qml':
       output = new XMLSerializer().serializeToString(
-        ocadToQml(ocadFile, outputOptions)
+        ocadToQml(ocadFile, { ...outputOptions, document: new Document() })
       )
       break
     case 'mvt':
@@ -279,9 +279,8 @@ async function toMvt(ocadFile, outputPath, outputOptions) {
 function toSvg(ocadFile, outputOptions) {
   const svgDoc = ocadToSvg(ocadFile, {
     ...outputOptions,
-    document: new DOMImplementation().createDocument(null, 'xml', null),
+    document: new Document(),
   })
-  fixIds(svgDoc)
   return new XMLSerializer().serializeToString(svgDoc)
 }
 
@@ -305,18 +304,4 @@ function getProj4Def(crs) {
     })
     request.end()
   })
-}
-
-// In xmldom, node ids are normal attributes, while in the browser's
-// DOM, they are a property on the node object itself. This method
-// recursively "fixes" nodes by adding id attributes.
-function fixIds(n) {
-  if (n.id) {
-    n.setAttributeNS('http://www.w3.org/2000/svg', 'id', n.id)
-  }
-  if (n.childNodes) {
-    for (let i = 0; i < n.childNodes.length; i++) {
-      fixIds(n.childNodes[i])
-    }
-  }
 }

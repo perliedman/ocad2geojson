@@ -2,7 +2,7 @@ declare namespace _exports {
     export { SvgNodeDef };
 }
 declare namespace _exports {
-    export function ocadToSvg(ocadFile: import("./ocad-reader/ocad-file"), options: any): Text | SVGElement;
+    export function ocadToSvg(ocadFile: import("./ocad-reader/ocad-file"), options: any): import("./mini-dom").Element | import("./mini-dom").TextNode;
     export { patternToSvg };
     export { createSvgNode };
 }
@@ -58,8 +58,8 @@ declare function patternToSvg(colors: any, s: any): ({
  */
 /**
  *
- * @param {Document} document
+ * @param {import('./mini-dom').Document} document
  * @param {SvgNodeDef} n
  * @returns
  */
-declare function createSvgNode(document: Document, n: SvgNodeDef): Text | SVGElement;
+declare function createSvgNode(document: import("./mini-dom").Document, n: SvgNodeDef): import("./mini-dom").Element | import("./mini-dom").TextNode;

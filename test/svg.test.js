@@ -7,88 +7,116 @@ const test = require('ava')
 const { readOcad, ocadToSvg } = require('..')
 
 const { readdirSync, existsSync } = require('fs')
-const xmldom = require('xmldom')
+const { Document } = require('../src/mini-dom')
 const { default: kinks } = require('@turf/kinks')
-const DOMImplementation = new xmldom.DOMImplementation()
 
 test('can convert to SVG', async (/** @type {ExecutionContext} */ t) => {
   const map = await readOcad(path.join(__dirname, 'data', 'basic-1.ocd'))
+  /** @type {import('../src/mini-dom').Element} */
   const svgDoc = ocadToSvg(map, {
-    document: DOMImplementation.createDocument(null, 'xml', null),
+    document: new Document('', 'xml'),
   })
 
-  t.is('svg', /** @type {Element} */ (svgDoc).tagName)
+  t.is('svg', svgDoc.tagName)
   const defs = svgDoc.firstChild
   if (!defs || defs.nodeType !== 1) t.fail('Expected defs element')
   else {
-    const defsEl = /** @type {Element} */ (defs)
+    const defsEl = /** @type {import('../src/mini-dom').Element} */ (defs)
     t.is('defs', defsEl.tagName)
     t.is(2, defsEl.childNodes.length)
     t.truthy(
       Array.from(defsEl.childNodes)
         .filter(n => n.nodeType === 1)
-        .every(x => /** @type {Element} */ (x).tagName === 'pattern')
+        .every(
+          x =>
+            /** @type {import('../src/mini-dom').Element} */ (x).tagName ===
+            'pattern'
+        )
     )
   }
   const mainGroupNode = svgDoc.childNodes[1]
   if (!mainGroupNode || mainGroupNode.nodeType !== 1)
     t.fail('Expected main group element')
   else {
-    const mainGroup = /** @type {Element} */ (mainGroupNode)
+    const mainGroup = /** @type {import('../src/mini-dom').Element} */ (
+      mainGroupNode
+    )
     t.is('g', mainGroup.tagName)
     const children = mainGroup.childNodes
     t.is(4, children.length)
-    t.is('path', /** @type {Element} */ (children[0]).tagName)
-    t.is('path', /** @type {Element} */ (children[1]).tagName)
-    t.is('path', /** @type {Element} */ (children[2]).tagName)
-    t.is('path', /** @type {Element} */ (children[3]).tagName)
+    t.is(
+      'path',
+      /** @type {import('../src/mini-dom').Element} */ (children[0]).tagName
+    )
+    t.is(
+      'path',
+      /** @type {import('../src/mini-dom').Element} */ (children[1]).tagName
+    )
+    t.is(
+      'path',
+      /** @type {import('../src/mini-dom').Element} */ (children[2]).tagName
+    )
+    t.is(
+      'path',
+      /** @type {import('../src/mini-dom').Element} */ (children[3]).tagName
+    )
   }
 })
 
 test('SVG can filter colors', async (/** @type {ExecutionContext} */ t) => {
   const map = await readOcad(path.join(__dirname, 'data', 'basic-1.ocd'))
   let svgDoc = ocadToSvg(map, {
-    document: DOMImplementation.createDocument(null, 'xml', null),
+    document: new Document('', 'xml'),
     fromColor: 0,
     toColor: 1,
   })
-  let mainGroup = /** @type {Element} */ (svgDoc.childNodes[1])
+  let mainGroup = /** @type {import('../src/mini-dom').Element} */ (
+    svgDoc.childNodes[1]
+  )
   t.is('g', mainGroup.tagName)
   t.is(0, mainGroup.childNodes.length)
 
   svgDoc = ocadToSvg(map, {
-    document: DOMImplementation.createDocument(null, 'xml', null),
+    document: new Document('', 'xml'),
     fromColor: 0,
     toColor: 2,
   })
-  mainGroup = /** @type {Element} */ (svgDoc.childNodes[1])
+  mainGroup = /** @type {import('../src/mini-dom').Element} */ (
+    svgDoc.childNodes[1]
+  )
   t.is('g', mainGroup.tagName)
   t.is(3, mainGroup.childNodes.length)
 
   svgDoc = ocadToSvg(map, {
-    document: DOMImplementation.createDocument(null, 'xml', null),
+    document: new Document('', 'xml'),
     fromColor: 2,
     toColor: 4,
   })
-  mainGroup = /** @type {Element} */ (svgDoc.childNodes[1])
+  mainGroup = /** @type {import('../src/mini-dom').Element} */ (
+    svgDoc.childNodes[1]
+  )
   t.is('g', mainGroup.tagName)
   t.is(3, mainGroup.childNodes.length)
 
   svgDoc = ocadToSvg(map, {
-    document: DOMImplementation.createDocument(null, 'xml', null),
+    document: new Document('', 'xml'),
     fromColor: 3,
     toColor: 5,
   })
-  mainGroup = /** @type {Element} */ (svgDoc.childNodes[1])
+  mainGroup = /** @type {import('../src/mini-dom').Element} */ (
+    svgDoc.childNodes[1]
+  )
   t.is('g', mainGroup.tagName)
   t.is(0, mainGroup.childNodes.length)
 
   svgDoc = ocadToSvg(map, {
-    document: DOMImplementation.createDocument(null, 'xml', null),
+    document: new Document('', 'xml'),
     fromColor: 2,
     toColor: 6,
   })
-  mainGroup = /** @type {Element} */ (svgDoc.childNodes[1])
+  mainGroup = /** @type {import('../src/mini-dom').Element} */ (
+    svgDoc.childNodes[1]
+  )
   t.is('g', mainGroup.tagName)
   t.is(4, mainGroup.childNodes.length)
 })
@@ -96,17 +124,19 @@ test('SVG can filter colors', async (/** @type {ExecutionContext} */ t) => {
 test('renders double line correctly', async (/** @type {ExecutionContext} */ t) => {
   const map = await readOcad(path.join(__dirname, 'data', 'double-line.ocd'))
   const svgDoc = ocadToSvg(map, {
-    document: DOMImplementation.createDocument(null, 'xml', null),
+    document: new Document('', 'xml'),
   })
 
-  t.is('svg', /** @type {Element} */ (svgDoc).tagName)
-  const mainGroup = /** @type {Element} */ (svgDoc.childNodes[1])
+  t.is('svg', /** @type {import('../src/mini-dom').Element} */ (svgDoc).tagName)
+  const mainGroup = /** @type {import('../src/mini-dom').Element} */ (
+    svgDoc.childNodes[1]
+  )
   t.is('g', mainGroup.tagName)
 
   // Should render exactly 4 paths for the double line with fill
   const paths = Array.from(mainGroup.childNodes)
     .filter(n => n.nodeType === 1)
-    .map(n => /** @type {Element} */ (n))
+    .map(n => /** @type {import('../src/mini-dom').Element} */ (n))
     .filter(n => n.tagName === 'path')
   t.is(4, paths.length, 'Should render exactly 4 paths')
 
@@ -148,18 +178,20 @@ test('renders double line correctly', async (/** @type {ExecutionContext} */ t) 
 test('jarnvag: renders patterned dashed double line correctly', async (/** @type {ExecutionContext} */ t) => {
   const map = await readOcad(path.join(__dirname, 'data', 'jarnvag.ocd'))
   const svgDoc = ocadToSvg(map, {
-    document: DOMImplementation.createDocument(null, 'xml', null),
+    document: new Document('', 'xml'),
   })
 
   // Root svg element presence
-  t.is('svg', /** @type {Element} */ (svgDoc).tagName)
-  const mainGroup = /** @type {Element} */ (svgDoc.childNodes[1])
+  t.is('svg', /** @type {import('../src/mini-dom').Element} */ (svgDoc).tagName)
+  const mainGroup = /** @type {import('../src/mini-dom').Element} */ (
+    svgDoc.childNodes[1]
+  )
   t.is('g', mainGroup.tagName)
 
   // Collect path elements
   const paths = Array.from(mainGroup.childNodes)
     .filter(n => n.nodeType === 1)
-    .map(n => /** @type {Element} */ (n))
+    .map(n => /** @type {import('../src/mini-dom').Element} */ (n))
     .filter(n => n.tagName === 'path')
 
   // We expect four path elements: two dark outer strokes, two white dashed inner strokes
@@ -194,14 +226,16 @@ test('renders house with offset outline without kinks', async (/** @type {Execut
     path.join(__dirname, 'data', 'myggfritt_byggnad2.ocd')
   )
   const svgDoc = ocadToSvg(map, {
-    document: DOMImplementation.createDocument(null, 'xml', null),
+    document: new Document('', 'xml'),
   })
-  const mainGroup = /** @type {Element} */ (svgDoc.childNodes[1])
+  const mainGroup = /** @type {import('../src/mini-dom').Element} */ (
+    svgDoc.childNodes[1]
+  )
   t.is('g', mainGroup.tagName)
 
   const paths = Array.from(mainGroup.childNodes)
     .filter(n => n.nodeType === 1)
-    .map(n => /** @type {Element} */ (n))
+    .map(n => /** @type {import('../src/mini-dom').Element} */ (n))
     .filter(n => n.tagName === 'path')
 
   for (const path of paths) {
@@ -229,14 +263,16 @@ test('renders house with offset outline without kinks', async (/** @type {Execut
 test('renders stair with all symbols', async (/** @type {ExecutionContext} */ t) => {
   const map = await readOcad(path.join(__dirname, 'data', 'sprint-stair.ocd'))
   const svgDoc = ocadToSvg(map, {
-    document: DOMImplementation.createDocument(null, 'xml', null),
+    document: new Document('', 'xml'),
   })
-  const mainGroup = /** @type {Element} */ (svgDoc.childNodes[1])
+  const mainGroup = /** @type {import('../src/mini-dom').Element} */ (
+    svgDoc.childNodes[1]
+  )
   t.is('g', mainGroup.tagName)
 
   const paths = Array.from(mainGroup.childNodes)
     .filter(n => n.nodeType === 1)
-    .map(n => /** @type {Element} */ (n))
+    .map(n => /** @type {import('../src/mini-dom').Element} */ (n))
     .filter(n => n.tagName === 'path')
 
   t.is(
@@ -261,14 +297,16 @@ test('renders stair with all symbols', async (/** @type {ExecutionContext} */ t)
 test('renders fences with correct number of fence lines', async (/** @type {ExecutionContext} */ t) => {
   const map = await readOcad(path.join(__dirname, 'data', 'fences.ocd'))
   const svgDoc = ocadToSvg(map, {
-    document: DOMImplementation.createDocument(null, 'xml', null),
+    document: new Document('', 'xml'),
   })
-  const mainGroup = /** @type {Element} */ (svgDoc.childNodes[1])
+  const mainGroup = /** @type {import('../src/mini-dom').Element} */ (
+    svgDoc.childNodes[1]
+  )
   t.is('g', mainGroup.tagName)
 
   const paths = Array.from(mainGroup.childNodes)
     .filter(n => n.nodeType === 1)
-    .map(n => /** @type {Element} */ (n))
+    .map(n => /** @type {import('../src/mini-dom').Element} */ (n))
     .filter(n => n.tagName === 'path')
 
   t.is(8, paths.length, 'Should render exactly 8 paths (2 main + 6 small)')
@@ -301,7 +339,7 @@ test('can open all local test maps', async (/** @type {ExecutionContext} */ t) =
       t.truthy(ocadFile)
       t.truthy(
         ocadToSvg(ocadFile, {
-          document: DOMImplementation.createDocument(null, 'xml', null),
+          document: new Document('', 'xml'),
         })
       )
     } catch (e) {

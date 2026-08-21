@@ -2,12 +2,18 @@ const { LineSymbolType, AreaSymbolType } = require('./ocad-reader/symbol-types')
 const { patternToSvg, createSvgNode } = require('./ocad-to-svg')
 const uuidv4 = require('uuid/v4')
 const _global = getGlobal()
-const DOMImplementation = _global.DOMImplementation
-  ? _global.DOMImplementation
-  : new (require('xmldom').DOMImplementation)()
+const documentFactory = _global.DOMImplementation
+  ? () =>
+      _global.DOMImplementation.createDocument(
+        'http://www.w3.org/2000/svg',
+        'svg',
+        null
+      )
+  : () =>
+      new (require('./mini-dom').Document)('http://www.w3.org/2000/svg', 'svg')
 const XMLSerializer = _global.XMLSerializer
   ? _global.XMLSerializer
-  : require('xmldom').XMLSerializer
+  : require('./mini-dom').XMLSerializer
 
 const defaultOptions = {
   generateSymbolElements: true,
@@ -85,8 +91,8 @@ module.exports = function ocadToQml(ocadFile, options) {
                     sym.type === LineSymbolType
                       ? 'line'
                       : sym.type === AreaSymbolType
-                      ? 'fill'
-                      : '',
+                        ? 'fill'
+                        : '',
                   force_rhr: 0,
                 },
               }))
@@ -97,15 +103,13 @@ module.exports = function ocadToQml(ocadFile, options) {
     ],
   }
 
-  const doc = DOMImplementation.createDocument(null, 'xml', null)
-  return createXmlNode(doc, root)
+  return createXmlNode(options.document || window.document, root)
 }
 
 /**
  *
- * @param {Document} document
+ * @param {import('./mini-dom').Document} document
  * @param {NodeDef} n
- * @returns {HTMLElement}
  */
 const createXmlNode = (document, n) => {
   const node = document.createElement(n.type)
@@ -247,11 +251,7 @@ const symbolToQml = (scale, colors, sym) => {
 const svgPatternToFill = (scale, fillColor, pattern) => {
   const { width, height, patternTransform } = pattern.attrs
   const angle = getPatternRotation(patternTransform)
-  const svgDoc = DOMImplementation.createDocument(
-    'http://www.w3.org/2000/svg',
-    'svg',
-    null
-  )
+  const svgDoc = documentFactory()
   svgDoc.firstChild.setAttribute('width', width)
   svgDoc.firstChild.setAttribute('height', height)
   pattern.children.forEach(c =>

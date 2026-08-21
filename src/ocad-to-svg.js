@@ -166,25 +166,26 @@ const patternToSvg = (colors, s) => {
 
 /**
  *
- * @param {Document} document
+ * @param {import('./mini-dom').Document} document
  * @param {SvgNodeDef} n
  * @returns
  */
 const createSvgNode = (document, n) => {
   let node
   if (n.text === undefined) {
-    node = document.createElementNS(svgNamespace, n.type)
+    const element = document.createElementNS(svgNamespace, n.type)
     const xmlnss = Object.entries(n.attrs || []).filter(([key, _]) =>
       key.startsWith('xmlns')
     )
     for (const [ns, uri] of xmlnss) {
-      node.setAttributeNS('http://www.w3.org/2000/xmlns/', ns, uri)
+      element.setAttributeNS('http://www.w3.org/2000/xmlns/', ns, uri)
     }
-    n.id && (node.id = n.id)
+    n.id && (element.id = n.id)
     n.attrs &&
       Object.keys(n.attrs).forEach(attrName =>
-        node.setAttribute(attrName, n.attrs[attrName])
+        element.setAttribute(attrName, n.attrs[attrName])
       )
+    node = element
   } else {
     node = document.createTextNode(n.text)
   }
